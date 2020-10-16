@@ -44,8 +44,7 @@ async def start_task_loops(bot):
 
 @Watcher.event
 async def on_ready():
-    Watcher.owner = discord.utils.get(
-        Watcher.get_all_members(), id=config['master'])
+    Watcher.owner = Watcher.get_user(config['master'])
     if Watcher.initial_start:
         await _print(Watcher.owner, 'Starting up...')
     Watcher.uptime = datetime.datetime.now()
