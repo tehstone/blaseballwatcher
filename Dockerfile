@@ -29,4 +29,4 @@ RUN pip install git+https://github.com/Rapptz/discord.py@master -U
 ADD . /src
 
 # Set default container command
-ENTRYPOINT ["dumb-init", "--", "python", "-m", "blaseballwatcher", "launcher"]
+ENTRYPOINT ["dumb-init", "--", "python", "-m", "watcher", "launcher"]
