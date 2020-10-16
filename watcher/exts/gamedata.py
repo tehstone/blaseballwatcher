@@ -1,0 +1,864 @@
+import math
+import os
+import asyncio
+
+import json
+import gspread
+
+from discord.ext import commands
+
+from watcher import utils
+
+spreadsheet_names = {
+    'adc5b394-8f76-416d-9ce9-813706877b84': {'schedule': 'Mints Schedule', 'matchups': 'Mints Matchups'},
+    '8d87c468-699a-47a8-b40d-cfb73a5660ad': {'schedule': 'Crabs Schedule', 'matchups': 'Crabs Matchups'},
+    'b63be8c2-576a-4d6e-8daf-814f8bcea96f': {'schedule': 'Dale Schedule', 'matchups': 'Dale Matchups'},
+    'ca3f1c8c-c025-4d8e-8eef-5be6accbeb16': {'schedule': 'Firefighters Schedule', 'matchups': 'Firefighters Matchups'},
+    '3f8bbb15-61c0-4e3f-8e4a-907a5fb1565e': {'schedule': 'Flowers Schedule', 'matchups': 'Flowers Matchups'},
+    '979aee4a-6d80-4863-bf1c-ee1a78e06024': {'schedule': 'Fridays Schedule', 'matchups': 'Fridays Matchups'},
+    '105bc3ff-1320-4e37-8ef0-8d595cb95dd0': {'schedule': 'Garages Schedule', 'matchups': 'Garages Matchups'},
+    'a37f9158-7f82-46bc-908c-c9e2dda7c33b': {'schedule': 'Hands Schedule', 'matchups': 'Hands Matchups'},
+    'b72f3061-f573-40d7-832a-5ad475bd7909': {'schedule': 'Lovers Schedule', 'matchups': 'Lovers Matchups'},
+    '7966eb04-efcc-499b-8f03-d13916330531': {'schedule': 'Magic Schedule', 'matchups': 'Magic Matchups'},
+    '36569151-a2fb-43c1-9df7-2df512424c82': {'schedule': 'Millennials Schedule', 'matchups': 'Millenials Matchups'},
+    'eb67ae5e-c4bf-46ca-bbbc-425cd34182ff': {'schedule': 'Talkers Schedule', 'matchups': 'Talkers Matchups'},
+    '23e4cbc1-e9cd-47fa-a35b-bfa06f726cb7': {'schedule': 'Pies Schedule', 'matchups': 'Pies Matchups'},
+    'bfd38797-8404-4b38-8b82-341da28b1f83': {'schedule': 'Shoe Schedule', 'matchups': 'Shoes Matchups'},
+    '9debc64f-74b7-4ae1-a4d6-fce0144b6ea5': {'schedule': 'Spies Schedule', 'matchups': 'Spies Matchups'},
+    'b024e975-1c4a-4575-8936-a3754a08806a': {'schedule': 'Steaks Schedule', 'matchups': 'Steaks Matchups'},
+    'f02aeae2-5e6a-4098-9842-02d2273f25c7': {'schedule': 'Sunbeams Schedule', 'matchups': 'Sunbeams Matchups'},
+    '878c1bf6-0d21-4659-bfee-916c8314d69c': {'schedule': 'Tacos Schedule', 'matchups': 'Tacos Matchups'},
+    '747b8e4a-7e50-4638-a973-ea7950a3e739': {'schedule': 'Tigers Schedule', 'matchups': 'Tigers Matchups'},
+    '57ec08cc-0411-4643-b304-0e80dbc15ac7': {'schedule': 'Wings Schedule', 'matchups': 'Wings Matchups'}
+}
+
+weather_types = {
+    0: 'Void',
+    1: 'Sunny',
+    2: 'Overcast',
+    3: 'Rainy',
+    4: 'Sandstorm',
+    5: 'Snowy',
+    6: 'Acidic',
+    7: 'Solar Eclipse',
+    8: 'Glitter',
+    9: 'Bloodwind',
+    10: 'Peanuts',
+    11: 'Bird',
+    12: 'Feedback',
+    13: 'Reverb'
+}
+
+old_favor_rankings = {
+        "Pies": 0,
+        "Lovers": 1,
+        "Tacos": 2,
+        "Steaks": 3,
+        "Breath Mints": 4,
+        "Firefighters": 5,
+        "Shoe Thieves": 6,
+        "Flowers": 7,
+        "Fridays": 8,
+        "Magic": 9,
+        "Millennials": 10,
+        "Crabs": 11,
+        "Sunbeams": 12,
+        "Wild Wings": 13,
+        "Tigers": 14,
+        "Moist Talkers": 15,
+        "Spies": 16,
+        "Dale": 17,
+        "Garages": 18,
+        "Jazz Hands": 19
+}
+
+favor_rankings = {
+        "Firefighters": 0,
+        "Jazz Hands": 1,
+        "Dale": 2,
+        "Fridays": 3,
+        "Shoe Thieves": 4,
+        "Lovers": 5,
+        "Pies": 6,
+        "Tigers": 7,
+        "Garages": 8,
+        "Sunbeams": 9,
+        "Millennials": 10,
+        "Spies": 11,
+        "Breath Mints": 12,
+        "Magic": 13,
+        "Steaks": 14,
+        "Crabs": 15,
+        "Wild Wings": 16,
+        "Flowers": 17,
+        "Moist Talkers": 18,
+        "Tacos": 19
+}
+
+
+class GameData(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @staticmethod
+    def get_team_league_division(divisions, teamID):
+        for div in divisions:
+            for team in div["teams"]:
+                if team == teamID:
+                    return div["league"], div["name"]
+
+    async def save_json_range(self, season, fill=False):
+        new_season_data = []
+        day = -1
+        try:
+            with open(os.path.join("season_data", f"season{season+1}.json")) as json_file:
+                season_data = json.load(json_file)
+            for game in season_data:
+                if game["gameComplete"]:
+                    new_season_data.append(game)
+                    day = game["day"]
+                else:
+                    break
+        except FileNotFoundError:
+            pass
+        day += 1
+        done = False
+        day_retries = 0
+        while True:
+            if done:
+                break
+            url = f"https://blaseball.com/database/games?day={day}&season={season}"
+            print(f"day: {day}")
+            html_response = await utils.retry_request(url)
+            if html_response:
+                day_data = html_response.json()
+                if len(day_data) < 1:
+                    break
+                if len(day_data) < 10:
+                    self.bot.logger.warn(f"Fewer than 10 games found for day{day}")
+                    if day < 99:
+                        day -= 1
+                        day_retries += 1
+                        if day_retries == 5:
+                            self.bot.logger.warn(f"Unable to get 10 games for day{day}")
+                            break
+                for game in day_data:
+                    if not fill and not game["gameComplete"]:
+                        done = True
+                        break
+                    new_season_data.append(game)
+            else:
+                print("no response")
+            day += 1
+        with open(os.path.join("season_data", f"season{season+1}.json"), 'w') as json_file:
+            json.dump(new_season_data, json_file)
+
+    def base_season_parser(self, seasons, fill):
+        schedule, teams, odds = {}, {}, {}
+        with open(os.path.join("data", "divisions.json")) as json_file:
+            divisions = json.load(json_file)
+        for seas in seasons:
+            with open(os.path.join("season_data", f"season{seas+1}.json")) as json_file:
+                season_data = json.load(json_file)
+            print(f"season: {seas}")
+            odds[seas] = {}
+            for game in season_data:
+                if not fill:
+                    if not game["gameComplete"]:
+                        break
+
+                if game['day'] not in odds[seas]:
+                    odds[seas][game['day']] = {"results": {"favored": 0, "underdog": 0}, "odds": []}
+                if game["homeScore"] > game["awayScore"]:
+                    if game["homeOdds"] > game["awayOdds"]:
+                        result = "favored"
+                    else:
+                        result = "underdog"
+                else:
+                    if game["awayOdds"] > game["homeOdds"]:
+                        result = "favored"
+                    else:
+                        result = "underdog"
+                if result == "favored":
+                    odds[seas][game['day']]["odds"].append(max(game["homeOdds"], game["awayOdds"]))
+                else:
+                    odds[seas][game['day']]["odds"].append(min(game["homeOdds"], game["awayOdds"]))
+
+                odds[seas][game['day']]["results"][result] += 1
+
+
+                season = schedule.setdefault(game["season"], {})
+                home_team = season.setdefault(game["homeTeam"], {})
+                away_team = season.setdefault(game["awayTeam"], {})
+                if game["homeTeam"] not in teams:
+                    league, division = self.get_team_league_division(divisions, game["homeTeam"])
+                    teams[game["homeTeam"]] = {
+                        "name": game["homeTeamNickname"],
+                        "league": league,
+                        "division": division
+                    }
+                if game["awayTeam"] not in teams:
+                    league, division = self.get_team_league_division(divisions, game["awayTeam"])
+                    teams[game["awayTeam"]] = {
+                        "name": game["awayTeamNickname"],
+                        "league": league,
+                        "division": division
+                    }
+                series_count = (game["day"]) // 3
+                series_game = (game["day"]) % 3
+                h_series = home_team.setdefault(series_count, {})
+                a_series = away_team.setdefault(series_count, {})
+                if series_game not in h_series:
+                    h_series[series_game] = {
+                        "teamScore": game["homeScore"],
+                        "opponentScore": game["awayScore"],
+                        "opponent": game["awayTeam"],
+                        "teamPitcher": game["homePitcherName"],
+                        "opponentPitcher": game["awayPitcherName"],
+                        "odds": game["homeOdds"],
+                        "home": True,
+                        "shame": game["shame"],
+                        "weather": game["weather"],
+                        "day": game["day"],
+                        "outcomes": game["outcomes"]
+                    }
+                if series_game not in a_series:
+                    a_series[series_game] = {
+                        "opponentScore": game["homeScore"],
+                        "teamScore": game["awayScore"],
+                        "opponent": game["homeTeam"],
+                        "teamPitcher": game["awayPitcherName"],
+                        "opponentPitcher": game["homePitcherName"],
+                        "odds": game["awayOdds"],
+                        "home": False,
+                        "shame": game["shame"],
+                        "weather": game["weather"],
+                        "day": game["day"],
+                        "outcomes": game["outcomes"]
+                    }
+        return schedule, teams, odds
+    # async def update_spreadsheets_old(self, seasons=[1, 2, 3, 4, 5], fill=False):
+    #     scope = ['https://spreadsheets.google.com/feeds']
+    #     gc = gspread.service_account()
+    #     schedule, teams = self.base_season_parser(seasons, fill)
+    #     league_records = {"Wild": {}, "Mild": {}}
+    #
+    #     for season in schedule:
+    #         season_outcomes = {}
+    #         sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season+1}"])
+    #         for team in schedule[season]:
+    #             s_worksheet = sheet.worksheet(spreadsheet_names[team]["schedule"])
+    #             m_worksheet = sheet.worksheet(spreadsheet_names[team]["matchups"])
+    #             srows = []
+    #             srows.append(["Opponent", "Team Score", "Opp Score", "Winner",
+    #                           "WinningPitcher", "LosingPitcher", "Streak", "Record",
+    #                           "Division", "League", "InterLeague", "Win", "Home",
+    #                           "Odds", "Shame", "Weather", "Outcomes"])
+    #             mrows = []
+    #             print(teams[team]["name"])
+    #             i, j = 2, 2
+    #             team_series = {}
+    #             record = {"win": 0, "loss": 0}
+    #             last_outcome, this_outcome, running_count = None, None, 0
+    #             for sid in schedule[season][team]:
+    #                 series = schedule[season][team][sid]
+    #                 for gid in series:
+    #                     i += 1
+    #                     game = series[gid]
+    #                     if game["opponent"] not in team_series:
+    #                         team_series[game["opponent"]] = {
+    #                             "team": teams[team]["name"],
+    #                             "opponent": teams[game["opponent"]]["name"],
+    #                             "wins": 0,
+    #                             "games": 0,
+    #                             "game_type": "",
+    #                             "season": season + 1
+    #                         }
+    #                     if game["teamScore"] > game["opponentScore"]:
+    #                         win = True
+    #                     else:
+    #                         win = False
+    #                     if win:
+    #                         winner = teams[team]["name"]
+    #                         win = game["teamPitcher"]
+    #                         loss = game["opponentPitcher"]
+    #                         record["win"] += 1
+    #                         team_series[game["opponent"]]["wins"] += 1
+    #                         this_outcome = "W"
+    #                     else:
+    #                         winner = teams[game["opponent"]]["name"]
+    #                         win = game["opponentPitcher"]
+    #                         loss = game["teamPitcher"]
+    #                         record["loss"] += 1
+    #                         this_outcome = "L"
+    #                     if this_outcome != last_outcome:
+    #                         running_count = 1
+    #                         last_outcome = this_outcome
+    #                     else:
+    #                         running_count += 1
+    #                     running_string = f"{this_outcome}-{running_count}"
+    #                     record_str = f"{record['win']}-{record['loss']}"
+    #                     team_league, team_division = teams[team]["league"], teams[team]["division"]
+    #                     opp_league, opp_division = teams[game["opponent"]]["league"], teams[game["opponent"]]["division"]
+    #                     division, league, inter = 0, 0, 0
+    #                     if team_division == opp_division:
+    #                         division = 1
+    #                         team_series[game["opponent"]]["game_type"] = "Division"
+    #                     elif team_league == opp_league:
+    #                         league = 1
+    #                         team_series[game["opponent"]]["game_type"] = "League"
+    #                     else:
+    #                         inter = 1
+    #                         team_series[game["opponent"]]["game_type"] = "InterLeague"
+    #                     team_series[game["opponent"]]["games"] += 1
+    #                     if game['weather']:
+    #                         w_str = weather_types[game['weather']]
+    #                     else:
+    #                         w_str = "None"
+    #                     if len(game["outcomes"]) > 0:
+    #                         for o in game["outcomes"]:
+    #                             if game["day"] not in season_outcomes:
+    #                                 season_outcomes[game["day"]] = [o]
+    #                             else:
+    #                                 if o not in season_outcomes[game["day"]]:
+    #                                     season_outcomes[game["day"]].append(o)
+    #                     row = [teams[game["opponent"]]["name"],
+    #                            game["teamScore"],
+    #                            game["opponentScore"],
+    #                            winner,
+    #                            win,
+    #                            loss,
+    #                            running_string,
+    #                            record_str,
+    #                            division,
+    #                            league,
+    #                            inter,
+    #                            game["teamScore"] > game["opponentScore"],
+    #                            game["home"],
+    #                            round(game["odds"]*100),
+    #                            game["shame"],
+    #                            w_str,
+    #                            " | ".join(game["outcomes"]),
+    #                            ]
+    #                     srows.append(row)
+    #             s_worksheet.update(f"A{2}:Q{i}", srows)
+    #
+    #             if fill:
+    #                 for opp in team_series:
+    #                     row = [team_series[opp]["opponent"], team_series[opp]['wins'],
+    #                            team_series[opp]['games'], team_series[opp]['game_type']]
+    #                     mrows.append(row)
+    #                     j += 1
+    #                 m_worksheet.update(f"A{3}:D{j}", mrows)
+    #             else:
+    #                 for opp in team_series:
+    #                     row = [team_series[opp]['wins']]
+    #                     mrows.append(row)
+    #                     j += 1
+    #                 m_worksheet.update(f"B{3}:B{j}", mrows)
+    #             league_records[teams[team]['league']][teams[team]["name"]] = record
+    #
+    #         try:
+    #             def get_outcome_type(outcome):
+    #                 if "reverb" in outcome.lower():
+    #                     return "Reverb"
+    #                 if "feedback" in outcome.lower():
+    #                     return "Feedback"
+    #                 if "blooddrain" in outcome.lower():
+    #                     return "Blooddrain"
+    #                 if "with a pitch" in outcome.lower():
+    #                     return "Hit by Pitch"
+    #                 if "allergic reaction" in outcome.lower():
+    #                     return "Allergic Reaction"
+    #                 if "yummy reaction" in outcome.lower():
+    #                     return "Yummy Reaction"
+    #                 if "is red hot" in outcome.lower():
+    #                     return "Red Hot"
+    #                 if "no longer Red Hot" in outcome.lower():
+    #                     return "Cooled Down"
+    #                 if "incinerated" in outcome.lower():
+    #                     return "Incineration"
+    #                 if "partying" in outcome.lower():
+    #                     return "Partying!"
+    #                 pass
+    #
+    #             orows, otypes = [], []
+    #             for day in sorted(season_outcomes.keys()):
+    #                 for outcome in season_outcomes[day]:
+    #                     outcome_type = get_outcome_type(outcome)
+    #                     orows.append([day, outcome])
+    #                     otypes.append([outcome_type])
+    #             o_worksheet = sheet.worksheet("Blaseball")
+    #             o_worksheet.merge_cells(f"B{9}:H{9 + len(orows)}", merge_type="MERGE_ROWS")
+    #             o_worksheet.update(f"A{9}:B{9+len(orows)}", orows)
+    #             o_worksheet.update(f"I{9}:I{9 + len(otypes)}", otypes)
+    #
+    #             s_worksheet = sheet.worksheet("Standings")
+    #
+    #             for le in league_records:
+    #                 league = league_records[le]
+    #                 sorted_league = {k: v for k, v in sorted(league.items(), key=lambda item: item[1]['total']["win"], reverse=True)}
+    #                 l_rows = []
+    #                 for team, record in sorted_league.items():
+    #                     l_rows.append([team, record['total']['win'], record['total']['loss']])
+    #                 if le == 'Good':
+    #                     s_column = 'A'
+    #                     e_column = 'C'
+    #                 else:
+    #                     s_column = 'H'
+    #                     e_column = 'J'
+    #                 s_worksheet.update(f"{s_column}{4}:{e_column}{4 + len(l_rows)}", l_rows)
+    #         except Exception as e:
+    #             print(e)
+    #         await asyncio.sleep(5)
+
+    async def update_spreadsheets(self, seasons=[1, 2, 3, 4, 5, 6], fill=False):
+        gc = gspread.service_account()
+        schedule, teams, odds = self.base_season_parser(seasons, fill)
+        league_records = {"Wild": {}, "Mild": {}}
+
+        for season in schedule:
+            season_outcomes = {}
+            sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season + 1}"])
+            print("Updating Team Schedules")
+            day = 0
+            for team in schedule[season]:
+                s_worksheet = sheet.worksheet(spreadsheet_names[team]["schedule"])
+                m_worksheet = sheet.worksheet(spreadsheet_names[team]["matchups"])
+                srows = [["Day", "Opponent", "Team Score", "Opp Score", "Winner",
+                          "Winning Pitcher", "Losing Pitcher", "Streak", "Record",
+                          "Game Type", "Win", "Home",
+                          "Odds", "Shame", "Weather", "Outcomes"]]
+                mrows = []
+                i, j = 3, 2
+                team_series = {}
+                record = {"total": {"win": 0, "loss": 0},
+                          "postseason": {"win": 0, "loss": 0},
+                          "home": {"win": 0, "loss": 0},
+                          "away": {"win": 0, "loss": 0},
+                          "o500": {"win": 0, "loss": 0},
+                          "single_run": {"win": 0, "loss": 0},
+                          "scored": 0, "given": 0,
+                          "shames": 0, "times_shamed": 0}
+                for oteam in teams:
+                    if oteam != team:
+                        record[teams[oteam]["name"]] = {"win": 0, "loss": 0}
+                last_outcome, this_outcome, running_count = None, None, 0
+                for sid in schedule[season][team]:
+                    series = schedule[season][team][sid]
+                    for gid in series:
+                        i += 1
+                        game = series[gid]
+                        day = max(day, game["day"])
+                        if game["opponent"] not in team_series:
+                            team_series[game["opponent"]] = {
+                                "team": teams[team]["name"],
+                                "opponent": teams[game["opponent"]]["name"],
+                                "wins": 0,
+                                "losses": 0,
+                                "games": 0,
+                                "game_type": "",
+                                "home": 0,
+                                "away": 0,
+                                "season": season + 1
+                            }
+                        record["scored"] += game["teamScore"]
+                        record["given"] += game["opponentScore"]
+
+                        if game["teamScore"] - game["opponentScore"] == 1:
+                            record["single_run"]["win"] += 1
+                        elif game["teamScore"] - game["opponentScore"] == -1:
+                            record["single_run"]["loss"] += 1
+                        win = game["teamScore"] > game["opponentScore"]
+
+                        if win:
+                            winner = teams[team]["name"]
+                            win = game["teamPitcher"]
+                            loss = game["opponentPitcher"]
+                            if game["day"] < 99:
+                                record["total"]["win"] += 1
+                            else:
+                                record["postseason"]["win"] += 1
+                            team_series[game["opponent"]]["wins"] += 1
+                            this_outcome = "W"
+                            if game["shame"]:
+                                record["shames"] += 1
+                            if game["home"]:
+                                record["home"]["win"] += 1
+                                team_series[game["opponent"]]["home"] += 1
+                            else:
+                                record["away"]["win"] += 1
+                                team_series[game["opponent"]]["away"] += 1
+                            record[teams[game["opponent"]]["name"]]["win"] += 1
+                        else:
+                            winner = teams[game["opponent"]]["name"]
+                            win = game["opponentPitcher"]
+                            loss = game["teamPitcher"]
+                            if game["day"] < 99:
+                                record["total"]["loss"] += 1
+                            else:
+                                record["postseason"]["loss"] += 1
+                            team_series[game["opponent"]]["losses"] += 1
+                            this_outcome = "L"
+                            if game["shame"]:
+                                record["times_shamed"] += 1
+                            if game["home"]:
+                                record["home"]["loss"] += 1
+                                team_series[game["opponent"]]["home"] += 1
+                            else:
+                                record["away"]["loss"] += 1
+                                team_series[game["opponent"]]["away"] += 1
+                            record[teams[game["opponent"]]["name"]]["loss"] += 1
+                        if this_outcome != last_outcome:
+                            running_count = 1
+                            last_outcome = this_outcome
+                        else:
+                            running_count += 1
+                        running_string = f"{this_outcome}-{running_count}"
+                        record_str = f"{record['total']['win']}-{record['total']['loss']}"
+                        team_league, team_division = teams[team]["league"], teams[team]["division"]
+                        opp_league, opp_division = teams[game["opponent"]]["league"], teams[game["opponent"]]["division"]
+                        if team_division == opp_division:
+                            game_type = team_series[game["opponent"]]["game_type"] = "Division"
+                        elif team_league == opp_league:
+                            game_type = team_series[game["opponent"]]["game_type"] = "League"
+                        else:
+                            game_type = team_series[game["opponent"]]["game_type"] = "InterLeague"
+                        team_series[game["opponent"]]["games"] += 1
+                        if game['weather']:
+                            w_str = weather_types[game['weather']]
+                        else:
+                            w_str = "None"
+                        if len(game["outcomes"]) > 0:
+                            for o in game["outcomes"]:
+                                if game["day"] not in season_outcomes:
+                                    season_outcomes[game["day"]] = [o]
+                                else:
+                                    if o not in season_outcomes[game["day"]]:
+                                        season_outcomes[game["day"]].append(o)
+                        if fill:
+                            row = [game["day"] + 1,
+                                   teams[game["opponent"]]["name"],
+                                   '',
+                                   '',
+                                   '',
+                                   win,
+                                   loss,
+                                   '',
+                                   '',
+                                   game_type,
+                                   '',
+                                   game["home"],
+                                   '',
+                                   '',
+                                   w_str,
+                                   " | ".join(game["outcomes"]),
+                                   ]
+                        else:
+                            row = [game["day"] + 1,
+                                   teams[game["opponent"]]["name"],
+                                   game["teamScore"],
+                                   game["opponentScore"],
+                                   winner,
+                                   win,
+                                   loss,
+                                   running_string,
+                                   record_str,
+                                   game_type,
+                                   game["teamScore"] > game["opponentScore"],
+                                   game["home"],
+                                   round(game["odds"]*100),
+                                   game["shame"],
+                                   w_str,
+                                   " | ".join(game["outcomes"]),
+                                   ]
+                        srows.append(row)
+                summary_row = ["Record", record['total']["win"], record['total']["loss"],
+                               round(record['total']["win"] / (
+                                           record['total']["win"] + record['total']["loss"]) * 1000) / 1000,
+                               "Runs", record["scored"], "Given Up", record["given"],
+                               "Diff", record["scored"] - record["given"],
+                               "Shames", record["shames"], "Shamed", record["times_shamed"]]
+                indices_to_add = len(srows[0]) - len(summary_row)
+                summary_row += [''] * indices_to_add
+                srows.insert(0, summary_row)
+                s_worksheet.update(f"A{2}:Q{i+1}", srows)
+
+                if fill:
+                    for opp in team_series:
+                        row = [team_series[opp]["opponent"], team_series[opp]['wins'], team_series[opp]['losses'],
+                               team_series[opp]['games'], team_series[opp]['game_type'],
+                               team_series[opp]['home'], team_series[opp]['away']]
+                        mrows.append(row)
+                        j += 1
+                    m_worksheet.update(f"A{3}:G{j}", mrows)
+
+                    k = 16
+                    if j >= 16:
+                        k = j + 1
+                    m_worksheet.update(f"B{k}:B{k+2}",
+                                       [[f'=SUM(FILTER(D3:D{j},E3:E{j}="Division"))'],
+                                        [f'=SUM(FILTER(D3:D{j},E3:E{j}="League"))'],
+                                        [f'=SUM(FILTER(D3:D{j},E3:E{j}="InterLeague"))']
+                                        ], raw=False)
+                    m_worksheet.update(f"F{k}:F{k+1}", [[f'=sum(F3:F{j})'], [f'=sum(G3:G{j})']], raw=False)
+                else:
+                    for opp in team_series:
+                        row = [team_series[opp]['wins'], team_series[opp]['losses']]
+                        mrows.append(row)
+                        j += 1
+                    m_worksheet.update(f"B{3}:C{j}", mrows)
+                league_records[teams[team]['league']][teams[team]["name"]] = record
+
+            print("Updating Weather Events")
+
+            def get_outcome_type(outcome):
+                if "reverb" in outcome.lower():
+                    return "Reverb"
+                if "feedback" in outcome.lower():
+                    return "Feedback"
+                if "blooddrain" in outcome.lower():
+                    return "Blooddrain"
+                if "with a pitch" in outcome.lower():
+                    return "Hit by Pitch"
+                if "allergic reaction" in outcome.lower():
+                    return "Allergic Reaction"
+                if "yummy reaction" in outcome.lower():
+                    return "Yummy Reaction"
+                if "is red hot" in outcome.lower():
+                    return "Red Hot"
+                if "no longer red hot" in outcome.lower():
+                    return "Cooled Down"
+                if "incinerated" in outcome.lower():
+                    return "Incineration"
+                if "partying" in outcome.lower():
+                    return "Partying!"
+                if "crashes into the field" in outcome.lower():
+                    return "Shelled"
+
+            orows, otypes = [], []
+            for day in sorted(season_outcomes.keys()):
+                for outcome in season_outcomes[day]:
+                    outcome_type = get_outcome_type(outcome)
+                    orows.append([day+1, outcome])
+                    otypes.append([outcome_type])
+            o_worksheet = sheet.worksheet("Blaseball")
+
+            o_worksheet.merge_cells(f"B{9}:H{9 + len(orows)}", merge_type="MERGE_ROWS")
+            o_worksheet.update(f"A{9}:B{9 + len(orows)}", orows)
+            o_worksheet.update(f"I{9}:I{9 + len(otypes)}", otypes)
+
+            s_worksheet = sheet.worksheet("Standings")
+
+            def generate_per_team_records(team_list, record):
+                # old_divions = {"Lawful Good": ["Lovers", "Firefighters", "Steaks", "Breath Mints", "Tacos"],
+                #              "Chaotic Good": ["Millennials", "Fridays", "Shoe Thieves", "Magic", "Flowers"],
+                #              "Lawful Evil": ["Crabs", "Tigers", "Wild Wings", "Pies", "Sunbeams"],
+                #              "Chaotic Evil": ["Jazz Hands", "Moist Talkers", "Garages", "Spies", "Dale"]
+                #              }
+                # old_div_records = {"Lawful Good": {"win": 0, "loss": 0},
+                #              "Chaotic Good": {"win": 0, "loss": 0},
+                #              "Lawful Evil": {"win": 0, "loss": 0},
+                #              "Chaotic Evil": {"win": 0, "loss": 0}
+                # }
+
+                n_divisions = {"Wild High": ["Lovers", "Crabs", "Wild Wings", "Firefighters", "Jazz Hands"],
+                             "Wild Low": ["Spies", "Flowers", "Sunbeams", "Dale", "Tacos"],
+                             "Mild High": ["Tigers", "Moist Talkers", "Garages", "Steaks", "Millennials"],
+                             "Mild Low": ["Fridays", "Pies", "Breath Mints", "Shoe Thieves", "Magic"]
+                             }
+
+                div_records = {"Wild High": {"win": 0, "loss": 0},
+                               "Wild Low": {"win": 0, "loss": 0},
+                               "Mild High": {"win": 0, "loss": 0},
+                               "Mild Low": {"win": 0, "loss": 0}
+                             }
+
+                team_columns = []
+
+                for division in n_divisions:
+                    for team in n_divisions[division]:
+                        if team == team_list[0]:
+                            team_columns.append("-")
+                        else:
+                            t_record = f'{record[team]["win"]}-{record[team]["loss"]}'
+                            div_records[division]["win"] += record[team]["win"]
+                            div_records[division]["loss"] += record[team]["loss"]
+                            team_columns.append(t_record)
+                for division in div_records:
+                    d_record = f'{div_records[division]["win"]}-{div_records[division]["loss"]}'
+                    team_list.append(d_record)
+                team_list += team_columns
+
+            def update_league(league, start_i):
+                sorted_league = {k: v for k, v in
+                                 sorted(league.items(), key=lambda item: item[1]["total"]["win"], reverse=True)}
+                teams = []
+                for team, record in sorted_league.items():
+                    teams.append([team, record['total']['win'], record['total']['loss']])
+                for i in range(len(teams)):
+                    gb_string = ""
+                    team, wins, losses = teams[i][0], teams[i][1], teams[i][2]
+                    if i >= 4:
+                        gb_string = (teams[3][1] - wins) + (losses - teams[3][2]) / 2
+                        diff = 100 - teams[3][1] - teams[i][2]
+                    else:
+                        diff = 100 - teams[i][1] - teams[4][2]
+                    teams[i] += round((wins / (wins + losses)) * 1000) / 1000, gb_string, diff
+                for i in range(len(teams) - 1):
+                    if teams[i][3] == teams[i+1][3]:
+                        if self.bot.favor_rankings[teams[i+1][0]] < self.bot.favor_rankings[teams[i][0]]:
+                            teams[i], teams[i+1] = teams[i+1], teams[i]
+                            if teams[i][4] == 0:
+                                teams[i][4] = ""
+                            teams[i+1][4] = f"{teams[i+1][4]}*"
+
+                for i in range(len(teams)):
+                    if i <= 3:
+                      if teams[i][5] <= 0:
+
+                            teams[i][5] = "Clinched"
+                    else:
+                        if teams[i][5] <= 0:
+                            teams[i][5] = "Party Time!"
+                    record = sorted_league[teams[i][0]]
+                    home_record = f"{record['home']['win']}-{record['home']['loss']}"
+                    away_record = f"{record['away']['win']}-{record['away']['loss']}"
+                    teams[i] += home_record, away_record, record["scored"] - record["given"]
+                    generate_per_team_records(teams[i], record)
+                    teams[i] += [f"{record['single_run']['win']}-{record['single_run']['loss']}"]
+
+                s_worksheet.update(f"A{start_i-1}:AH{start_i -1}",
+                                   [["Team", "Wins", "Losses", "Pct.", "GB", "Magic #",
+                                    "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
+                                    "Lovers", "Crabs", "Millennials", "Firefighters", "Jazz Hands", "Spies",
+                                     "Flowers", "Sunbeams", "Dale", "Tacos", "Tigers", "Moist Talkers",
+                                     "Garages", "Steaks", "Breath Mints", "Fridays", "Pies", "Wild Wings",
+                                     "Shoe Thieves", "Magic", "1-Run"]])
+                s_worksheet.update(f"A{start_i}:AH{start_i + len(teams)}", teams)
+
+            if day <= 98:
+                print("Updating Standings")
+                update_league(league_records["Wild"], 4)
+                update_league(league_records["Mild"], 17)
+
+            print("Updating Odds")
+            if season in odds:
+                odds_rows = []
+                running_totals = [0, 0, 0, 0]
+                for day in odds[season]:
+                    payouts = self._calculate_payout(odds[season][day]["odds"])
+                    for i in range(len(payouts)):
+                        running_totals[i] += payouts[i]
+                    rounded_odds = []
+                    for o in odds[season][day]["odds"]:
+                        if round(o * 100) == 50:
+                            rounded_odds.append(round(o * 1000)/10)
+                        else:
+                            rounded_odds.append(round(o * 100))
+
+                    rounded_odds.sort()
+                    rounded_odds += [''] * (10 - len(rounded_odds))
+                    row = [day+1, odds[season][day]["results"]["favored"], odds[season][day]["results"]["underdog"]]
+                    row += rounded_odds
+                    payout_row = [val for pair in zip(payouts, running_totals) for val in pair]
+                    row += payout_row
+                    odds_rows.append(row)
+                od_worksheet = sheet.worksheet("Daily Results")
+                od_worksheet.update(f"A{5}:U{5 + len(odds_rows)}", odds_rows)
+
+            print("Updates Complete")
+            await asyncio.sleep(5)
+
+    @staticmethod
+    def _calculate_payout(odds):
+        cut_high = [.5, .51, .52, .53]
+        payouts = [0] * len(cut_high)
+        for i in range(len(cut_high)):
+            count = 0
+            for odd in odds:
+                if odd >= cut_high[i]:
+                    payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
+                    count += 1
+                elif odd < 1 - cut_high[i]:
+                    count += 1
+            payouts[i] = payouts[i] - (1000 * count)
+        return payouts
+
+    @commands.command(name='update_divine_favor', aliases=['favor', 'divine', 'udf'])
+    async def _update_divine_favor(self, ctx):
+        url = 'https://www.blaseball.com/database/simulationdata'
+        html_response = await utils.retry_request(url)
+        if not html_response:
+            return await ctx.send("Failed to acquire simulation data, cannot find league id.")
+        league_id = html_response.json()['league']
+        url = f"https://www.blaseball.com/database/league?id={league_id}"
+        html_response = await utils.retry_request(url)
+        if not html_response:
+            return await ctx.send("Failed to acquire league data, cannot find tiebreaker id.")
+        tiebreaker_id = html_response.json()['tiebreakers']
+        url = f'https://www.blaseball.com/database/tiebreakers?id={tiebreaker_id}'
+        html_response = await utils.retry_request(url)
+        if not html_response:
+            return await ctx.send("Failed to acquire tiebreaker data.")
+        favor_data = html_response.json()
+        html_response = await utils.retry_request('https://www.blaseball.com/database/allteams')
+        if not html_response:
+            return await ctx.send("Failed to acquire team data.")
+        team_data = html_response.json()
+        favor_rankings = {}
+        count = 0
+        for rank in favor_data[0]['order']:
+            for team in team_data:
+                if team['id'] == rank:
+                    favor_rankings[team['nickname']] = count
+                    count += 1
+        self.bot.config['favor_rankings'] = self.bot.favor_rankings = favor_rankings
+
+    @commands.command(name='update_spreadsheets', aliases=['us'])
+    async def _update_spreadsheets(self, ctx, current_season: int, fill: bool = False):
+        current_season -= 1
+        await self.save_json_range(current_season, fill)
+        await self.update_spreadsheets([current_season], fill)
+        await ctx.send("Spreadsheets updated.")
+
+    @commands.command(name="tu")
+    async def _tu(self, ctx):
+        gc = gspread.service_account()
+        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season9"])
+        m_worksheet = sheet.worksheet(spreadsheet_names['57ec08cc-0411-4643-b304-0e80dbc15ac7']["matchups"])
+        m_worksheet.update(f"B16:B16", [['=SUM(FILTER(D3:D14,E3:E14="Division"))']], raw=False)
+
+
+    @commands.command(name="anc")
+    async def _anc(self, ctx):
+        html_response = await utils.retry_request('https://www.blaseball.com/database/allteams')
+        if not html_response:
+            return await ctx.send("Failed to acquire team data.")
+        team_data = html_response.json()
+        for team in team_data:
+            out_str = ""
+            players = team['bullpen']
+            html_response = await utils.retry_request(f'https://www.blaseball.com/database/players?ids={",".join(players)}')
+            if not html_response:
+                return await ctx.send("Failed to acquire player data.")
+            player_data = html_response.json()
+            for player in player_data:
+                out_str += f"{team['nickname']}\t{player['name']}\tbullpen\n"
+
+            players= team['bench']
+            html_response = await utils.retry_request(
+                f'https://www.blaseball.com/database/players?ids={",".join(players)}')
+            if not html_response:
+                return await ctx.send("Failed to acquire player data.")
+            player_data = html_response.json()
+            for player in player_data:
+                out_str += f"{team['nickname']}\t{player['name']}\tbench\n"
+            print(out_str)
+            #     anticap += player['anticapitalism']
+            # anticap /= len(player_data)
+            # print(f"{team['nickname']}: {anticap}")
+
+
+def setup(bot):
+    bot.add_cog(GameData(bot))
