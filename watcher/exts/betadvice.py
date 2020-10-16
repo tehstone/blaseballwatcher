@@ -206,9 +206,6 @@ class BetAdvice(commands.Cog):
             url = "https://discordapp.com/api/webhooks/763892125170663426/ChsDDSABlFfx8dXkQfJ52iNVphO7Msc7r_7Pioy2hAuSdp-5qwO8Jz1faoe4sMkaYpxc"
             await self.send_to_webhook(message, embed_fields, url)
 
-            # other
-            #await self.send_to_webhook(message, embed_fields, url)
-
             return message, embed_fields
 
     @staticmethod

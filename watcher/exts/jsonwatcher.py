@@ -31,9 +31,7 @@ class JsonWatcher(commands.Cog):
         await self.check_for_comprehensive_updates()
 
     async def check_for_field_updates(self):
-        # test 740069136650207295
-        # prod 740637645691945044
-        output_channel = self.bot.get_channel(740069136650207295)
+        output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
         if not html_response:
             self.bot.logger.warn('Failed to acquire sim data')
@@ -131,9 +129,7 @@ class JsonWatcher(commands.Cog):
             self.bot.logger.warn('Failed to acquire league data. Cascading failure to subleague')
 
     async def check_for_comprehensive_updates(self):
-        # test 740069136650207295
-        # prod 740637645691945044
-        output_channel = self.bot.get_channel(740069136650207295)
+        output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
         with open(os.path.join("json_data", "allteams.json"), encoding='utf-8') as json_file:
             current_allteams = json.load(json_file)
         try:
@@ -155,9 +151,7 @@ class JsonWatcher(commands.Cog):
             self.bot.logger.warn(f'Failed to acquire allteams data: {e}')
 
     async def check_for_content_updates(self):
-        # test 740069136650207295
-        # prod 740637645691945044
-        output_channel = self.bot.get_channel(740069136650207295)
+        output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
 
         with open(os.path.join("json_data", "simulationdata.json"), encoding='utf-8') as json_file:
             simulationdata_json = json.load(json_file)
@@ -208,6 +202,17 @@ class JsonWatcher(commands.Cog):
                     await output_channel.send(content='Tiebreakers have changed!',
                                               file=discord.File(logfile,
                                                                 filename=f'tiebreakers{int(time.time())}.json'))
+                await self.update_bot_tiebreakers(new_ties_json)
+
+    async def update_bot_tiebreakers(self, new_ties_json):
+        favor_rankings = {}
+        position = 0
+        for team in new_ties_json["order"]:
+            team_name = self.bot.team_names[team]
+            favor_rankings[team_name] = position
+            position += 1
+        self.bot.config['favor_rankings'] = favor_rankings
+        await self.save()
 
     @staticmethod
     async def check_for_division_changes(old_divisions, new_divisions):

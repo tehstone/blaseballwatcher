@@ -14,7 +14,6 @@ from urllib.parse import urljoin
 from discord.ext import commands
 
 from watcher import utils, parse_blaseball_book
-from watcher.exts import admincommands
 from watcher.exts.db.watcher_db import WatcherDB
 
 
@@ -66,9 +65,7 @@ class RulesWatcher(commands.Cog):
         watch_list = self.bot.config.setdefault('player_watch_list', ["3a96d76a-c508-45a0-94a0-8f64cd6beeb4",
                                                                       "1f159bab-923a-4811-b6fa-02bfde50925a"])
         url = f"https://www.blaseball.com/database/players?ids={','.join(watch_list)}"
-        # test 740069136650207295
-        # prod 740637645691945044
-        output_channel = self.bot.get_channel(740069136650207295)
+        output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
         html_response = await utils.retry_request(url)
         if html_response:
             for player in html_response.json():
@@ -228,25 +225,20 @@ class RulesWatcher(commands.Cog):
 
     async def check_book_loop(self):
         while not self.bot.is_closed():
-            iguild_id = None
-            for guild_id in self.bot.guild_dict.keys():
-                iguild_id = guild_id
-                messages, filename = await self._check_for_rules_update()
-                output_channel_id = self.bot.guild_dict[guild_id]['configure_dict'].setdefault('notify_channel', None)
-                if output_channel_id:
-                    output_channel = self.bot.get_channel(output_channel_id)
-                    if output_channel:
-                        for m in messages:
-                            if m not in self.no_reply_messages:
-                                await output_channel.send(m)
-                            self.bot.logger.info(m)
-                        if filename:
-                            with open(os.path.join('diffs', filename), 'rb') as logfile:
-                                await output_channel.send(file=discord.File(logfile, filename=filename))
-                # if this bot ever runs on more than 1 server this will need to be changed
-            interval = self.bot.guild_dict[iguild_id]['configure_dict'] \
-                .setdefault('interval_minutes', self.default_interval_minutes)
+            messages, filename = await self._check_for_rules_update()
+            output_channel_id = self.bot.config['notify_channel']
+            if output_channel_id:
+                output_channel = self.bot.get_channel(output_channel_id)
+                if output_channel:
+                    for m in messages:
+                        if m not in self.no_reply_messages:
+                            await output_channel.send(m)
+                        self.bot.logger.info(m)
+                    if filename:
+                        with open(os.path.join('diffs', filename), 'rb') as logfile:
+                            await output_channel.send(file=discord.File(logfile, filename=filename))
 
+            interval = self.bot.config['player_change_interval']
             await self.save()
             await asyncio.sleep(interval * 60)
 

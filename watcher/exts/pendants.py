@@ -3,9 +3,6 @@ import itertools
 import json
 import os
 
-import operator
-from collections import Counter
-
 import discord
 import gspread
 import requests
@@ -98,115 +95,111 @@ class Pendants(commands.Cog):
         players_list = player_statsheets.json()
         for p_values in players_list:
             p_values["rotation_changed"] = False
-            if day == 0 and p_values["name"] in []:
-                # ["Gunther O'Brian","Stephanie Winters","Logan Rodriguez","Orville Manco","Nicholas Mora","Stevenson Heat","Patty Fox","Rivers Clembons","Sexton Wheerer","Theodore Holloway","Sandford Garner","Lowe Forbes","Yazmin Mason","Tot Clark","Greer Lott","Oscar Vaughan","Zack Sanders","Zeboriah Wilson","Axel Trololol","Caleb Alvarado"]:
-                a = 1 + 1
-            else:
-                if p_values["outsRecorded"] >= 24 and p_values["earnedRuns"] <= 0:
-                    opp_id = game_team_map[p_values["teamId"]]["opponent"]
-                    if opp_id not in team_stats:
-                        team_stats[opp_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0, "struckout": 0}
-                    team_stats[opp_id]["shutout"] += 1
-                    if p_values['hitsAllowed'] == 0:
-                        if p_values['walksIssued'] == 0:
-                            p_values['perfectGame'] = 1
-                            notable["perfect"][p_values["playerId"]] = {
-                                "name": p_values["name"],
-                                "strikeouts": p_values["strikeouts"],
-                                "outsRecorded": p_values["outsRecorded"],
-                                "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                                "statsheet_id": p_values["id"]
-                            }
-                        else:
-                            p_values['nohitter'] = 1
-                            notable["nohitter"][p_values["playerId"]] = {
-                                "name": p_values["name"],
-                                "strikeouts": p_values["strikeouts"],
-                                "outsRecorded": p_values["outsRecorded"],
-                                "walksIssued": p_values['walksIssued'],
-                                "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                                "statsheet_id": p_values["id"]
-                            }
+            if p_values["outsRecorded"] >= 24 and p_values["earnedRuns"] <= 0:
+                opp_id = game_team_map[p_values["teamId"]]["opponent"]
+                if opp_id not in team_stats:
+                    team_stats[opp_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0, "struckout": 0}
+                team_stats[opp_id]["shutout"] += 1
+                if p_values['hitsAllowed'] == 0:
+                    if p_values['walksIssued'] == 0:
+                        p_values['perfectGame'] = 1
+                        notable["perfect"][p_values["playerId"]] = {
+                            "name": p_values["name"],
+                            "strikeouts": p_values["strikeouts"],
+                            "outsRecorded": p_values["outsRecorded"],
+                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                            "statsheet_id": p_values["id"]
+                        }
                     else:
-                        p_values["shutout"] = 1
-                        notable["shutout"][p_values["playerId"]] = {
+                        p_values['nohitter'] = 1
+                        notable["nohitter"][p_values["playerId"]] = {
                             "name": p_values["name"],
                             "strikeouts": p_values["strikeouts"],
                             "outsRecorded": p_values["outsRecorded"],
                             "walksIssued": p_values['walksIssued'],
-                            "hitsAllowed": p_values['hitsAllowed'],
                             "game_id": game_team_map[p_values["teamId"]]["game_id"],
                             "statsheet_id": p_values["id"]
                         }
-                if p_values["outsRecorded"] > 0:
-                    p_values["position"] = "rotation"
-                    rot = (day + 1) % 5
-                    if rot == 0:
-                        rot = 5
-                    p_values["rotation"] = rot
-                    if p_values["playerId"] in pitching_rotations:
-                        if pitching_rotations[p_values["playerId"]] != rot:
-                            p_values["rotation_changed"] = True
-                        pitching_rotations[p_values["playerId"]] = rot
-                    else:
-                        pitching_rotations[p_values["playerId"]] = rot
-                    if "shutout" not in p_values:
-                        p_values["shutout"] = 0
                 else:
-                    p_values["position"] = "lineup"
-                    team_id = p_values["teamId"]
-                    if team_id not in team_stats:
-                        team_stats[team_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0, "struckout": 0}
-                    team_stats[team_id]["at_bats"] += p_values["atBats"]
-                    if "plate_appearances" not in team_stats[team_id]:
-                        team_stats[team_id]["plate_appearances"] = 0
-                    team_stats[team_id]["plate_appearances"] += p_values["atBats"] + p_values["walks"] \
-                                                              + p_values["hitByPitch"]
-                    team_stats[team_id]["struckouts"] += p_values["struckouts"]
-
-                    if p_values["hits"] >= 4:
-                        if p_values["homeRuns"] > 0 and p_values["doubles"] > 0 and p_values["triples"] > 0 and \
-                                p_values["hits"] - p_values["homeRuns"] - p_values["doubles"] - p_values["triples"] > 0:
-                            notable["cycle"][p_values["playerId"]] = {
-                                "name": p_values["name"],
-                                "atBats": p_values["atBats"],
-                                "hits": p_values["hits"],
-                                "homeRuns": p_values["homeRuns"],
-                                "doubles": p_values["doubles"],
-                                "triples": p_values["triples"],
-                                "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                                "statsheet_id": p_values["id"]
-                            }
-                            print("Cycle")
-                        if p_values["hits"] >= 6:
-                            print("bighits")
-                            notable["bighits"][p_values["playerId"]] = {
-                                "name": p_values["name"],
-                                "atBats": p_values["atBats"],
-                                "hits": p_values["hits"],
-                                "homeRuns": p_values["homeRuns"],
-                                "doubles": p_values["doubles"],
-                                "triples": p_values["triples"],
-                                "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                                "statsheet_id": p_values["id"]
-                            }
-                        if p_values["homeRuns"] >= 4:
-                            print("4homerun")
-                            notable["4homerun"][p_values["playerId"]] = {
-                                "name": p_values["name"],
-                                "atBats": p_values["atBats"],
-                                "hits": p_values["hits"],
-                                "homeRuns": p_values["homeRuns"],
-                                "doubles": p_values["doubles"],
-                                "triples": p_values["triples"],
-                                "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                                "statsheet_id": p_values["id"]
-                            }
-                if "rotation" not in p_values:
-                    p_values["rotation"] = -1
+                    p_values["shutout"] = 1
+                    notable["shutout"][p_values["playerId"]] = {
+                        "name": p_values["name"],
+                        "strikeouts": p_values["strikeouts"],
+                        "outsRecorded": p_values["outsRecorded"],
+                        "walksIssued": p_values['walksIssued'],
+                        "hitsAllowed": p_values['hitsAllowed'],
+                        "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                        "statsheet_id": p_values["id"]
+                    }
+            if p_values["outsRecorded"] > 0:
+                p_values["position"] = "rotation"
+                rot = (day + 1) % 5
+                if rot == 0:
+                    rot = 5
+                p_values["rotation"] = rot
+                if p_values["playerId"] in pitching_rotations:
+                    if pitching_rotations[p_values["playerId"]] != rot:
+                        p_values["rotation_changed"] = True
+                    pitching_rotations[p_values["playerId"]] = rot
+                else:
+                    pitching_rotations[p_values["playerId"]] = rot
                 if "shutout" not in p_values:
-                    p_values["shutout"] = -1
-                statsheets[p_values["id"]] = p_values
+                    p_values["shutout"] = 0
+            else:
+                p_values["position"] = "lineup"
+                team_id = p_values["teamId"]
+                if team_id not in team_stats:
+                    team_stats[team_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0, "struckout": 0}
+                team_stats[team_id]["at_bats"] += p_values["atBats"]
+                if "plate_appearances" not in team_stats[team_id]:
+                    team_stats[team_id]["plate_appearances"] = 0
+                team_stats[team_id]["plate_appearances"] += p_values["atBats"] + p_values["walks"] \
+                                                          + p_values["hitByPitch"]
+                team_stats[team_id]["struckouts"] += p_values["struckouts"]
+
+                if p_values["hits"] >= 4:
+                    if p_values["homeRuns"] > 0 and p_values["doubles"] > 0 and p_values["triples"] > 0 and \
+                            p_values["hits"] - p_values["homeRuns"] - p_values["doubles"] - p_values["triples"] > 0:
+                        notable["cycle"][p_values["playerId"]] = {
+                            "name": p_values["name"],
+                            "atBats": p_values["atBats"],
+                            "hits": p_values["hits"],
+                            "homeRuns": p_values["homeRuns"],
+                            "doubles": p_values["doubles"],
+                            "triples": p_values["triples"],
+                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                            "statsheet_id": p_values["id"]
+                        }
+                        print("Cycle")
+                    if p_values["hits"] >= 6:
+                        print("bighits")
+                        notable["bighits"][p_values["playerId"]] = {
+                            "name": p_values["name"],
+                            "atBats": p_values["atBats"],
+                            "hits": p_values["hits"],
+                            "homeRuns": p_values["homeRuns"],
+                            "doubles": p_values["doubles"],
+                            "triples": p_values["triples"],
+                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                            "statsheet_id": p_values["id"]
+                        }
+                    if p_values["homeRuns"] >= 4:
+                        print("4homerun")
+                        notable["4homerun"][p_values["playerId"]] = {
+                            "name": p_values["name"],
+                            "atBats": p_values["atBats"],
+                            "hits": p_values["hits"],
+                            "homeRuns": p_values["homeRuns"],
+                            "doubles": p_values["doubles"],
+                            "triples": p_values["triples"],
+                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                            "statsheet_id": p_values["id"]
+                        }
+            if "rotation" not in p_values:
+                p_values["rotation"] = -1
+            if "shutout" not in p_values:
+                p_values["shutout"] = -1
+            statsheets[p_values["id"]] = p_values
         return notable
 
     def print_top(self, player_dict, key, count=10, avg=False):
