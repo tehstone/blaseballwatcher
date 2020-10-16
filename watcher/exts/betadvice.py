@@ -232,14 +232,13 @@ class BetAdvice(commands.Cog):
                     at_bats += all_players[player]["atBats"]
         pitcher["opponentSOAvg"] = round((struckouts / at_bats) * 1000) / 1000
 
-    @commands.command(aliases=['tdm'])
-    async def _testdm(self, ctx):
-        message, embed_fields = await self.daily_message()
-        m_embed = discord.Embed(description=message)
-        for field in embed_fields:
-            m_embed.add_field(name=field["name"], value=field["value"])
-        output = await ctx.send(message, embed=m_embed)
-        await output.publish()
+    @commands.command(name='set_bet_channel', aliases=['sbc'])
+    async def _set_bet_channel(self, ctx, item):
+        output_channel = await utils.get_channel_by_name_or_id(ctx, item)
+        if output_channel is None:
+            return await ctx.message.add_reaction(self.bot.failed_react)
+        self.bot.config['bet_channel'] = output_channel.id
+        return await ctx.message.add_reaction(self.bot.success_react)
 
 
 def setup(bot):

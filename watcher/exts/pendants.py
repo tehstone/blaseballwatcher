@@ -9,6 +9,8 @@ import requests
 from discord.ext import commands
 from requests import Timeout
 
+from watcher import utils
+
 PM_ID = "de21c97e-f575-43b7-8be7-ecc5d8c4eaff"
 WHEERER_ID = "0bb35615-63f2-4492-80ec-b6b322dc5450"
 MOVING_PLAYER_IDS = [
@@ -222,10 +224,9 @@ class Pendants(commands.Cog):
 
     async def get_latest_pendant_data(self, guild_id, current_season):
         current_season -= 1
-        oc_id = self.bot.guild_dict[guild_id]['configure_dict'].get('output_channel', None)
-        output_channel = None
-        if oc_id:
-            output_channel = self.bot.get_channel(oc_id)
+        stats_chan_id = self.bot.config['stats_channel']
+        if stats_chan_id:
+            output_channel = self.bot.get_channel(stats_chan_id)
         all_statsheets = []
         try:
             with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
@@ -367,15 +368,14 @@ class Pendants(commands.Cog):
                             daily_message += message
                             game_watcher_messages.append(message)
                 if output_channel:
-                    msg_embed = discord.Embed(description=daily_message)
+                    msg_embed = discord.Embed()
+                    for message in game_watcher_messages:
+                        msg_embed += message + "\n"
                     await output_channel.send(embed=msg_embed)
                 if len(game_watcher_messages) > 0:
-                    url = "https://discordapp.com/api/webhooks/758380547532652615/c8d8gwbuieggAQy8JPX69AaSNXjb2QkW4C0GIE2Pb6gLTmnUxVXYpg_GyC99G0uZKFxZ"
-                    embeds = []
-                    for message in game_watcher_messages:
-                        embeds.append({"description": message})
+                    url = "https://discordapp.com/api/webhooks/742597115494006784/JUcT8Un1wcS7AV2Bgj-w0Ldx956zQDDUhDWRu95qeIq2xaOrg4wk_ZTIX9QVK5t2sCKM"
                     data = {"content": "", "avatar_url": "https://i.imgur.com/tX3ECh6.png",
-                            "embeds": embeds
+                            "embeds": [{"description": daily_message}]
                             }
                     result = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"})
 
@@ -537,6 +537,14 @@ class Pendants(commands.Cog):
     @commands.command(aliases=['sld'])
     async def _set_latest_day(self, ctx, day: int):
         self.bot.config['DAILY_STATS_LAST_DAY'] = day
+        return await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(name='set_stats_channel', aliases=['stc'])
+    async def _set_stats_channel(self, ctx, item):
+        output_channel = await utils.get_channel_by_name_or_id(ctx, item)
+        if output_channel is None:
+            return await ctx.message.add_reaction(self.bot.failed_react)
+        self.bot.config['stats_channel'] = output_channel.id
         return await ctx.message.add_reaction(self.bot.success_react)
 
 

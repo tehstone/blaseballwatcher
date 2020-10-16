@@ -3,6 +3,8 @@ import os
 import pickle
 import sys
 
+import requests
+
 from watcher.logs import init_loggers
 from watcher.errors import custom_error_handling
 
@@ -128,14 +130,13 @@ class WatcherBot(commands.AutoShardedBot):
         if message.type == discord.MessageType.pins_add and message.author == self.user:
             return await message.delete()
         if "Go Bet!" in message.clean_content:
-            oc_id = self.guild_dict[message.guild.id]['configure_dict'].get('output_channel', None)
+            bet_chan_id = self.config['bet_channel']
             current_season = self.config['current_season']
             pendant_cog = self.cogs.get('Pendants')
+            url = "https://discordapp.com/api/webhooks/742597115494006784/JUcT8Un1wcS7AV2Bgj-w0Ldx956zQDDUhDWRu95qeIq2xaOrg4wk_ZTIX9QVK5t2sCKM"
             try:
                 await pendant_cog.get_latest_pendant_data(message.guild.id, current_season)
-                if oc_id:
-                    output_channel = self.get_channel(oc_id)
-                    await output_channel.send("Pendant sheet updated.")
+                await self.send_to_webhook("Pendant sheet updated.", url)
             except Exception as e:
                 self.logger.warn(f"Failed to get latest pendant data: {e}")
             try:
@@ -149,22 +150,34 @@ class WatcherBot(commands.AutoShardedBot):
                 m_embed = discord.Embed(description=message)
                 for field in embed_fields:
                     m_embed.add_field(name=field["name"], value=field["value"])
-                if oc_id:
-                    output_channel = self.get_channel(oc_id)
-                    await output_channel.send(message, embed=m_embed)
+                if bet_chan_id:
+                    output_channel = self.get_channel(bet_chan_id)
+                    bet_msg = await output_channel.send(message, embed=m_embed)
+                    await bet_msg.publish()
             except Exception as e:
                 self.logger.warn(f"Failed to send pendant picks: {e}")
 
             gamedata_cog = self.cogs.get('GameData')
             await gamedata_cog.save_json_range(current_season-1)
             await gamedata_cog.update_spreadsheets([current_season-1])
-
-            if oc_id:
-                output_channel = self.get_channel(oc_id)
-                await output_channel.send("Spreadsheets updated.")
+            await self.send_to_webhook("Spreadsheets updated.", url)
 
         elif not message.author.bot:
             await self.process_commands(message)
+
+    @staticmethod
+    async def send_to_webhook(message, url, embed_fields=None):
+        data = {"content": message, "avatar_url": "https://i.imgur.com/q9OOb63.png"}
+        if embed_fields:
+            data["embeds"] = [{"fields": embed_fields}]
+        result = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"})
+
+        try:
+            result.raise_for_status()
+        except requests.exceptions.HTTPError as err:
+            print(err)
+        else:
+            print("Payload delivered successfully, code {}.".format(result.status_code))
 
     async def process_commands(self, message):
         """Processes commands that are registered with the bot and it's groups.
