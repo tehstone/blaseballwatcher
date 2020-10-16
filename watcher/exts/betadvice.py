@@ -203,8 +203,8 @@ class BetAdvice(commands.Cog):
             # url = "https://discordapp.com/api/webhooks/758417639068008511/FWS-4KvHXEc40rTVommWHvt4zMjiKzoNM51H5SxWd0jxg5eLCoC2scTYOes0GGdTxaip"
             # await self.send_to_webhook(message, embed_fields, url)
             # sibr
-            url = "https://discordapp.com/api/webhooks/763892125170663426/ChsDDSABlFfx8dXkQfJ52iNVphO7Msc7r_7Pioy2hAuSdp-5qwO8Jz1faoe4sMkaYpxc"
-            await self.send_to_webhook(message, embed_fields, url)
+            # url = "https://discordapp.com/api/webhooks/763892125170663426/ChsDDSABlFfx8dXkQfJ52iNVphO7Msc7r_7Pioy2hAuSdp-5qwO8Jz1faoe4sMkaYpxc"
+            # await self.send_to_webhook(message, embed_fields, url)
 
             return message, embed_fields
 

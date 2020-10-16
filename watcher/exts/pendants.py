@@ -240,10 +240,9 @@ class Pendants(commands.Cog):
             last_day = max(last_day, day['day'])
         latest_day = last_day + 1
         notable = 1
-        if last_day < 99:
-            while notable:
-                notable = await self.get_daily_stats(all_statsheets, latest_day, current_season)
-                latest_day += 1
+        while notable:
+            notable = await self.get_daily_stats(all_statsheets, latest_day, current_season)
+            latest_day += 1
 
         for day in all_statsheets:
             if day['season'] != current_season:
