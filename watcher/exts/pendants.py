@@ -222,8 +222,9 @@ class Pendants(commands.Cog):
                 break
         return message
 
-    async def get_latest_pendant_data(self, guild_id, current_season):
+    async def get_latest_pendant_data(self, current_season):
         current_season -= 1
+        output_channel = None
         stats_chan_id = self.bot.config['stats_channel']
         if stats_chan_id:
             output_channel = self.bot.get_channel(stats_chan_id)
@@ -371,19 +372,13 @@ class Pendants(commands.Cog):
                     for message in game_watcher_messages:
                         msg_embed += message + "\n"
                     await output_channel.send(embed=msg_embed)
-                if len(game_watcher_messages) > 0:
-                    url = "https://discordapp.com/api/webhooks/742597115494006784/JUcT8Un1wcS7AV2Bgj-w0Ldx956zQDDUhDWRu95qeIq2xaOrg4wk_ZTIX9QVK5t2sCKM"
-                    data = {"content": "", "avatar_url": "https://i.imgur.com/tX3ECh6.png",
-                            "embeds": [{"description": daily_message}]
-                            }
-                    result = requests.post(url, data=json.dumps(data), headers={"Content-Type": "application/json"})
-
-                    try:
-                        result.raise_for_status()
-                    except requests.exceptions.HTTPError as err:
-                        print(err)
-                    else:
-                        print("Payload delivered successfully, code {}.".format(result.status_code))
+                if len(daily_message) > 0:
+                    debug_chan_id = self.bot.config.setdefault('debug_channel', None)
+                    debug_channel = None
+                    if debug_chan_id:
+                        debug_channel = self.bot.get_channel(debug_chan_id)
+                    if debug_channel:
+                        await debug_channel.send(daily_message)
 
     async def compile_stats(self):
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
@@ -395,7 +390,10 @@ class Pendants(commands.Cog):
                 if player["playerId"] not in players:
                     players[player["playerId"]] = player
                 else:
-                    for key in ["atBats", "struckouts", "hits", "homeRuns", "outsRecorded", "strikeouts", "shutout"]:
+                    for key in ["atBats", "caughtStealing", "doubles", "earnedRuns", "groundIntoDp", "hits",
+                                "hitsAllowed", "homeRuns", "losses", "outsRecorded", "rbis", "runs", "stolenBases",
+                                "strikeouts", "struckouts", "triples", "walks", "walksIssued", "wins",
+                                "hitByPitch", "hitBatters"]:
                         if key in player:
                             if key in players[player["playerId"]]:
                                 players[player["playerId"]][key] += player[key]
@@ -529,7 +527,7 @@ class Pendants(commands.Cog):
 
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):
-        await self.get_latest_pendant_data(ctx.guild.id, season)
+        await self.get_latest_pendant_data(season)
         await self.update_leaders_sheet(season)
         await ctx.message.add_reaction(self.bot.success_react)
 

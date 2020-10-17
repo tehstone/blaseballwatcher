@@ -21,7 +21,9 @@ class RulesWatcher(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.default_interval_minutes = 10
-        self.no_reply_messages = ["No change to Rule Book text.", "Failed to find a js URL."]
+        self.no_reply_messages = ["No change to Rule Book text.",
+                                  "Failed to find a js URL.",
+                                  "Failed to obtain most recent page text."]
 
     @commands.command(name='set_notify_channel', aliases=['snc'])
     async def _set_notify_channel(self, ctx, item):
@@ -29,6 +31,14 @@ class RulesWatcher(commands.Cog):
         if output_channel is None:
             return await ctx.message.add_reaction(self.bot.failed_react)
         self.bot.config['notify_channel'] = output_channel.id
+        return await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(name='_set_debug_channel', aliases=['sdb'])
+    async def _set_debug_channel(self, ctx, item):
+        output_channel = await utils.get_channel_by_name_or_id(ctx, item)
+        if output_channel is None:
+            return await ctx.message.add_reaction(self.bot.failed_react)
+        self.bot.config['debug_channel'] = output_channel.id
         return await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(name='set_update_interval', aliases=['sui'])

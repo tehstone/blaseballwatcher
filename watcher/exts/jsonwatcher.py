@@ -103,9 +103,9 @@ class JsonWatcher(commands.Cog):
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json[0], player_json[0], output_channel, "player")
             self.save_files(cur_json, "player.json", changed)
-        except:
+        except Exception as e:
             self.bot.logger.warn('Failed to acquire game data, cascading failures to gamestatsheet, '
-                                 'teamstatsheet, playerstatsheet, player')
+                                 f'teamstatsheet, playerstatsheet, player\n{e}')
 
         try:
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/league?id={league_id}")

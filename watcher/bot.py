@@ -129,38 +129,44 @@ class WatcherBot(commands.AutoShardedBot):
     async def on_message(self, message):
         if message.type == discord.MessageType.pins_add and message.author == self.user:
             return await message.delete()
-        if "Go Bet!" in message.clean_content:
-            bet_chan_id = self.config['bet_channel']
-            current_season = self.config['current_season']
-            pendant_cog = self.cogs.get('Pendants')
-            url = "https://discordapp.com/api/webhooks/742597115494006784/JUcT8Un1wcS7AV2Bgj-w0Ldx956zQDDUhDWRu95qeIq2xaOrg4wk_ZTIX9QVK5t2sCKM"
-            try:
-                await pendant_cog.get_latest_pendant_data(message.guild.id, current_season)
-                await self.send_to_webhook("Pendant sheet updated.", url)
-            except Exception as e:
-                self.logger.warn(f"Failed to get latest pendant data: {e}")
-            try:
-                await pendant_cog.update_leaders_sheet(current_season)
-            except Exception as e:
-                self.logger.warn(f"Failed to update pendant leaders: {e}")
+        debug_chan_id = self.config.setdefault('debug_channel', None)
+        debug_channel = None
+        if debug_chan_id:
+            debug_channel = self.get_channel(debug_chan_id)
+        if debug_channel and message.channel == debug_channel:
+            if "Go Bet!" in message.clean_content:
+                bet_chan_id = self.config['bet_channel']
+                current_season = self.config['current_season']
+                pendant_cog = self.cogs.get('Pendants')
+                try:
+                    await pendant_cog.get_latest_pendant_data(current_season)
+                    if debug_channel:
+                        await debug_channel.send("Pendant sheet updated.")
+                except Exception as e:
+                    self.logger.warn(f"Failed to get latest pendant data: {e}")
+                try:
+                    await pendant_cog.update_leaders_sheet(current_season)
+                except Exception as e:
+                    self.logger.warn(f"Failed to update pendant leaders: {e}")
 
-            betadvice_cog = self.cogs.get('BetAdvice')
-            try:
-                message, embed_fields = await betadvice_cog.daily_message()
-                m_embed = discord.Embed(description=message)
-                for field in embed_fields:
-                    m_embed.add_field(name=field["name"], value=field["value"])
-                if bet_chan_id:
-                    output_channel = self.get_channel(bet_chan_id)
-                    bet_msg = await output_channel.send(message, embed=m_embed)
-                    await bet_msg.publish()
-            except Exception as e:
-                self.logger.warn(f"Failed to send pendant picks: {e}")
+                betadvice_cog = self.cogs.get('BetAdvice')
+                try:
+                    message, embed_fields = await betadvice_cog.daily_message()
+                    m_embed = discord.Embed(description=message)
+                    for field in embed_fields:
+                        m_embed.add_field(name=field["name"], value=field["value"])
+                    if bet_chan_id:
+                        output_channel = self.get_channel(bet_chan_id)
+                        bet_msg = await output_channel.send(message, embed=m_embed)
+                        await bet_msg.publish()
+                except Exception as e:
+                    self.logger.warn(f"Failed to send pendant picks: {e}")
 
-            gamedata_cog = self.cogs.get('GameData')
-            await gamedata_cog.save_json_range(current_season-1)
-            await gamedata_cog.update_spreadsheets([current_season-1])
-            await self.send_to_webhook("Spreadsheets updated.", url)
+                gamedata_cog = self.cogs.get('GameData')
+                await gamedata_cog.save_json_range(current_season-1)
+                await gamedata_cog.update_spreadsheets([current_season-1])
+                if debug_channel:
+                    await debug_channel.send("Spreadsheets updated.")
 
         elif not message.author.bot:
             await self.process_commands(message)
