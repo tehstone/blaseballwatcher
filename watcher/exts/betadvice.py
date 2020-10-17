@@ -180,7 +180,7 @@ class BetAdvice(commands.Cog):
         values = pitcher_dict[top_list[0]]
         opponent = self.bot.team_names[values['opponent']]
         sho_message = f"{values['name']} vs. {opponent}"
-        if opponent != "Fridays":
+        if opponent != "Fridays" and day < 99:
             sho_message += "\n(or whoever's pitching against the Fridays)"
         embed_fields.append({"name": "Most likely shutout",
                              "value": sho_message})
@@ -192,11 +192,6 @@ class BetAdvice(commands.Cog):
         r_message += "||"
         embed_fields.append({"name": "||Top by Ruthlessness||",
                              "value": r_message})
-
-        # watch blasebot
-        if self.bot.config['live_version']:
-            url = "https://discordapp.com/api/webhooks/763805364684587038/IP_Uv3Ro0bR1Cdae4T87CTeTtoVjdhuaXChi0_hjCr1VclrKLyYp5-pOPFSGyCtAc-S5"
-            await self.send_to_webhook(message, embed_fields, url)
 
         return message, embed_fields
 
