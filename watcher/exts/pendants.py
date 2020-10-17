@@ -250,17 +250,17 @@ class Pendants(commands.Cog):
                 continue
             if day['day'] > last_day:
                 players = day['statsheets']
-                daily_message = ""
+                daily_message = f"Daily leaders for day {day['day']+1}"
                 sorted_hits = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['hits'], reverse=True)}
                 sorted_homeruns = {k: v for k, v in
                                    sorted(players.items(), key=lambda item: item[1]['homeRuns'], reverse=True)}
-                daily_message += f"\n**Daily Hit leaders**\n{self.print_top(sorted_hits, 'hits', 5)}"
-                daily_message += f"\n**Daily Home Run leaders**\n{self.print_top(sorted_homeruns, 'homeRuns', 5)}"
+                daily_message += f"\n**Hit leaders**\n{self.print_top(sorted_hits, 'hits', 5)}"
+                daily_message += f"\n**Home Run leaders**\n{self.print_top(sorted_homeruns, 'homeRuns', 5)}"
 
                 sorted_strikeouts = {k: v for k, v in
                                      sorted(players.items(), key=lambda item: item[1]['strikeouts'],
                                             reverse=True)}
-                daily_message += f"\n**Daily Strikeout leaders**\n{self.print_top(sorted_strikeouts, 'strikeouts', 5, True)}"
+                daily_message += f"\n**Strikeout leaders**\n{self.print_top(sorted_strikeouts, 'strikeouts', 5, True)}"
                 game_watcher_messages = []
                 if 'notable' in day:
                     notable = day['notable']
