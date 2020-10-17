@@ -125,6 +125,8 @@ class WatcherBot(commands.AutoShardedBot):
             self.config = json.load(fd)
         if 'current_season' not in self.config:
             self.config['current_season'] = 9
+        if 'live_version' not in self.config:
+            self.config['live_version'] = True
 
     async def on_message(self, message):
         if message.type == discord.MessageType.pins_add and message.author == self.user:
@@ -133,15 +135,15 @@ class WatcherBot(commands.AutoShardedBot):
         debug_channel = None
         if debug_chan_id:
             debug_channel = self.get_channel(debug_chan_id)
-        if debug_channel and message.channel == debug_channel:
-            if "Go Bet!" in message.clean_content:
+        if debug_channel and message.channel == debug_channel \
+            and "Go Bet!" in message.clean_content:
                 bet_chan_id = self.config['bet_channel']
                 current_season = self.config['current_season']
                 pendant_cog = self.cogs.get('Pendants')
                 try:
                     await pendant_cog.get_latest_pendant_data(current_season)
                     if debug_channel:
-                        await debug_channel.send("Pendant sheet updated.")
+                        await debug_channel.send("Pendant data updated.")
                 except Exception as e:
                     self.logger.warn(f"Failed to get latest pendant data: {e}")
                 try:

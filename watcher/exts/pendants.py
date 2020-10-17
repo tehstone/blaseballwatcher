@@ -49,7 +49,7 @@ class Pendants(commands.Cog):
             team_stats = json.load(file)
         games = await self.retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
         for game in games.json():
-            if not game["gameComplete"]:
+            if not game["gameComplete"] and game["day"] != 101:
                 return None
         game_team_map = {}
         for game in games.json():
@@ -367,7 +367,7 @@ class Pendants(commands.Cog):
                             message += "\n"
                             daily_message += message
                             game_watcher_messages.append(message)
-                if output_channel:
+                if output_channel and len(game_watcher_messages) > 0:
                     msg_embed = discord.Embed()
                     for message in game_watcher_messages:
                         msg_embed += message + "\n"

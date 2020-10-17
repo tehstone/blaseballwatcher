@@ -408,7 +408,8 @@ class GameData(commands.Cog):
                 indices_to_add = len(srows[0]) - len(summary_row)
                 summary_row += [''] * indices_to_add
                 srows.insert(0, summary_row)
-                s_worksheet.update(f"A{2}:Q{i+1}", srows)
+                if self.bot.config['live_version']:
+                    s_worksheet.update(f"A{2}:Q{i+1}", srows)
 
                 if fill:
                     for opp in team_series:
@@ -417,23 +418,26 @@ class GameData(commands.Cog):
                                team_series[opp]['home'], team_series[opp]['away']]
                         mrows.append(row)
                         j += 1
-                    m_worksheet.update(f"A{3}:G{j}", mrows)
+                    if self.bot.config['live_version']:
+                        m_worksheet.update(f"A{3}:G{j}", mrows)
 
                     k = 16
                     if j >= 16:
                         k = j + 1
-                    m_worksheet.update(f"B{k}:B{k+2}",
-                                       [[f'=SUM(FILTER(D3:D{j},E3:E{j}="Division"))'],
-                                        [f'=SUM(FILTER(D3:D{j},E3:E{j}="League"))'],
-                                        [f'=SUM(FILTER(D3:D{j},E3:E{j}="InterLeague"))']
-                                        ], raw=False)
-                    m_worksheet.update(f"F{k}:F{k+1}", [[f'=sum(F3:F{j})'], [f'=sum(G3:G{j})']], raw=False)
+                    if self.bot.config['live_version']:
+                        m_worksheet.update(f"B{k}:B{k+2}",
+                                           [[f'=SUM(FILTER(D3:D{j},E3:E{j}="Division"))'],
+                                            [f'=SUM(FILTER(D3:D{j},E3:E{j}="League"))'],
+                                            [f'=SUM(FILTER(D3:D{j},E3:E{j}="InterLeague"))']
+                                            ], raw=False)
+                        m_worksheet.update(f"F{k}:F{k+1}", [[f'=sum(F3:F{j})'], [f'=sum(G3:G{j})']], raw=False)
                 else:
                     for opp in team_series:
                         row = [team_series[opp]['wins'], team_series[opp]['losses']]
                         mrows.append(row)
                         j += 1
-                    m_worksheet.update(f"B{3}:C{j}", mrows)
+                    if self.bot.config['live_version']:
+                        m_worksheet.update(f"B{3}:C{j}", mrows)
                 league_records[teams[team]['league']][teams[team]["name"]] = record
 
             print("Updating Weather Events")
@@ -471,23 +475,13 @@ class GameData(commands.Cog):
             o_worksheet = sheet.worksheet("Blaseball")
 
             o_worksheet.merge_cells(f"B{9}:H{9 + len(orows)}", merge_type="MERGE_ROWS")
-            o_worksheet.update(f"A{9}:B{9 + len(orows)}", orows)
-            o_worksheet.update(f"I{9}:I{9 + len(otypes)}", otypes)
+            if self.bot.config['live_version']:
+                o_worksheet.update(f"A{9}:B{9 + len(orows)}", orows)
+                o_worksheet.update(f"I{9}:I{9 + len(otypes)}", otypes)
 
             s_worksheet = sheet.worksheet("Standings")
 
             def generate_per_team_records(team_list, record):
-                # old_divions = {"Lawful Good": ["Lovers", "Firefighters", "Steaks", "Breath Mints", "Tacos"],
-                #              "Chaotic Good": ["Millennials", "Fridays", "Shoe Thieves", "Magic", "Flowers"],
-                #              "Lawful Evil": ["Crabs", "Tigers", "Wild Wings", "Pies", "Sunbeams"],
-                #              "Chaotic Evil": ["Jazz Hands", "Moist Talkers", "Garages", "Spies", "Dale"]
-                #              }
-                # old_div_records = {"Lawful Good": {"win": 0, "loss": 0},
-                #              "Chaotic Good": {"win": 0, "loss": 0},
-                #              "Lawful Evil": {"win": 0, "loss": 0},
-                #              "Chaotic Evil": {"win": 0, "loss": 0}
-                # }
-
                 n_divisions = {"Wild High": ["Lovers", "Crabs", "Wild Wings", "Firefighters", "Jazz Hands"],
                              "Wild Low": ["Spies", "Flowers", "Sunbeams", "Dale", "Tacos"],
                              "Mild High": ["Tigers", "Moist Talkers", "Garages", "Steaks", "Millennials"],
@@ -554,14 +548,15 @@ class GameData(commands.Cog):
                     generate_per_team_records(teams[i], record)
                     teams[i] += [f"{record['single_run']['win']}-{record['single_run']['loss']}"]
 
-                s_worksheet.update(f"A{start_i-1}:AH{start_i -1}",
-                                   [["Team", "Wins", "Losses", "Pct.", "GB", "Magic #",
-                                    "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
-                                    "Lovers", "Crabs", "Millennials", "Firefighters", "Jazz Hands", "Spies",
-                                     "Flowers", "Sunbeams", "Dale", "Tacos", "Tigers", "Moist Talkers",
-                                     "Garages", "Steaks", "Breath Mints", "Fridays", "Pies", "Wild Wings",
-                                     "Shoe Thieves", "Magic", "1-Run"]])
-                s_worksheet.update(f"A{start_i}:AH{start_i + len(teams)}", teams)
+                if self.bot.config['live_version']:
+                    s_worksheet.update(f"A{start_i-1}:AH{start_i -1}",
+                                       [["Team", "Wins", "Losses", "Pct.", "GB", "Magic #",
+                                        "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
+                                        "Lovers", "Crabs", "Millennials", "Firefighters", "Jazz Hands", "Spies",
+                                         "Flowers", "Sunbeams", "Dale", "Tacos", "Tigers", "Moist Talkers",
+                                         "Garages", "Steaks", "Breath Mints", "Fridays", "Pies", "Wild Wings",
+                                         "Shoe Thieves", "Magic", "1-Run"]])
+                    s_worksheet.update(f"A{start_i}:AH{start_i + len(teams)}", teams)
 
             if day <= 98:
                 print("Updating Standings")
@@ -591,7 +586,8 @@ class GameData(commands.Cog):
                     row += payout_row
                     odds_rows.append(row)
                 od_worksheet = sheet.worksheet("Daily Results")
-                od_worksheet.update(f"A{5}:U{5 + len(odds_rows)}", odds_rows)
+                if self.bot.config['live_version']:
+                    od_worksheet.update(f"A{5}:U{5 + len(odds_rows)}", odds_rows)
 
             print("Updates Complete")
             await asyncio.sleep(5)
@@ -653,7 +649,8 @@ class GameData(commands.Cog):
         gc = gspread.service_account()
         sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season9"])
         m_worksheet = sheet.worksheet(spreadsheet_names['57ec08cc-0411-4643-b304-0e80dbc15ac7']["matchups"])
-        m_worksheet.update(f"B16:B16", [['=SUM(FILTER(D3:D14,E3:E14="Division"))']], raw=False)
+        if self.bot.config['live_version']:
+            m_worksheet.update(f"B16:B16", [['=SUM(FILTER(D3:D14,E3:E14="Division"))']], raw=False)
 
 
     @commands.command(name="anc")

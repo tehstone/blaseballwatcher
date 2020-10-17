@@ -94,10 +94,6 @@ class RulesWatcher(commands.Cog):
             self.bot.logger.warn("Could not get updated player pages.")
         await self.save()
 
-    @commands.command(name='test2', aliases=['ttt'])
-    async def _test2(self, ctx):
-        await self.watch_players()
-
     async def _check_for_rules_update(self):
         messages = []
         retries = 3
@@ -232,6 +228,7 @@ class RulesWatcher(commands.Cog):
             interval = self.bot.config.setdefault('player_change_interval', 30)
             await self.save()
             await asyncio.sleep(interval)
+            continue
 
     async def check_book_loop(self):
         while not self.bot.is_closed():
@@ -248,9 +245,10 @@ class RulesWatcher(commands.Cog):
                         with open(os.path.join('diffs', filename), 'rb') as logfile:
                             await output_channel.send(file=discord.File(logfile, filename=filename))
 
-            interval = self.bot.config['player_change_interval']
+            interval = self.bot.config['interval_minutes']
             await self.save()
             await asyncio.sleep(interval * 60)
+            continue
 
     async def save(self):
         admin_cog = self.bot.cogs.get('AdminCommands')

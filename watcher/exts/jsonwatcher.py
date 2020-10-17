@@ -300,6 +300,7 @@ class JsonWatcher(commands.Cog):
             await self.check_for_comprehensive_updates()
             await self.save()
             await asyncio.sleep(self.bot.config.setdefault('json_watch_interval', 10) * 60)
+            continue
 
     async def save(self):
         admin_cog = self.bot.cogs.get('AdminCommands')
