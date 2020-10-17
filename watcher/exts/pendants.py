@@ -420,7 +420,8 @@ class Pendants(commands.Cog):
             c += 1
             if c == count:
                 break
-        p_worksheet.update("A22:B31", rows)
+        if self.bot.config['live_version']:
+            p_worksheet.update("A22:B31", rows)
         sorted_homeruns = {k: v for k, v in
                            sorted(all_players.items(), key=lambda item: item[1]['homeRuns'], reverse=True)}
         count, c = 10, 0
@@ -430,13 +431,15 @@ class Pendants(commands.Cog):
             c += 1
             if c == count:
                 break
-        p_worksheet.update("A35:B44", rows)
+        if self.bot.config['live_version']:
+            p_worksheet.update("A35:B44", rows)
         rows = []
         try:
             k_9_value = round((all_players[WHEERER_ID]['strikeouts']
                                / (all_players[WHEERER_ID]['outsRecorded'] / 27)) * 10) / 10
             pm_row = [all_players[WHEERER_ID]["strikeouts"], k_9_value]
-            p_worksheet.update("F19:G19", [pm_row])
+            if self.bot.config['live_version']:
+                p_worksheet.update("F19:G19", [pm_row])
         except KeyError:
             pass
         pitcher_dict = {k: v for k, v in all_players.items() if v['outsRecorded'] > 0}
@@ -461,7 +464,8 @@ class Pendants(commands.Cog):
                     name = values["name"]
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
                     rows.append([values["rotation"], name, values["strikeouts"], k_9_value])
-        p_worksheet.update("D4:G18", rows)
+        if self.bot.config['live_version']:
+            p_worksheet.update("D4:G18", rows)
 
         rows = []
         sorted_strikeouts = {k: v
@@ -483,7 +487,8 @@ class Pendants(commands.Cog):
             name = values["name"]
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, values["strikeouts"], k_9_value])
-        p_worksheet.update("L4:O11", rows)
+        if self.bot.config['live_version']:
+            p_worksheet.update("L4:O11", rows)
 
         rows = []
         for i in range(1, 6):
@@ -494,7 +499,8 @@ class Pendants(commands.Cog):
                 values = sorted_shutouts[key]
                 name = values["name"]
                 rows.append([name, values["shutout"]])
-        p_worksheet.update("I4:J18", rows)
+        if self.bot.config['live_version']:
+            p_worksheet.update("I4:J18", rows)
 
         rows = []
         sorted_shutouts = {k: v for k, v in sorted(pitcher_dict.items(), key=lambda item: item[1]['shutout'],
@@ -504,7 +510,8 @@ class Pendants(commands.Cog):
             values = sorted_shutouts[key]
             name = values["name"]
             rows.append([values["rotation"], name, values["shutout"]])
-        p_worksheet.update("L15:N20", rows)
+        if self.bot.config['live_version']:
+            p_worksheet.update("L15:N20", rows)
 
         rows = []
         total_hit_payouts = {}
@@ -521,7 +528,8 @@ class Pendants(commands.Cog):
         for key in top_keys:
             values = sorted_total_hit_payouts[key]
             rows.append([values["name"], values["totalmax"]])
-        p_worksheet.update("A4:B18", rows)
+        if self.bot.config['live_version']:
+            p_worksheet.update("A4:B18", rows)
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
             json.dump(all_players, file)
 
