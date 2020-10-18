@@ -23,7 +23,10 @@ Watcher.event_loop = event_loop
 async def _print(owner, message):
     if 'launcher' in sys.argv[1:]:
         if 'debug' not in sys.argv[1:]:
-            await owner.send(message)
+            try:
+                await owner.send(message)
+            except:
+                pass
     print(message)
     logger.info(message)
 
