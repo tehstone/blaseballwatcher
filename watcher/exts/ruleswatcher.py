@@ -232,6 +232,7 @@ class RulesWatcher(commands.Cog):
 
     async def check_book_loop(self):
         while not self.bot.is_closed():
+            print("checking for book changes")
             messages, filename = await self._check_for_rules_update()
             output_channel_id = self.bot.config['notify_channel']
             if output_channel_id:
