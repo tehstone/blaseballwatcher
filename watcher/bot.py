@@ -85,7 +85,8 @@ class WatcherBot(commands.AutoShardedBot):
                         "eb67ae5e-c4bf-46ca-bbbc-425cd34182ff": "Moist Talkers",
                         "b63be8c2-576a-4d6e-8daf-814f8bcea96f": "Dale",
                         "105bc3ff-1320-4e37-8ef0-8d595cb95dd0": "Garages",
-                        "a37f9158-7f82-46bc-908c-c9e2dda7c33b": "Jazz Hands"
+                        "a37f9158-7f82-46bc-908c-c9e2dda7c33b": "Jazz Hands",
+                        "c73b705c-40ad-4633-a6ed-d357ee2e2bcf": "Lift"
                         }
 
         for ext in default_exts:

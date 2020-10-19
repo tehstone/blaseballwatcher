@@ -207,7 +207,7 @@ class JsonWatcher(commands.Cog):
     async def update_bot_tiebreakers(self, new_ties_json):
         favor_rankings = {}
         position = 0
-        for team in new_ties_json["order"]:
+        for team in new_ties_json[0]["order"]:
             team_name = self.bot.team_names[team]
             favor_rankings[team_name] = position
             position += 1

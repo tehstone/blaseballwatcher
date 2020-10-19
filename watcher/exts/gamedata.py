@@ -9,6 +9,15 @@ from discord.ext import commands
 
 from watcher import utils
 
+"""New season checklist:
+    Make sure divisions are up to date 
+    Make sure weather types are up to date
+    Make sure all team spreadsheet tabs exists
+    Make sure all teams are added to name mapping
+    Update divisions in generate_per_team_records
+    Maybe just automate the update of as much of this as possible
+"""
+
 spreadsheet_names = {
     'adc5b394-8f76-416d-9ce9-813706877b84': {'schedule': 'Mints Schedule', 'matchups': 'Mints Matchups'},
     '8d87c468-699a-47a8-b40d-cfb73a5660ad': {'schedule': 'Crabs Schedule', 'matchups': 'Crabs Matchups'},
@@ -18,6 +27,7 @@ spreadsheet_names = {
     '979aee4a-6d80-4863-bf1c-ee1a78e06024': {'schedule': 'Fridays Schedule', 'matchups': 'Fridays Matchups'},
     '105bc3ff-1320-4e37-8ef0-8d595cb95dd0': {'schedule': 'Garages Schedule', 'matchups': 'Garages Matchups'},
     'a37f9158-7f82-46bc-908c-c9e2dda7c33b': {'schedule': 'Hands Schedule', 'matchups': 'Hands Matchups'},
+    'c73b705c-40ad-4633-a6ed-d357ee2e2bcf': {'schedule': 'Lift Schedule', 'matchups': 'Lift Matchups'},
     'b72f3061-f573-40d7-832a-5ad475bd7909': {'schedule': 'Lovers Schedule', 'matchups': 'Lovers Matchups'},
     '7966eb04-efcc-499b-8f03-d13916330531': {'schedule': 'Magic Schedule', 'matchups': 'Magic Matchups'},
     '36569151-a2fb-43c1-9df7-2df512424c82': {'schedule': 'Millennials Schedule', 'matchups': 'Millenials Matchups'},
@@ -34,7 +44,7 @@ spreadsheet_names = {
 
 weather_types = {
     0: 'Void',
-    1: 'Sunny',
+    1: 'Sun 2',
     2: 'Overcast',
     3: 'Rainy',
     4: 'Sandstorm',
@@ -46,7 +56,14 @@ weather_types = {
     10: 'Peanuts',
     11: 'Bird',
     12: 'Feedback',
-    13: 'Reverb'
+    13: 'Reverb',
+    14: 'Black Hole',
+    15: '???',
+    16: '???',
+    17: '???',
+    18: '???',
+    19: '???',
+    20: '???'
 }
 
 old_favor_rankings = {
@@ -482,10 +499,10 @@ class GameData(commands.Cog):
             s_worksheet = sheet.worksheet("Standings")
 
             def generate_per_team_records(team_list, record):
-                n_divisions = {"Wild High": ["Lovers", "Crabs", "Wild Wings", "Firefighters", "Jazz Hands"],
+                n_divisions = {"Wild High": ["Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands"],
                              "Wild Low": ["Spies", "Flowers", "Sunbeams", "Dale", "Tacos"],
-                             "Mild High": ["Tigers", "Moist Talkers", "Garages", "Steaks", "Millennials"],
-                             "Mild Low": ["Fridays", "Pies", "Breath Mints", "Shoe Thieves", "Magic"]
+                             "Mild High": ["Lovers", "Pies", "Garages", "Steaks", "Millennials"],
+                             "Mild Low": ["Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic"]
                              }
 
                 div_records = {"Wild High": {"win": 0, "loss": 0},
@@ -644,7 +661,6 @@ class GameData(commands.Cog):
         await self.update_spreadsheets([current_season], fill)
         await ctx.send("Spreadsheets updated.")
 
-
     @commands.command(name="anc")
     async def _anc(self, ctx):
         html_response = await utils.retry_request('https://www.blaseball.com/database/allteams')
@@ -670,9 +686,39 @@ class GameData(commands.Cog):
             for player in player_data:
                 out_str += f"{team['nickname']}\t{player['name']}\tbench\n"
             print(out_str)
-            #     anticap += player['anticapitalism']
-            # anticap /= len(player_data)
-            # print(f"{team['nickname']}: {anticap}")
+
+    @commands.command(aliases=['tsh'])
+    async def _test_spreadsheet(self, ctx):
+        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
+        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS["season11"])
+        s_worksheet = sheet.worksheet("Blaseball")
+        s_worksheet.update(f"J1:J1", "test")
+
+    @commands.command(aliases=['utb'])
+    async def _update_tie_breakers(self, ctx):
+        try:
+            html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
+            if not html_response:
+                self.bot.logger.warn('Failed to acquire sim data')
+                return
+            sim_data = html_response.json()
+            league_id = sim_data['league']
+            html_response = await utils.retry_request(f"https://www.blaseball.com/database/league?id={league_id}")
+            if not html_response:
+                self.bot.logger.warn('Failed to acquire league data')
+                return
+            league_json = json.loads(html_response.content.decode('utf-8'))
+            html_response = await utils.retry_request(f"https://www.blaseball.com/database/tiebreakers?id={league_json['tiebreakers']}")
+            if not html_response:
+                self.bot.logger.warn('Failed to acquire tiebreakers data')
+                return
+            new_ties_json = html_response.json()
+            json_watcher = self.bot.get_cog("JsonWatcher")
+            await json_watcher.update_bot_tiebreakers(new_ties_json)
+        except Exception as e:
+            self.bot.logger.warn(f"Failed to update tiebreakers: {e}")
+            return await ctx.message.add_reaction(self.bot.failed_react)
+        await ctx.message.add_reaction(self.bot.success_react)
 
 
 def setup(bot):
