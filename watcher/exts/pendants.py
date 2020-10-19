@@ -423,7 +423,7 @@ class Pendants(commands.Cog):
             if c == count:
                 break
         if self.bot.config['live_version']:
-            p_worksheet.update("A22:B31", rows)
+            p_worksheet.update("A27:B36", rows)
         sorted_homeruns = {k: v for k, v in
                            sorted(all_players.items(), key=lambda item: item[1]['homeRuns'], reverse=True)}
         count, c = 10, 0
@@ -434,7 +434,7 @@ class Pendants(commands.Cog):
             if c == count:
                 break
         if self.bot.config['live_version']:
-            p_worksheet.update("A35:B44", rows)
+            p_worksheet.update("A40:B49", rows)
         rows = []
         try:
             k_9_value = round((all_players[WHEERER_ID]['strikeouts']
@@ -526,12 +526,26 @@ class Pendants(commands.Cog):
             total_hit_payouts[k] = {"name": v["name"], "total1": total_one, "total10": total_ten, "totalmax": total_max}
         sorted_total_hit_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
                                                             key=lambda item: item[1]['totalmax'], reverse=True)}
-        top_keys = list(sorted_total_hit_payouts.keys())[:15]
+
+        top_keys = list(sorted_total_hit_payouts.keys())
+        count = 0
         for key in top_keys:
+            if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
+                continue
             values = sorted_total_hit_payouts[key]
             rows.append([values["name"], values["totalmax"]])
+            count += 1
+            if count == 15:
+                break
         if self.bot.config['live_version']:
             p_worksheet.update("A4:B18", rows)
+
+        # York Silk
+        ys_max = total_hit_payouts["86d4e22b-f107-4bcf-9625-32d387fcb521"]["totalmax"]
+        # Wyatt Glover
+        wg_max = total_hit_payouts["e16c3f28-eecd-4571-be1a-606bbac36b2b"]["totalmax"]
+        p_worksheet.update("B21:B22", [[f"={ys_max}*C21"], [f"={wg_max}*C22"]], raw=False)
+
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
             json.dump(all_players, file)
 
