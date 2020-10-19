@@ -244,7 +244,7 @@ class GameSim(commands.Cog):
                   f"{home_name} shutout %: {home_so_per}% - "
                   f"{away_name} shutout %: {away_so_per}%\n"
                   f"{home_name} win %: {home_win_per}% - Odds: {game['homeOdds']}\n"
-                  f"{away_name} win %: {away_win_per}% - Odds: {game['awayOdds']}\n"
+                  f"{away_name} win %: {away_win_per}% - Odds: {game['awayOdds']}\n\n"
                   )
             results[game['homeTeam']] = {"shutout_percentage": home_so_per, "win_percentage": home_win_per}
             results[game['awayTeam']] = {"shutout_percentage": away_so_per, "win_percentage": away_win_per}
