@@ -11,7 +11,8 @@ from watcher.errors import custom_error_handling
 import discord
 from discord.ext import commands
 
-default_exts = ['admincommands', 'betadvice', 'gamedata', 'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher', 'winexp']
+default_exts = ['admincommands', 'betadvice', 'gamedata', 'gamesim',
+                'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher', 'winexp']
 
 
 def _prefix_callable(bot, msg):

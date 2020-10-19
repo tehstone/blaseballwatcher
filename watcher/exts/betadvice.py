@@ -180,30 +180,24 @@ class BetAdvice(commands.Cog):
                 k_message += f'\n{opponent} shutout {values["opp_shutouts"]} times'
             embed_fields.append({"name": f"**{name}**",
                                  "value": k_message})
-        top_list = list(sorted_ml_model.keys())[:2]
+        top_list = list(sorted_ml_model.keys())[:3]
         ep_msg = ""
-        for i in range(2):
+        for i in range(3):
             values = pitcher_dict[top_list[i]]
             opponent = self.bot.team_names[values['opponent']]
             ep_msg += f"{values['name']} vs. {opponent}\n"
         embed_fields.append({"name": "Experimental picks",
                              "value": ep_msg})
-        top_list = list(sorted_sho.keys())[:1]
-        values = pitcher_dict[top_list[0]]
-        opponent = self.bot.team_names[values['opponent']]
-        sho_message = f"{values['name']} vs. {opponent}"
-        if opponent != "Fridays" and day < 99:
-            sho_message += "\n(or whoever's pitching against the Fridays)"
-        embed_fields.append({"name": "Most likely shutout",
-                             "value": sho_message})
-        top_list = list(sorted_ruth.keys())[:3]
-        r_message = "||"
-        for key in top_list:
-            values = pitcher_dict[key]
-            r_message += f"{values['name']}: {values['ruth']}\n"
-        r_message += "||"
-        embed_fields.append({"name": "||Top by Ruthlessness||",
-                             "value": r_message})
+
+        game_sim_cog = self.bot.cogs.get('GameSim')
+        results = await game_sim_cog.setup(1000)
+        top_five_shos = list(results.keys())[:3]
+        sh_message = ""
+        for key in top_five_shos:
+            team_name = self.bot.team_names[key]
+            sh_message += f"{team_name}: {results[key]['shutout_percentage']}%\n"
+        embed_fields.append({"name": "Most likely shutouts",
+                             "value": sh_message})
 
         return message, embed_fields
 
