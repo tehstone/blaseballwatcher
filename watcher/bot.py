@@ -48,6 +48,8 @@ class WatcherBot(commands.AutoShardedBot):
         self.thumbsup_react = '👍'
         self.empty_str = '\u200b'
         self.initial_start = True
+        self.watch_servers = [738107179294523402]
+        self.off_topic_channels = [756667935728074754]
         self.SPREADSHEET_IDS = {'season1': '1yvGP3DwIHC7NOsPIlSCMYKbrZp6Luvir2vRMvVfe4rg',
                                 'season2': '1LT2lE31Azx7iyT-KgHXrknUIXUVjr_WJ5iH7eYIWDmU',
                                 'season3': '1tGDP50yFYbYYrptcUB-735D75ZOTDxHHV-XC32wUFdc',
@@ -133,6 +135,20 @@ class WatcherBot(commands.AutoShardedBot):
     async def on_message(self, message):
         if message.type == discord.MessageType.pins_add and message.author == self.user:
             return await message.delete()
+        if message.guild.id in self.watch_servers:
+            if message.clean_content == "computers":
+                await message.add_reaction("💻")
+                await message.add_reaction("🔨")
+            elif "a cop " in message.clean_content.lower() or message.clean_content.lower().endswith("a cop"):
+                await message.add_reaction("🚨")
+            elif message.clean_content == "words":
+                await message.add_reaction("🅰️")
+                await message.add_reaction("🔨")
+            elif message.clean_content == "math" or message.clean_content == "maths":
+                await message.add_reaction("0️⃣")
+                await message.add_reaction("🔨")
+            if message.channel.id in self.off_topic_channels and 'blaseball' in message.clean_content.lower():
+                await message.add_reaction("❌")
         debug_chan_id = self.config.setdefault('debug_channel', None)
         debug_channel = None
         if debug_chan_id:
