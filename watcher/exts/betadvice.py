@@ -91,11 +91,12 @@ class BetAdvice(commands.Cog):
         pitcher_ids += [game["homePitcher"] for game in games_json]
         pitcher_ids += [game["awayPitcher"] for game in games_json]
         pitcher_dict = {k: v for k, v in all_players.items() if k in pitcher_ids}
-        for k in pitcher_dict.keys():
-            pitcher_dict[k]['so_nine'] = round((pitcher_dict[k]['strikeouts'] /
-                                                (pitcher_dict[k]['outsRecorded'] / 27)) * 10) / 10
 
         for game in games_json:
+            if game["homePitcher"] not in pitcher_dict:
+                pitcher_dict[game["homePitcher"]] = {"shutout": 0, "strikeouts": 0, "outsRecorded": 0,
+                                                     "name": game["homePitcherName"], "team": game["homeTeamNickname"],
+                                                     "opponent": game["awayTeamNickname"], "odds": game["homeOdds"]}
             pitcher_dict[game["homePitcher"]]["team"] = game["homeTeam"]
             pitcher_dict[game["homePitcher"]]["opponent"] = game["awayTeam"]
             pitcher_dict[game["homePitcher"]]["odds"] = game["homeOdds"]
@@ -110,6 +111,10 @@ class BetAdvice(commands.Cog):
             strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf, team_stats[game["awayTeam"]], day)
             pitcher_dict[game["homePitcher"]]["k_prediction"] = strikeout_odds
 
+            if game["awayPitcher"] not in pitcher_dict:
+                pitcher_dict[game["awayPitcher"]] = {"shutout": 0, "strikeouts": 0, "outsRecorded": 0,
+                                                     "name": game["awayPitcherName"], "team": game["awayTeamNickname"],
+                                                     "opponent": game["homeTeamNickname"], "odds": game["awayOdds"]}
             pitcher_dict[game["awayPitcher"]]["team"] = game["awayTeam"]
             pitcher_dict[game["awayPitcher"]]["opponent"] = game["homeTeam"]
             pitcher_dict[game["awayPitcher"]]["odds"] = game["awayOdds"]
@@ -123,6 +128,13 @@ class BetAdvice(commands.Cog):
             opp_stlats = team_stlats[game["homeTeam"]]
             strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf, team_stats[game["homeTeam"]], day)
             pitcher_dict[game["awayPitcher"]]["k_prediction"] = strikeout_odds
+
+        for k in pitcher_dict.keys():
+            if pitcher_dict[k]['outsRecorded'] > 0:
+                pitcher_dict[k]['so_nine'] = round((pitcher_dict[k]['strikeouts'] /
+                                                    (pitcher_dict[k]['outsRecorded'] / 27)) * 10) / 10
+            else:
+                pitcher_dict[k]['so_nine'] = 0
 
         players = await utils.retry_request(f"https://www.blaseball.com/database/players?ids={','.join(pitcher_ids)}")
         players = players.json()
@@ -151,7 +163,7 @@ class BetAdvice(commands.Cog):
             name = values["name"]
             team = self.bot.team_names[values["team"]]
             opponent = self.bot.team_names[values["opponent"]]
-            k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
+            k_9_value = values['so_nine']
             odds = round((values["odds"] * 1000)) / 10
             br_link = f"[blaseball-ref]({'https://blaseball-reference.com/players/'+key})"
             br_link += f" | [idol]({'https://www.blaseball.com/player/'+key})"
@@ -227,6 +239,20 @@ class BetAdvice(commands.Cog):
         self.bot.config['bet_channel'] = output_channel.id
         return await ctx.message.add_reaction(self.bot.success_react)
 
+    @commands.command(aliases=['tdm'])
+    async def _testdm(self, ctx):
+        bet_chan_id = self.bot.config['bet_channel']
+        #try:
+        message, embed_fields = await self.daily_message()
+        m_embed = discord.Embed(description=message)
+        for field in embed_fields:
+            m_embed.add_field(name=field["name"], value=field["value"])
+        if bet_chan_id:
+            output_channel = self.bot.get_channel(bet_chan_id)
+            bet_msg = await output_channel.send(message, embed=m_embed)
+            await bet_msg.publish()
+        # except Exception as e:
+        #     self.bot.logger.warn(f"Failed to send pendant picks: {e}")
 
 
 def setup(bot):
