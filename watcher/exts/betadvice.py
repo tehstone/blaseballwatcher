@@ -155,9 +155,13 @@ class BetAdvice(commands.Cog):
                                                    key=lambda item: item[1]['k_prediction'],
                                                    reverse=True) if k in pitcher_ids}
 
-        message = f"Pitching Idol recommendations for **day {day+1}**\n"
+        message = f"Pitching Idol recommendations for **day {day+1}**\n" \
+                  f"Ranked by Machine Learning model simulating pitchers vs " \
+                  f"the full opposing lineup courtesy of kjc9#9000\n"
         embed_fields = []
-        top_list = list(sorted_strikeouts.keys())[:2]
+        #top_list = list(sorted_strikeouts.keys())[:2]
+        top_list = list(sorted_ml_model.keys())[:5]
+        count = 1
         for key in top_list:
             values = pitcher_dict[key]
             name = values["name"]
@@ -178,16 +182,17 @@ class BetAdvice(commands.Cog):
                         f'Game odds: **{odds}%**'
             if values["opp_shutouts"] >= 1:
                 k_message += f'\n{opponent} shutout {values["opp_shutouts"]} times'
-            embed_fields.append({"name": f"**{name}**",
+            embed_fields.append({"name": f"**{count}. {name}**",
                                  "value": k_message})
-        top_list = list(sorted_ml_model.keys())[:3]
-        ep_msg = ""
-        for i in range(3):
-            values = pitcher_dict[top_list[i]]
-            opponent = self.bot.team_names[values['opponent']]
-            ep_msg += f"{values['name']} vs. {opponent}\n"
-        embed_fields.append({"name": "Experimental picks",
-                             "value": ep_msg})
+            count += 1
+        # top_list = list(sorted_ml_model.keys())[:3]
+        # ep_msg = ""
+        # for i in range(3):
+        #     values = pitcher_dict[top_list[i]]
+        #     opponent = self.bot.team_names[values['opponent']]
+        #     ep_msg += f"{values['name']} vs. {opponent}\n"
+        # embed_fields.append({"name": "Experimental picks",
+        #                      "value": ep_msg})
 
         game_sim_cog = self.bot.cogs.get('GameSim')
         results = await game_sim_cog.setup(1000)
@@ -236,7 +241,7 @@ class BetAdvice(commands.Cog):
     @commands.command(aliases=['tdm'])
     async def _testdm(self, ctx):
         bet_chan_id = self.bot.config['bet_channel']
-        #try:
+
         message, embed_fields = await self.daily_message()
         m_embed = discord.Embed(description=message)
         for field in embed_fields:
@@ -244,9 +249,8 @@ class BetAdvice(commands.Cog):
         if bet_chan_id:
             output_channel = self.bot.get_channel(bet_chan_id)
             bet_msg = await output_channel.send(message, embed=m_embed)
-            await bet_msg.publish()
-        # except Exception as e:
-        #     self.bot.logger.warn(f"Failed to send pendant picks: {e}")
+            if self.bot.config['live_version']:
+                await bet_msg.publish()
 
 
 def setup(bot):
