@@ -379,6 +379,7 @@ class GameData(commands.Cog):
                                 else:
                                     if o not in season_outcomes[game["day"]]:
                                         season_outcomes[game["day"]].append(o)
+                        game_outcomes = [o.strip() for o in game["outcomes"]]
                         if fill:
                             row = [game["day"] + 1,
                                    teams[game["opponent"]]["name"],
@@ -395,7 +396,7 @@ class GameData(commands.Cog):
                                    '',
                                    '',
                                    w_str,
-                                   " | ".join(game["outcomes"]),
+                                   " | ".join(game_outcomes),
                                    ]
                         else:
                             row = [game["day"] + 1,
@@ -413,7 +414,7 @@ class GameData(commands.Cog):
                                    round(game["odds"]*100),
                                    game["shame"],
                                    w_str,
-                                   " | ".join(game["outcomes"]),
+                                   " | ".join(game_outcomes),
                                    ]
                         srows.append(row)
                 summary_row = ["Record", record['total']["win"], record['total']["loss"],
@@ -482,12 +483,16 @@ class GameData(commands.Cog):
                     return "Partying!"
                 if "crashes into the field" in outcome.lower():
                     return "Shelled"
+                if "set a win" in outcome.lower():
+                    return "Sunset"
+                if "black hole swallowed" in outcome.lower():
+                    return "Black Hole"
 
             orows, otypes = [], []
             for day in sorted(season_outcomes.keys()):
                 for outcome in season_outcomes[day]:
                     outcome_type = get_outcome_type(outcome)
-                    orows.append([day+1, outcome])
+                    orows.append([day+1, outcome.strip()])
                     otypes.append([outcome_type])
             o_worksheet = sheet.worksheet("Blaseball")
 
