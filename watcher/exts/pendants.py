@@ -364,14 +364,15 @@ class Pendants(commands.Cog):
                                       f"with {doubles_str}, {triples_str}, {quad_str}and {hr_str}.\n" \
                                       f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
                             if "statsheet_id" in event:
-                                message += f"https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']}"
+                                message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                             message += "\n"
                             daily_message += message
                             game_watcher_messages.append(message)
                 if output_channel and len(game_watcher_messages) > 0:
-                    msg_embed = discord.Embed()
+                    desription = ""
                     for message in game_watcher_messages:
-                        msg_embed += message + "\n"
+                        desription += message + "\n"
+                    msg_embed = discord.Embed(description=desription)
                     await output_channel.send(embed=msg_embed)
                 if len(daily_message) > 0:
                     debug_chan_id = self.bot.config.setdefault('debug_channel', None)
