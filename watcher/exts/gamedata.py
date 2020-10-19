@@ -239,7 +239,7 @@ class GameData(commands.Cog):
         return schedule, teams, odds
 
     async def update_spreadsheets(self, seasons=[1, 2, 3, 4, 5, 6], fill=False):
-        gc = gspread.service_account()
+        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
         schedule, teams, odds = self.base_season_parser(seasons, fill)
         league_records = {"Wild": {}, "Mild": {}}
 
@@ -643,14 +643,6 @@ class GameData(commands.Cog):
         await self.save_json_range(current_season, fill)
         await self.update_spreadsheets([current_season], fill)
         await ctx.send("Spreadsheets updated.")
-
-    @commands.command(name="tu")
-    async def _tu(self, ctx):
-        gc = gspread.service_account()
-        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season9"])
-        m_worksheet = sheet.worksheet(spreadsheet_names['57ec08cc-0411-4643-b304-0e80dbc15ac7']["matchups"])
-        if self.bot.config['live_version']:
-            m_worksheet.update(f"B16:B16", [['=SUM(FILTER(D3:D14,E3:E14="Division"))']], raw=False)
 
 
     @commands.command(name="anc")

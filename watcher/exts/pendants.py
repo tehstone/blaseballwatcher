@@ -408,7 +408,7 @@ class Pendants(commands.Cog):
         return players
 
     async def update_leaders_sheet(self, season=5):
-        gc = gspread.service_account()
+        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
         sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}"])
         p_worksheet = sheet.worksheet("Pendants")
         all_players = await self.compile_stats()
