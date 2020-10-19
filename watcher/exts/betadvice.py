@@ -185,18 +185,10 @@ class BetAdvice(commands.Cog):
             embed_fields.append({"name": f"**{count}. {name}**",
                                  "value": k_message})
             count += 1
-        # top_list = list(sorted_ml_model.keys())[:3]
-        # ep_msg = ""
-        # for i in range(3):
-        #     values = pitcher_dict[top_list[i]]
-        #     opponent = self.bot.team_names[values['opponent']]
-        #     ep_msg += f"{values['name']} vs. {opponent}\n"
-        # embed_fields.append({"name": "Experimental picks",
-        #                      "value": ep_msg})
 
         game_sim_cog = self.bot.cogs.get('GameSim')
         results = await game_sim_cog.setup(1000)
-        top_five_shos = list(results.keys())[:3]
+        top_five_shos = list(results.keys())[:4]
         sh_message = ""
         for key in top_five_shos:
             team_name = self.bot.team_names[key]
