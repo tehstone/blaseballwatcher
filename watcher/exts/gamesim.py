@@ -246,8 +246,12 @@ class GameSim(commands.Cog):
                   f"{home_name} win %: {home_win_per}% - Odds: {game['homeOdds']}\n"
                   f"{away_name} win %: {away_win_per}% - Odds: {game['awayOdds']}\n\n"
                   )
-            results[game['homeTeam']] = {"shutout_percentage": home_so_per, "win_percentage": home_win_per}
-            results[game['awayTeam']] = {"shutout_percentage": away_so_per, "win_percentage": away_win_per}
+            results[game['homeTeam']] = {"shutout_percentage": home_so_per,
+                                         "win_percentage": home_win_per,
+                                         "strikeout_percentage": statistics.mean(home_struckout)}
+            results[game['awayTeam']] = {"shutout_percentage": away_so_per,
+                                         "win_percentage": away_win_per,
+                                         "strikeout_percentage": statistics.mean(away_struckout)}
         with open(os.path.join('data', 'pendant_data', 'results', f"s{season}_d{day}_results.txt"), 'a') as fd:
             fd.write((output_text))
         return f"Day: {games[0]['day']} Predicted wins: {predicted_wins} - favored wins: {a_favored_wins}", results

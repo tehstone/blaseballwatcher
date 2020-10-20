@@ -141,19 +141,12 @@ class BetAdvice(commands.Cog):
         for player in players:
             pitcher_dict[player['id']]['ruth'] = player["ruthlessness"]
 
-        sorted_strikeouts = {k: v
-                             for k, v in sorted(pitcher_dict.items(),
-                                                key=lambda item: item[1]['so_nine'],
-                                                reverse=True) if k in pitcher_ids}
-        sorted_ruth = {k: v for k, v in sorted(pitcher_dict.items(),
-                                               key=lambda item: item[1]['ruth'],
-                                               reverse=True) if k in pitcher_ids}
-        sorted_sho = {k: v for k, v in sorted(pitcher_dict.items(),
-                                              key=lambda item: item[1]['shutout_weight'],
-                                              reverse=True) if k in pitcher_ids}
         sorted_ml_model = {k: v for k, v in sorted(pitcher_dict.items(),
                                                    key=lambda item: item[1]['k_prediction'],
                                                    reverse=True) if k in pitcher_ids}
+
+        game_sim_cog = self.bot.cogs.get('GameSim')
+        results = await game_sim_cog.setup(1000)
 
         message = f"Pitching Idol recommendations for **day {day+1}**\n" \
                   f"Ranked by Machine Learning model simulating pitchers vs " \
@@ -162,13 +155,17 @@ class BetAdvice(commands.Cog):
         #top_list = list(sorted_strikeouts.keys())[:2]
         top_list = list(sorted_ml_model.keys())[:5]
         count = 1
+        # add projected strikeouts * 200 + expected shutout * 10000
         for key in top_list:
             values = pitcher_dict[key]
             name = values["name"]
             team = self.bot.team_names[values["team"]]
             opponent = self.bot.team_names[values["opponent"]]
+            opp_sho_per = results[values["opponent"]]["shutout_percentage"]
+            opp_k_per = results[values["opponent"]]["strikeout_percentage"]
+            predicted_payout_ko = round(opp_k_per * 200)
+            predicted_payout = round((opp_k_per * 200) + ((opp_sho_per/100) * 10000))
             k_9_value = values['so_nine']
-            odds = round((values["odds"] * 1000)) / 10
             br_link = f"[blaseball-ref]({'https://blaseball-reference.com/players/'+key})"
             br_link += f" | [idol]({'https://www.blaseball.com/player/'+key})"
             shutout = "\n"
@@ -178,17 +175,14 @@ class BetAdvice(commands.Cog):
                 else:
                     shutout = f" ({values['shutout']} shutout)\n"
             k_message = f'{br_link}\nSO: **{values["strikeouts"]}** SO/9: **{k_9_value}**{shutout}' \
-                        f'{team} vs **{opponent}** SO/AB: **{values["opponentSOAvg"]}** ' \
-                        f'Game odds: **{odds}%**'
-            if values["opp_shutouts"] >= 1:
-                k_message += f'\n{opponent} shutout {values["opp_shutouts"]} times'
+                        f'{team} vs **{opponent}** SO/AB: **{values["opponentSOAvg"]}** '
+            k_message += f"\nPredicted payout: {predicted_payout}. \nKs only: {predicted_payout_ko}"
+
             embed_fields.append({"name": f"**{count}. {name}**",
                                  "value": k_message})
             count += 1
 
-        game_sim_cog = self.bot.cogs.get('GameSim')
-        results = await game_sim_cog.setup(1000)
-        top_five_shos = list(results.keys())[:4]
+        top_five_shos = list(results.keys())[:5]
         sh_message = ""
         for key in top_five_shos:
             team_name = self.bot.team_names[key]
