@@ -174,8 +174,8 @@ class BetAdvice(commands.Cog):
                     shutout = f" ({values['shutout']} shutouts)\n"
                 else:
                     shutout = f" ({values['shutout']} shutout)\n"
-            k_message = f'{br_link}\nSO: **{values["strikeouts"]}** SO/9: **{k_9_value}**{shutout}' \
-                        f'{team} vs **{opponent}** SO/AB: **{values["opponentSOAvg"]}** '
+            k_message = f'{br_link}\nKs: **{values["strikeouts"]}** K/9: **{k_9_value}**{shutout}' \
+                        f'{team} vs **{opponent}** K/AB: **{values["opponentSOAvg"]}** '
             k_message += f"\nPredicted payout: {predicted_payout}. \nKs only: {predicted_payout_ko}"
 
             embed_fields.append({"name": f"**{count}. {name}**",
