@@ -388,12 +388,18 @@ class Pendants(commands.Cog):
                     if debug_chan_id:
                         debug_channel = self.bot.get_channel(debug_chan_id)
                         if debug_channel:
-                            await debug_channel.send(daily_message, embed=sh_embed)
+                            if len(sh_description) > 0:
+                                await debug_channel.send(daily_message, embed=sh_embed)
+                            else:
+                                await debug_channel.send(daily_message)
                     daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
                     if daily_stats_channel_id:
                         daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
                         if daily_stats_channel:
-                            await daily_stats_channel.send(daily_message, embed=sh_embed)
+                            if len(sh_description) > 0:
+                                await daily_stats_channel.send(daily_message, embed=sh_embed)
+                            else:
+                                await daily_stats_channel.send(daily_message)
 
     async def compile_stats(self):
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
