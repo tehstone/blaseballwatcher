@@ -1,6 +1,7 @@
 import json
 import os
 import pickle
+import re
 import sys
 
 import requests
@@ -133,6 +134,14 @@ class WatcherBot(commands.AutoShardedBot):
         if 'live_version' not in self.config:
             self.config['live_version'] = True
 
+    @staticmethod
+    def _has_string(string, text):
+        match = re.search(string, text)
+        if match:
+            return True
+        else:
+            return False
+
     async def on_message(self, message):
         if message.type == discord.MessageType.pins_add and message.author == self.user:
             return await message.delete()
@@ -141,7 +150,7 @@ class WatcherBot(commands.AutoShardedBot):
                 if message.clean_content == "computers":
                     await message.add_reaction("💻")
                     await message.add_reaction("🔨")
-                elif "a cop " in message.clean_content.lower() or message.clean_content.lower().endswith("a cop"):
+                elif self._has_string(r"\ba cop\b", message.clean_content.lower()):
                     await message.add_reaction("🚨")
                 elif message.clean_content == "words":
                     await message.add_reaction("🅰️")
@@ -149,7 +158,8 @@ class WatcherBot(commands.AutoShardedBot):
                 elif message.clean_content == "math" or message.clean_content == "maths":
                     await message.add_reaction("0️⃣")
                     await message.add_reaction("🔨")
-                if message.channel.id in self.off_topic_channels and 'blaseball' in message.clean_content.lower():
+                if message.channel.id in self.off_topic_channels \
+                        and self._has_string(r"\bblaseball\b", message.clean_content.lower()):
                     await message.add_reaction("❌")
         debug_chan_id = self.config.setdefault('debug_channel', None)
         debug_channel = None
