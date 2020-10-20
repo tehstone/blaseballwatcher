@@ -272,7 +272,8 @@ class Pendants(commands.Cog):
                         if "statsheet_id" in event:
                             message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                         message += "\n"
-                        daily_message += message
+                        if not self.bot.config['live_version']:
+                            daily_message += message
                         game_watcher_messages.append(message)
                     for __, event in notable["nohitter"].items():
 
@@ -282,7 +283,8 @@ class Pendants(commands.Cog):
                         if "statsheet_id" in event:
                             message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                         message += "\n"
-                        daily_message += message
+                        if not self.bot.config['live_version']:
+                            daily_message += message
                         game_watcher_messages.append(message)
                     for __, event in notable["shutout"].items():
                         daily_message += f"\n**Shutout!**\n{event['name']} with {event['strikeouts']} strikeouts " \
@@ -324,7 +326,8 @@ class Pendants(commands.Cog):
                             if "statsheet_id" in event:
                                 message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                             message += "\n"
-                            daily_message += message
+                            if not self.bot.config['live_version']:
+                                daily_message += message
                             game_watcher_messages.append(message)
                     if '4homerun' in notable:
                         for __, event in notable["4homerun"].items():
@@ -337,7 +340,8 @@ class Pendants(commands.Cog):
                             if "statsheet_id" in event:
                                 message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                             message += "\n"
-                            daily_message += message
+                            if not self.bot.config['live_version']:
+                                daily_message += message
                             game_watcher_messages.append(message)
                     if 'bighits' in notable:
                         for __, event in notable["bighits"].items():
@@ -366,7 +370,8 @@ class Pendants(commands.Cog):
                             if "statsheet_id" in event:
                                 message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                             message += "\n"
-                            daily_message += message
+                            if not self.bot.config['live_version']:
+                                daily_message += message
                             game_watcher_messages.append(message)
                 if output_channel and len(game_watcher_messages) > 0:
                     desription = ""
@@ -376,11 +381,15 @@ class Pendants(commands.Cog):
                     await output_channel.send(embed=msg_embed)
                 if len(daily_message) > 0:
                     debug_chan_id = self.bot.config.setdefault('debug_channel', None)
-                    debug_channel = None
                     if debug_chan_id:
                         debug_channel = self.bot.get_channel(debug_chan_id)
-                    if debug_channel:
-                        await debug_channel.send(daily_message)
+                        if debug_channel:
+                            await debug_channel.send(daily_message)
+                    daily_stats_channel_id = self.bot.configsetdefault('daily_stats_channel', None)
+                    if daily_stats_channel_id:
+                        daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
+                        if daily_stats_channel:
+                            await daily_stats_channel.send(daily_message)
 
     async def compile_stats(self):
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
@@ -436,14 +445,7 @@ class Pendants(commands.Cog):
         if self.bot.config['live_version']:
             p_worksheet.update("A40:B49", rows)
         rows = []
-        try:
-            k_9_value = round((all_players[WHEERER_ID]['strikeouts']
-                               / (all_players[WHEERER_ID]['outsRecorded'] / 27)) * 10) / 10
-            pm_row = [all_players[WHEERER_ID]["strikeouts"], k_9_value]
-            if self.bot.config['live_version']:
-                p_worksheet.update("F19:G19", [pm_row])
-        except KeyError:
-            pass
+
         pitcher_dict = {k: v for k, v in all_players.items() if v['outsRecorded'] > 0}
         for i in range(1, 6):
             sorted_strikeouts = {k: v
@@ -454,12 +456,6 @@ class Pendants(commands.Cog):
             top_list = list(sorted_strikeouts.keys())
 
             if len(top_list) > 3:
-                # Pitching Machine
-                for j in range(3):
-                    if top_list[j] == WHEERER_ID:
-                        del top_list[j]
-                        break
-
                 top_keys = top_list[:3]
                 for key in top_keys:
                     values = all_players[key]
@@ -476,12 +472,6 @@ class Pendants(commands.Cog):
                                                         item[1]['outsRecorded'] / 27)) * 10) / 10,
                                                 reverse=True) if v["rotation_changed"]}
         top_list = list(sorted_strikeouts.keys())
-
-        # Pitching Machine
-        for j in range(len(top_list)):
-            if top_list[j] == WHEERER_ID:
-                del top_list[j]
-                break
 
         top_keys = top_list[:8]
         for key in top_keys:
@@ -566,6 +556,14 @@ class Pendants(commands.Cog):
         if output_channel is None:
             return await ctx.message.add_reaction(self.bot.failed_react)
         self.bot.config['stats_channel'] = output_channel.id
+        return await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(name='set_dailystats_channel', aliases=['sdtc'])
+    async def _set_dailystats_channel(self, ctx, item):
+        output_channel = await utils.get_channel_by_name_or_id(ctx, item)
+        if output_channel is None:
+            return await ctx.message.add_reaction(self.bot.failed_react)
+        self.bot.config['daily_stats_channel'] = output_channel.id
         return await ctx.message.add_reaction(self.bot.success_react)
 
 

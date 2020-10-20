@@ -197,13 +197,37 @@ class BetAdvice(commands.Cog):
                 sorted_big_scores = {k: v for k, v in sorted(results.items(),
                                                              key=lambda item: item[1]['over_ten'],
                                                              reverse=True)}
-                big_message = ""
-                for key in list(sorted_big_scores.keys())[:10]:
-                    team_name = self.bot.team_names[key]
-                    over_ten = round(sorted_big_scores[key]['over_ten'] * 1000) / 10
-                    big_message += f"{team_name}: {over_ten}\n"
+                big_message = f"Day {day}:\nTeams Likely to score 10+\n"
+                for key in list(sorted_big_scores.keys()):
+                    if sorted_big_scores[key]['over_ten'] > .04:
+                        team_name = self.bot.team_names[key]
+                        over_ten = round(sorted_big_scores[key]['over_ten'] * 1000) / 10
+                        big_message += f"{team_name}: {over_ten}% chance\n"
+                    else:
+                        break
+
+                sorted_xbig_scores = {k: v for k, v in sorted(results.items(),
+                                                              key=lambda item: item[1]['over_twenty'],
+                                                              reverse=True)}
+                x_big_message = ""
+                for key in list(sorted_xbig_scores.keys()):
+                    if sorted_big_scores[key]['over_twenty'] > .01:
+                        team_name = self.bot.team_names[key]
+                        over_twenty = round(sorted_big_scores[key]['over_twenty'] * 1000) / 10
+                        x_big_message += f"{team_name}: {over_twenty}% chance\n"
+                    else:
+                        break
+                if len(x_big_message) > 0:
+                    x_big_message = f"\nTeams Likely to score 20+\n{x_big_message}"
+                    big_message += x_big_message
 
                 await debug_channel.send(big_message)
+
+                daily_stats_channel_id = self.bot.configsetdefault('daily_stats_channel', None)
+                if daily_stats_channel_id:
+                    daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
+                    if daily_stats_channel:
+                        await daily_stats_channel.send(big_message)
 
         return message, embed_fields
 
