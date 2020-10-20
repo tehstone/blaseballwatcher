@@ -227,6 +227,10 @@ class GameSim(commands.Cog):
 
             home_p_scores = score_percentiles(home_scores)
             away_p_scores = score_percentiles(away_scores)
+            home_big_scores = len(list(filter(lambda s: s >= 10, home_scores))) / sim_length
+            away_big_scores = len(list(filter(lambda s: s >= 10, away_scores))) / sim_length
+            home_xbig_scores = len(list(filter(lambda s: s >= 20, home_scores))) / sim_length
+            away_xbig_scores = len(list(filter(lambda s: s >= 20, away_scores))) / sim_length
             home_p_result = [(item[0], item[1]) for item in zip(p_idxs, home_p_scores)]
             away_p_result = [(item[0], item[1]) for item in zip(p_idxs, away_p_scores)]
             home_p_strs = [str(y) for y in sorted(home_p_result, key=lambda x: x[0], reverse=True)]
@@ -248,10 +252,14 @@ class GameSim(commands.Cog):
                   )
             results[game['homeTeam']] = {"shutout_percentage": home_so_per,
                                          "win_percentage": home_win_per,
-                                         "strikeout_percentage": statistics.mean(home_struckout)}
+                                         "strikeout_percentage": statistics.mean(home_struckout),
+                                         "over_ten": home_big_scores,
+                                         "over_twenty": home_xbig_scores}
             results[game['awayTeam']] = {"shutout_percentage": away_so_per,
                                          "win_percentage": away_win_per,
-                                         "strikeout_percentage": statistics.mean(away_struckout)}
+                                         "strikeout_percentage": statistics.mean(away_struckout),
+                                         "over_ten": away_big_scores,
+                                         "over_twenty": away_xbig_scores}
         with open(os.path.join('data', 'pendant_data', 'results', f"s{season}_d{day}_results.txt"), 'a') as fd:
             fd.write((output_text))
         return f"Day: {games[0]['day']} Predicted wins: {predicted_wins} - favored wins: {a_favored_wins}", results

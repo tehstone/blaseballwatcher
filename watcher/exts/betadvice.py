@@ -190,6 +190,21 @@ class BetAdvice(commands.Cog):
         embed_fields.append({"name": "Teams most likely to be shutout",
                              "value": sh_message})
 
+        debug_chan_id = self.bot.config.setdefault('debug_channel', None)
+        if debug_chan_id:
+            debug_channel = self.bot.get_channel(debug_chan_id)
+            if debug_channel:
+                sorted_big_scores = {k: v for k, v in sorted(results.items(),
+                                                             key=lambda item: item[1]['over_ten'],
+                                                             reverse=True)}
+                big_message = ""
+                for key in list(sorted_big_scores.keys())[:10]:
+                    team_name = self.bot.team_names[key]
+                    over_ten = round(sorted_big_scores[key]['over_ten'] * 1000) / 10
+                    big_message += f"{team_name}: {over_ten}\n"
+
+                await debug_channel.send(big_message)
+
         return message, embed_fields
 
     @staticmethod
