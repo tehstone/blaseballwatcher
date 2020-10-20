@@ -92,9 +92,9 @@ class WatcherBot(commands.AutoShardedBot):
                         "a37f9158-7f82-46bc-908c-c9e2dda7c33b": "Jazz Hands",
                         "c73b705c-40ad-4633-a6ed-d357ee2e2bcf": "Lift"
                         }
+        self.daily_watch_message = self.config.setdefault('daily_watch_message', 'Go Bet!')
 
         for ext in default_exts:
-#            self.load_extension(f"watcher.exts.{ext}")
             try:
                 self.load_extension(f"watcher.exts.{ext}")
             except Exception as e:
@@ -156,8 +156,7 @@ class WatcherBot(commands.AutoShardedBot):
         if debug_chan_id:
             debug_channel = self.get_channel(debug_chan_id)
         if debug_channel and message.channel == debug_channel \
-                and "Internal Bet Reminder" in message.clean_content:
-            # "Go Bet!" in message.clean_content or
+                and self.daily_watch_message in message.clean_content:
             bet_chan_id = self.config['bet_channel']
             current_season = self.config['current_season']
             pendant_cog = self.cogs.get('Pendants')

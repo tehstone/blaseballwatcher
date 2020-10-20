@@ -263,6 +263,7 @@ class Pendants(commands.Cog):
                                             reverse=True)}
                 daily_message += f"\n**Strikeout leaders**\n{self.print_top(sorted_strikeouts, 'strikeouts', 5, True)}"
                 game_watcher_messages = []
+                sh_embed = discord.Embed(title="**Shutout!**", desription="")
                 if 'notable' in day:
                     notable = day['notable']
                     for __, event in notable["perfect"].items():
@@ -287,12 +288,13 @@ class Pendants(commands.Cog):
                             daily_message += message
                         game_watcher_messages.append(message)
                     for __, event in notable["shutout"].items():
-                        daily_message += f"\n**Shutout!**\n{event['name']} with {event['strikeouts']} strikeouts " \
-                                         f"in {event['outsRecorded']} outs. {event['hitsAllowed']} hits allowed and " \
-                                         f"{event['walksIssued']} batters walked.\n" \
-                                         f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
-                        if "statsheet_id" in event:
-                            daily_message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})\n"
+
+                        sh_message = f"{event['name']} with {event['strikeouts']} strikeouts " \
+                                     f"in {event['outsRecorded']} outs. {event['hitsAllowed']} hits allowed and " \
+                                     f"{event['walksIssued']} batters walked.\n" \
+                                     f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})" \
+                                     f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})\n"
+                        sh_embed.description += sh_message
 
                     if 'cycle' in notable:
                         for __, event in notable["cycle"].items():
@@ -384,12 +386,12 @@ class Pendants(commands.Cog):
                     if debug_chan_id:
                         debug_channel = self.bot.get_channel(debug_chan_id)
                         if debug_channel:
-                            await debug_channel.send(daily_message)
+                            await debug_channel.send(daily_message, embed=sh_embed)
                     daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
                     if daily_stats_channel_id:
                         daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
                         if daily_stats_channel:
-                            await daily_stats_channel.send(daily_message)
+                            await daily_stats_channel.send(daily_message, embed=sh_embed)
 
     async def compile_stats(self):
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
@@ -564,6 +566,12 @@ class Pendants(commands.Cog):
         if output_channel is None:
             return await ctx.message.add_reaction(self.bot.failed_react)
         self.bot.config['daily_stats_channel'] = output_channel.id
+        return await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(name='set_daily_watch_message', aliases=['sdwm'])
+    async def _set_daily_watch_message(self, ctx, *, message_text):
+        self.bot.config['daily_watch_message'] = message_text
+        self.bot.daily_watch_message = message_text
         return await ctx.message.add_reaction(self.bot.success_react)
 
 
