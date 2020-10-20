@@ -187,7 +187,7 @@ class BetAdvice(commands.Cog):
         for key in top_five_shos:
             team_name = self.bot.team_names[key]
             sh_message += f"{team_name}: {results[key]['shutout_percentage']}%\n"
-        embed_fields.append({"name": "Most likely shutouts",
+        embed_fields.append({"name": "Teams most likely to be shutout",
                              "value": sh_message})
 
         return message, embed_fields
