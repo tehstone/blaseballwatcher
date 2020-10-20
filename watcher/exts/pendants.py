@@ -385,7 +385,7 @@ class Pendants(commands.Cog):
                         debug_channel = self.bot.get_channel(debug_chan_id)
                         if debug_channel:
                             await debug_channel.send(daily_message)
-                    daily_stats_channel_id = self.bot.configsetdefault('daily_stats_channel', None)
+                    daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
                     if daily_stats_channel_id:
                         daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
                         if daily_stats_channel:
