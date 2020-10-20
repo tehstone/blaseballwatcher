@@ -263,7 +263,8 @@ class Pendants(commands.Cog):
                                             reverse=True)}
                 daily_message += f"\n**Strikeout leaders**\n{self.print_top(sorted_strikeouts, 'strikeouts', 5, True)}"
                 game_watcher_messages = []
-                sh_embed = discord.Embed(title="**Shutout!**", desription="")
+                sh_embed = discord.Embed(title="**Shutout!**")
+                sh_description = ""
                 if 'notable' in day:
                     notable = day['notable']
                     for __, event in notable["perfect"].items():
@@ -294,7 +295,7 @@ class Pendants(commands.Cog):
                                      f"{event['walksIssued']} batters walked.\n" \
                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})" \
                                      f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})\n"
-                        sh_embed.description += sh_message
+                        sh_description += sh_message
 
                     if 'cycle' in notable:
                         for __, event in notable["cycle"].items():
@@ -382,6 +383,7 @@ class Pendants(commands.Cog):
                     msg_embed = discord.Embed(description=desription)
                     await output_channel.send(embed=msg_embed)
                 if len(daily_message) > 0:
+                    sh_embed.description = sh_description
                     debug_chan_id = self.bot.config.setdefault('debug_channel', None)
                     if debug_chan_id:
                         debug_channel = self.bot.get_channel(debug_chan_id)
