@@ -156,7 +156,8 @@ class WatcherBot(commands.AutoShardedBot):
         if debug_chan_id:
             debug_channel = self.get_channel(debug_chan_id)
         if debug_channel and message.channel == debug_channel \
-                and ("Go Bet!" in message.clean_content or "Internal Bet Reminder" in message.clean_content):
+                and "Internal Bet Reminder" in message.clean_content:
+            # "Go Bet!" in message.clean_content or
             bet_chan_id = self.config['bet_channel']
             current_season = self.config['current_season']
             pendant_cog = self.cogs.get('Pendants')
