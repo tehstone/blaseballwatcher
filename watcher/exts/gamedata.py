@@ -124,6 +124,12 @@ class GameData(commands.Cog):
                 if team == teamID:
                     return div["league"], div["name"]
 
+    def get_weather(self, weather_id):
+        if weather_id not in weather_types:
+            self.bot.logger.warn(f"Unknown weather id: {weather_id}.")
+            return "Unknown"
+        return weather_types[weather_id]
+
     async def save_json_range(self, season, fill=False):
         new_season_data = []
         day = -1
@@ -369,7 +375,7 @@ class GameData(commands.Cog):
                             game_type = team_series[game["opponent"]]["game_type"] = "InterLeague"
                         team_series[game["opponent"]]["games"] += 1
                         if game['weather']:
-                            w_str = weather_types[game['weather']]
+                            w_str = self.get_weather(game['weather'])
                         else:
                             w_str = "None"
                         if len(game["outcomes"]) > 0:
