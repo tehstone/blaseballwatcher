@@ -197,7 +197,7 @@ class BetAdvice(commands.Cog):
                 sorted_big_scores = {k: v for k, v in sorted(results.items(),
                                                              key=lambda item: item[1]['over_ten'],
                                                              reverse=True)}
-                big_message = f"Day {day}:\nTeams Likely to score 10+\n"
+                big_message = ""
                 for key in list(sorted_big_scores.keys()):
                     if sorted_big_scores[key]['over_ten'] > .04:
                         team_name = self.bot.team_names[key]
@@ -205,6 +205,8 @@ class BetAdvice(commands.Cog):
                         big_message += f"{team_name}: {over_ten}% chance\n"
                     else:
                         break
+                if len(big_message) > 0:
+                    big_message = f"Day {day}:\nTeams Likely to score 10+\n{big_message}"
 
                 sorted_xbig_scores = {k: v for k, v in sorted(results.items(),
                                                               key=lambda item: item[1]['over_twenty'],

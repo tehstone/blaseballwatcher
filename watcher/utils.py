@@ -81,5 +81,5 @@ async def game_check_loop(bot):
             debug_channel = bot.get_channel(bot.config['debug_channel'])
             await debug_channel.send("Internal Bet Reminder")
         else:
-            interval = .5
+            interval = 1
         await asyncio.sleep(interval * 60)
