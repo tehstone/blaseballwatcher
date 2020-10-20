@@ -12,7 +12,8 @@ import discord
 from discord.ext import commands
 
 default_exts = ['admincommands', 'betadvice', 'gamedata', 'gamesim',
-                'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher', 'winexp']
+                'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher',
+                'teamlookups', 'winexp']
 
 
 def _prefix_callable(bot, msg):
@@ -155,38 +156,38 @@ class WatcherBot(commands.AutoShardedBot):
         if debug_chan_id:
             debug_channel = self.get_channel(debug_chan_id)
         if debug_channel and message.channel == debug_channel \
-            and "Go Bet!" in message.clean_content:
-                bet_chan_id = self.config['bet_channel']
-                current_season = self.config['current_season']
-                pendant_cog = self.cogs.get('Pendants')
-                #try:
-                await pendant_cog.get_latest_pendant_data(current_season)
-                if debug_channel:
-                    await debug_channel.send("Pendant data updated.")
-                #
-                try:
-                    await pendant_cog.update_leaders_sheet(current_season)
-                except Exception as e:
-                    self.logger.warn(f"Failed to update pendant leaders: {e}")
+                and ("Go Bet!" in message.clean_content or "Internal Bet Reminder" in message.clean_content):
+            bet_chan_id = self.config['bet_channel']
+            current_season = self.config['current_season']
+            pendant_cog = self.cogs.get('Pendants')
+            #try:
+            await pendant_cog.get_latest_pendant_data(current_season)
+            if debug_channel:
+                await debug_channel.send("Pendant data updated.")
+            #
+            try:
+                await pendant_cog.update_leaders_sheet(current_season)
+            except Exception as e:
+                self.logger.warn(f"Failed to update pendant leaders: {e}")
 
-                betadvice_cog = self.cogs.get('BetAdvice')
-                try:
-                    message, embed_fields = await betadvice_cog.daily_message()
-                    m_embed = discord.Embed(description=message)
-                    for field in embed_fields:
-                        m_embed.add_field(name=field["name"], value=field["value"])
-                    if bet_chan_id:
-                        output_channel = self.get_channel(bet_chan_id)
-                        bet_msg = await output_channel.send(message, embed=m_embed)
-                        await bet_msg.publish()
-                except Exception as e:
-                    self.logger.warn(f"Failed to send pendant picks: {e}")
+            betadvice_cog = self.cogs.get('BetAdvice')
+            try:
+                message, embed_fields = await betadvice_cog.daily_message()
+                m_embed = discord.Embed(description=message)
+                for field in embed_fields:
+                    m_embed.add_field(name=field["name"], value=field["value"])
+                if bet_chan_id:
+                    output_channel = self.get_channel(bet_chan_id)
+                    bet_msg = await output_channel.send(message, embed=m_embed)
+                    await bet_msg.publish()
+            except Exception as e:
+                self.logger.warn(f"Failed to send pendant picks: {e}")
 
-                gamedata_cog = self.cogs.get('GameData')
-                await gamedata_cog.save_json_range(current_season-1)
-                await gamedata_cog.update_spreadsheets([current_season-1])
-                if debug_channel:
-                    await debug_channel.send("Spreadsheets updated.")
+            gamedata_cog = self.cogs.get('GameData')
+            await gamedata_cog.save_json_range(current_season-1)
+            await gamedata_cog.update_spreadsheets([current_season-1])
+            if debug_channel:
+                await debug_channel.send("Spreadsheets updated.")
 
         elif not message.author.bot:
             await self.process_commands(message)

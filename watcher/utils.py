@@ -56,3 +56,30 @@ async def retry_request(url, tries=10):
         finally:
             await asyncio.sleep(.5)
     return None
+
+
+async def game_check_loop(bot):
+    while not bot.is_closed():
+        bot.logger.info("Checking for games complete")
+        failed = False
+        url = 'https://www.blaseball.com/database/simulationdata'
+        html_response = await retry_request(url)
+        if not html_response:
+            failed = True
+            continue
+        resp_json = html_response.json()
+        season = resp_json["season"]
+        day = resp_json["day"]
+        games = await retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
+        complete = True
+        for game in games.json():
+            if not game["gameComplete"]:
+                complete = False
+                break
+        if complete and failed == False:
+            interval = 45
+            debug_channel = bot.get_channel(bot.config['debug_channel'])
+            await debug_channel.send("Internal Bet Reminder")
+        else:
+            interval = .5
+        await asyncio.sleep(interval * 60)
