@@ -68,8 +68,8 @@ class TeamLookups(commands.Cog):
         message = f"{team_name.capitalize()} have been struck out {struckouts} time{suff} in season {season}"
         return await ctx.send(message)
 
-    @commands.command(name='team_shutout', aliases=['t_sho'])
-    async def _team_shutout(self, ctx, *, info):
+    @commands.command(name='team_shutouts', aliases=['t_sho'])
+    async def _team_shutouts(self, ctx, *, info):
         info_parts = info.split()
         season, team_id, team_name = self._process_input(info_parts)
 

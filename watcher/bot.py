@@ -11,7 +11,7 @@ from watcher.errors import custom_error_handling
 import discord
 from discord.ext import commands
 
-default_exts = ['admincommands', 'betadvice', 'gamedata', 'gamesim',
+default_exts = ['admincommands', 'betadvice', 'gamedata', 'gamesim', 'helpcommand',
                 'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher',
                 'teamlookups', 'winexp']
 
