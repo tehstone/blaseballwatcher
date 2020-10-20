@@ -223,11 +223,12 @@ class BetAdvice(commands.Cog):
                     x_big_message = f"\nTeams Likely to score 20+\n{x_big_message}"
                     big_message += x_big_message
 
-                daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
-                if daily_stats_channel_id:
-                    daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
-                    if daily_stats_channel:
-                        await daily_stats_channel.send(big_message)
+                if len(big_message) > 0:
+                    daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
+                    if daily_stats_channel_id:
+                        daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
+                        if daily_stats_channel:
+                            await daily_stats_channel.send(big_message)
 
         return message, embed_fields
 
