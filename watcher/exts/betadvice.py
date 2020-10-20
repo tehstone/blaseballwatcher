@@ -223,7 +223,7 @@ class BetAdvice(commands.Cog):
 
                 await debug_channel.send(big_message)
 
-                daily_stats_channel_id = self.bot.configsetdefault('daily_stats_channel', None)
+                daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
                 if daily_stats_channel_id:
                     daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
                     if daily_stats_channel:
