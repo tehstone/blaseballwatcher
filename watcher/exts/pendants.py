@@ -105,7 +105,8 @@ class Pendants(commands.Cog):
             if p_values["outsRecorded"] >= 24 and p_values["earnedRuns"] <= 0:
                 opp_id = game_team_map[p_values["teamId"]]["opponent"]
                 if opp_id not in team_stats:
-                    team_stats[opp_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0, "struckouts": 0}
+                    team_stats[opp_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0,
+                                          "struckouts": 0, "name": self.bot.team_names[opp_id]}
                 team_stats[opp_id]["shutout"] += 1
                 if p_values['hitsAllowed'] == 0:
                     if p_values['walksIssued'] == 0:
@@ -167,7 +168,8 @@ class Pendants(commands.Cog):
                 p_values["position"] = "lineup"
                 team_id = p_values["teamId"]
                 if team_id not in team_stats:
-                    team_stats[team_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0, "struckouts": 0}
+                    team_stats[team_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0,
+                                          "struckouts": 0, "name": self.bot.team_names[team_id]}
                 team_stats[team_id]["at_bats"] += p_values["atBats"]
                 if "plate_appearances" not in team_stats[team_id]:
                     team_stats[team_id]["plate_appearances"] = 0
