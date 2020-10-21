@@ -6,6 +6,7 @@ import sys
 
 import requests
 
+from watcher import utils
 from watcher.logs import init_loggers
 from watcher.errors import custom_error_handling
 
@@ -94,6 +95,7 @@ class WatcherBot(commands.AutoShardedBot):
                         "c73b705c-40ad-4633-a6ed-d357ee2e2bcf": "Lift"
                         }
         self.daily_watch_message = self.config.setdefault('daily_watch_message', 'Go Bet!')
+        self.current_day = 0
 
         for ext in default_exts:
             try:
@@ -198,6 +200,8 @@ class WatcherBot(commands.AutoShardedBot):
             await gamedata_cog.update_spreadsheets([current_season-1])
             if debug_channel:
                 await debug_channel.send("Spreadsheets updated.")
+
+            await utils.update_cumulative_statsheets(self.config['current_season'])
 
         elif not message.author.bot:
             await self.process_commands(message)

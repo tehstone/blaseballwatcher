@@ -68,10 +68,11 @@ class Pendants(commands.Cog):
         chunked_player_ids = [flat_playerstatsheet_ids[i:i + 50] for i in range(0, len(flat_playerstatsheet_ids), 50)]
 
         statsheets = {}
+        pitcher_p_values = {}
         notable = {"perfect": {}, "nohitter": {}, "shutout": {}, "cycle": {}, "4homerun": {}, "bighits": {}}
         for chunk in chunked_player_ids:
             c_notable = await self.get_player_statsheets(chunk, day, statsheets, game_team_map,
-                                                         pitching_rotations, team_stats)
+                                                         pitching_rotations, team_stats, pitcher_p_values)
             for key, value in c_notable.items():
                 for ikey, ivalue in c_notable[key].items():
                     notable[key][ikey] = ivalue
@@ -89,13 +90,16 @@ class Pendants(commands.Cog):
             json.dump(team_stats, file)
         return notable
 
-    async def get_player_statsheets(self, player_ids, day, statsheets, game_team_map, pitching_rotations, team_stats):
+    async def get_player_statsheets(self, player_ids, day, statsheets, game_team_map,
+                                    pitching_rotations, team_stats, pitcher_p_values):
         notable = {"perfect": {}, "nohitter": {}, "shutout": {},
                    "cycle": {}, "4homerun": {}, "bighits": {}}
         player_statsheets = await self.retry_request(
             f"https://www.blaseball.com/database/playerStatsheets?ids={','.join(player_ids)}")
         players_list = player_statsheets.json()
+
         for p_values in players_list:
+            save = True
             p_values["rotation_changed"] = False
             if p_values["outsRecorded"] >= 24 and p_values["earnedRuns"] <= 0:
                 opp_id = game_team_map[p_values["teamId"]]["opponent"]
@@ -147,7 +151,18 @@ class Pendants(commands.Cog):
                     pitching_rotations[p_values["playerId"]] = rot
                 if "shutout" not in p_values:
                     p_values["shutout"] = 0
+                if p_values["playerId"] in pitcher_p_values:
+                    p_values["pitchesThrown"] += pitcher_p_values[p_values["playerId"]]["pitchesThrown"]
+                else:
+                    pitcher_p_values[p_values["playerId"]] = {"statsheetId": p_values["id"]}
             else:
+                if p_values["pitchesThrown"] > 0:
+                    save = False
+                    if p_values["playerId"] in pitcher_p_values:
+                        statsheet_id = pitcher_p_values[p_values["playerId"]]["statsheetId"]
+                        statsheets[statsheet_id]["pitchesThrown"] += p_values["pitchesThrown"]
+                    else:
+                        pitcher_p_values[p_values["playerId"]] = {"pitchesThrown": p_values["pitchesThrown"]}
                 p_values["position"] = "lineup"
                 team_id = p_values["teamId"]
                 if team_id not in team_stats:
@@ -202,7 +217,8 @@ class Pendants(commands.Cog):
                 p_values["rotation"] = -1
             if "shutout" not in p_values:
                 p_values["shutout"] = -1
-            statsheets[p_values["id"]] = p_values
+            if save:
+                statsheets[p_values["id"]] = p_values
         return notable
 
     def print_top(self, player_dict, key, count=10, avg=False):
