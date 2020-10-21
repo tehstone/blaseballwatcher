@@ -152,3 +152,5 @@ async def update_cumulative_statsheets(season):
 
     with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season-1}_player_stats_upto_d{last_day}.json'), 'w') as file:
         json.dump(data, file)
+    with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season-1}_current_player_stats.json'), 'w') as file:
+        json.dump(data, file)

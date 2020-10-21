@@ -69,7 +69,8 @@ class Pendants(commands.Cog):
 
         statsheets = {}
         pitcher_p_values = {}
-        notable = {"perfect": {}, "nohitter": {}, "shutout": {}, "cycle": {}, "4homerun": {}, "bighits": {}}
+        notable = {"perfect": {}, "nohitter": {}, "shutout": {}, "cycle": {},
+                   "4homerun": {}, "bighits": {}, "rbimaster": {}}
         for chunk in chunked_player_ids:
             c_notable = await self.get_player_statsheets(chunk, day, statsheets, game_team_map,
                                                          pitching_rotations, team_stats, pitcher_p_values)
@@ -93,7 +94,7 @@ class Pendants(commands.Cog):
     async def get_player_statsheets(self, player_ids, day, statsheets, game_team_map,
                                     pitching_rotations, team_stats, pitcher_p_values):
         notable = {"perfect": {}, "nohitter": {}, "shutout": {},
-                   "cycle": {}, "4homerun": {}, "bighits": {}}
+                   "cycle": {}, "4homerun": {}, "bighits": {}, "rbimaster": {}}
         player_statsheets = await self.retry_request(
             f"https://www.blaseball.com/database/playerStatsheets?ids={','.join(player_ids)}")
         players_list = player_statsheets.json()
@@ -213,6 +214,19 @@ class Pendants(commands.Cog):
                             "game_id": game_team_map[p_values["teamId"]]["game_id"],
                             "statsheet_id": p_values["id"]
                         }
+                    if p_values["rbis"] >= 8:
+                        print("rbimaster")
+                        notable["rbimaster"][p_values["playerId"]] = {
+                            "name": p_values["name"],
+                            "atBats": p_values["atBats"],
+                            "rbis": p_values["rbis"],
+                            "hits": p_values["hits"],
+                            "homeRuns": p_values["homeRuns"],
+                            "doubles": p_values["doubles"],
+                            "triples": p_values["triples"],
+                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                            "statsheet_id": p_values["id"]
+                        }
             if "rotation" not in p_values:
                 p_values["rotation"] = -1
             if "shutout" not in p_values:
@@ -221,22 +235,18 @@ class Pendants(commands.Cog):
                 statsheets[p_values["id"]] = p_values
         return notable
 
-    def print_top(self, player_dict, key, count=10, avg=False):
+    def print_top(self, player_dict, key, string, cutoff=2, avg=False):
         message = ""
-        c = 0
         for pkey, pvalue in player_dict.items():
-            if pvalue[key] > 0:
+            if pvalue[key] >= cutoff:
                 if key == 'strikeouts':
                     avg_str = ""
                     if avg:
                         k_9_value = round((pvalue[key] / (pvalue['outsRecorded'] / 27)) * 10) / 10
                         avg_str = f"({k_9_value} {key}/9)"
-                    message += f"{pvalue['name']} {pvalue[key]} {key} {avg_str}\n"
+                    message += f"{pvalue['name']} {pvalue[key]} {string} {avg_str}\n"
                 else:
-                    message += f"{pvalue['name']} {pvalue[key]} {key}\n"
-            c += 1
-            if c == count:
-                break
+                    message += f"{pvalue['name']} {pvalue[key]} {string}\n"
         return message
 
     async def get_latest_pendant_data(self, current_season):
@@ -267,17 +277,30 @@ class Pendants(commands.Cog):
                 continue
             if day['day'] > last_day:
                 players = day['statsheets']
-                daily_message = f"Daily leaders for day {day['day']+1}"
+                daily_message = f"**Daily leaders for day {day['day']+1}**\n"
+                daily_message_two = ""
                 sorted_hits = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['hits'], reverse=True)}
                 sorted_homeruns = {k: v for k, v in
                                    sorted(players.items(), key=lambda item: item[1]['homeRuns'], reverse=True)}
-                daily_message += f"\n**Hit leaders**\n{self.print_top(sorted_hits, 'hits', 5)}"
-                daily_message += f"\n**Home Run leaders**\n{self.print_top(sorted_homeruns, 'homeRuns', 5)}"
+                sorted_rbis = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['rbis'], reverse=True)}
+
+                hit_message = self.print_top(sorted_hits, 'hits', 'hits', 3)
+                if len(hit_message) > 0:
+                    daily_message += f"\n**Hits**\n{hit_message}"
+
+                hr_message = self.print_top(sorted_homeruns, 'homeRuns', 'home runs', 2)
+                if len(hr_message) > 0:
+                    daily_message += f"\n**Home Runs**\n{hr_message}"
+
+                rbi_message = self.print_top(sorted_rbis, 'rbis', 'RBIs', 4)
+                if len(rbi_message) > 0:
+                    daily_message += f"\n**RBIs**\n{rbi_message}"
 
                 sorted_strikeouts = {k: v for k, v in
                                      sorted(players.items(), key=lambda item: item[1]['strikeouts'],
                                             reverse=True)}
-                daily_message += f"\n**Strikeout leaders**\n{self.print_top(sorted_strikeouts, 'strikeouts', 5, True)}"
+                daily_message_two += f"\n**Strikeouts**\n{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 7, True)}"
+
                 game_watcher_messages = []
                 sh_embed = discord.Embed(title="**Shutout!**")
                 sh_description = ""
@@ -291,7 +314,7 @@ class Pendants(commands.Cog):
                             message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                         message += "\n"
                         if not self.bot.config['live_version']:
-                            daily_message += message
+                            daily_message_two += message
                         game_watcher_messages.append(message)
                     for __, event in notable["nohitter"].items():
 
@@ -302,7 +325,7 @@ class Pendants(commands.Cog):
                             message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                         message += "\n"
                         if not self.bot.config['live_version']:
-                            daily_message += message
+                            daily_message_two += message
                         game_watcher_messages.append(message)
                     for __, event in notable["shutout"].items():
 
@@ -346,7 +369,7 @@ class Pendants(commands.Cog):
                                 message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                             message += "\n"
                             if not self.bot.config['live_version']:
-                                daily_message += message
+                                daily_message_two += message
                             game_watcher_messages.append(message)
                     if '4homerun' in notable:
                         for __, event in notable["4homerun"].items():
@@ -360,7 +383,7 @@ class Pendants(commands.Cog):
                                 message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                             message += "\n"
                             if not self.bot.config['live_version']:
-                                daily_message += message
+                                daily_message_two += message
                             game_watcher_messages.append(message)
                     if 'bighits' in notable:
                         for __, event in notable["bighits"].items():
@@ -390,7 +413,37 @@ class Pendants(commands.Cog):
                                 message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
                             message += "\n"
                             if not self.bot.config['live_version']:
-                                daily_message += message
+                                daily_message_two += message
+                            game_watcher_messages.append(message)
+                    if "rbimaster" in notable:
+                        for __, event in notable["rbimaster"].items():
+                            doubles_str = f"{event['doubles']} double"
+                            if event['doubles'] != 1:
+                                doubles_str += "s"
+                            triples_str = f"{event['triples']} triple"
+                            if event['triples'] != 1:
+                                triples_str += "s"
+                            hr_str = f"{event['homeRuns']} home run"
+                            if event['homeRuns'] != 1:
+                                hr_str += "s"
+                            quad_str = ""
+                            if "quadruples" in event:
+                                quad_str = f"{event['quadruples']} quadruple"
+                                if event['quadruples'] != 1:
+                                    quad_str += "s, "
+                                else:
+                                    quad_str += ", "
+                            at_bats_str = "\n"
+                            if "atBats" in event:
+                                at_bats_str = f" with {event['hits']} in {event['atBats']} at bats.\n"
+                            message = f"\n**{event['name']} got {event['rbis']} RBIs!**{at_bats_str}" \
+                                      f"with {doubles_str}, {triples_str}, {quad_str}and {hr_str}.\n" \
+                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
+                            if "statsheet_id" in event:
+                                message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
+                            message += "\n"
+                            if not self.bot.config['live_version']:
+                                daily_message_two += message
                             game_watcher_messages.append(message)
                 if output_channel and len(game_watcher_messages) > 0:
                     desription = ""
@@ -405,17 +458,21 @@ class Pendants(commands.Cog):
                         debug_channel = self.bot.get_channel(debug_chan_id)
                         if debug_channel:
                             if len(sh_description) > 0:
-                                await debug_channel.send(daily_message, embed=sh_embed)
+                                await debug_channel.send(daily_message)
+                                await debug_channel.send(daily_message_two, embed=sh_embed)
                             else:
                                 await debug_channel.send(daily_message)
+                                await debug_channel.send(daily_message_two)
                     daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
                     if daily_stats_channel_id:
                         daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
                         if daily_stats_channel:
                             if len(sh_description) > 0:
-                                await daily_stats_channel.send(daily_message, embed=sh_embed)
+                                await daily_stats_channel.send(daily_message)
+                                await daily_stats_channel.send(daily_message_two, embed=sh_embed)
                             else:
                                 await daily_stats_channel.send(daily_message)
+                                await daily_stats_channel.send(daily_message_two)
 
     async def compile_stats(self):
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
