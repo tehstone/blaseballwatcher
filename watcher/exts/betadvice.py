@@ -61,7 +61,10 @@ class BetAdvice(commands.Cog):
         odds_sum = 0
         for odds in odds_list:
             odds_sum += odds[1]
-        return odds_sum * ((team_stats["at_bats"] * 1.05) / day)
+        if "plate_appearances" in team_stats:
+            return odds_sum * (team_stats["plate_appearances"] / day)
+        else:
+            return odds_sum * ((team_stats["at_bats"] * 1.05) / day)
 
     async def daily_message(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
@@ -91,6 +94,7 @@ class BetAdvice(commands.Cog):
         pitcher_ids += [game["homePitcher"] for game in games_json]
         pitcher_ids += [game["awayPitcher"] for game in games_json]
         pitcher_dict = {k: v for k, v in all_players.items() if k in pitcher_ids}
+        results = {}
 
         for game in games_json:
             if game["homePitcher"] not in pitcher_dict:
@@ -109,6 +113,7 @@ class BetAdvice(commands.Cog):
             hp_stlats = pitcher_stlats[game["homePitcher"]]
             opp_stlats = team_stlats[game["awayTeam"]]
             strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf, team_stats[game["awayTeam"]], day)
+            results[strikeout_odds] = game["homePitcherName"]
             pitcher_dict[game["homePitcher"]]["k_prediction"] = strikeout_odds
 
             if game["awayPitcher"] not in pitcher_dict:
@@ -127,7 +132,16 @@ class BetAdvice(commands.Cog):
             hp_stlats = pitcher_stlats[game["awayPitcher"]]
             opp_stlats = team_stlats[game["homeTeam"]]
             strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf, team_stats[game["homeTeam"]], day)
+            results[strikeout_odds] = game["awayPitcherName"]
             pitcher_dict[game["awayPitcher"]]["k_prediction"] = strikeout_odds
+
+        sorted_results = {k: v for k, v in
+                       sorted(results.items(), key=lambda item: item[0], reverse=True)}
+        output_text = ""
+        for key, value in sorted_results.items():
+            output_text += f"{value}: {round(key)}\n"
+        with open(os.path.join('data', 'pendant_data', 'results', f"s{season}_d{day}_so_model_results.txt"), 'a') as fd:
+            fd.write((output_text))
 
         for k in pitcher_dict.keys():
             if pitcher_dict[k]['outsRecorded'] > 0:
