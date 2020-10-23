@@ -150,6 +150,7 @@ class JsonWatcher(commands.Cog):
                         messages.append(cur_message)
                         cur_message = ""
                     cur_message += f"\n{part}"
+                messages.append(cur_message)
                 with open(os.path.join("json_data", "allteams.json"), 'rb') as logfile:
                     await output_channel.send(file=discord.File(logfile, filename=f'allteams{int(time.time())}.json'))
                     for message in messages:
