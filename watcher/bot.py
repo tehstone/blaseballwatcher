@@ -182,6 +182,8 @@ class WatcherBot(commands.AutoShardedBot):
             except Exception as e:
                 self.logger.warn(f"Failed to update pendant leaders: {e}")
 
+            await utils.update_cumulative_statsheets(self.config['current_season'])
+
             betadvice_cog = self.cogs.get('BetAdvice')
             try:
                 message, embed_fields = await betadvice_cog.daily_message()
@@ -200,8 +202,6 @@ class WatcherBot(commands.AutoShardedBot):
             await gamedata_cog.update_spreadsheets([current_season-1])
             if debug_channel:
                 await debug_channel.send("Spreadsheets updated.")
-
-            await utils.update_cumulative_statsheets(self.config['current_season'])
 
         elif not message.author.bot:
             await self.process_commands(message)

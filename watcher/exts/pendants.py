@@ -58,6 +58,8 @@ class Pendants(commands.Cog):
         game_statsheet_ids = [game["statsheet"] for game in games.json()]
         game_statsheets = await self.retry_request(
             f"https://www.blaseball.com/database/gameStatsheets?ids={','.join(game_statsheet_ids)}")
+        if not game_statsheets:
+            return None
         team_statsheet_ids = [game["awayTeamStats"] for game in game_statsheets.json()]
         team_statsheet_ids += [game["homeTeamStats"] for game in game_statsheets.json()]
         team_statsheets = await self.retry_request(
@@ -106,7 +108,8 @@ class Pendants(commands.Cog):
                 opp_id = game_team_map[p_values["teamId"]]["opponent"]
                 if opp_id not in team_stats:
                     team_stats[opp_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0,
-                                          "struckouts": 0, "name": self.bot.team_names[opp_id]}
+                                          "struckouts": 0, "name": self.bot.team_names[opp_id],
+                                          "lineup_pa": {}}
                 team_stats[opp_id]["shutout"] += 1
                 if p_values['hitsAllowed'] == 0:
                     if p_values['walksIssued'] == 0:
@@ -169,14 +172,20 @@ class Pendants(commands.Cog):
                 team_id = p_values["teamId"]
                 if team_id not in team_stats:
                     team_stats[team_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0,
-                                          "struckouts": 0, "name": self.bot.team_names[team_id]}
+                                          "struckouts": 0, "name": self.bot.team_names[team_id],
+                                          "lineup_pa": {}}
                 team_stats[team_id]["at_bats"] += p_values["atBats"]
                 if "plate_appearances" not in team_stats[team_id]:
                     team_stats[team_id]["plate_appearances"] = 0
-                team_stats[team_id]["plate_appearances"] += p_values["atBats"] + p_values["walks"] \
-                                                          + p_values["hitByPitch"]
+                plate_appearances = p_values["atBats"] + p_values["walks"] + p_values["hitByPitch"]
+                team_stats[team_id]["plate_appearances"] += plate_appearances
                 if "struckouts" in p_values:
                     team_stats[team_id]["struckouts"] += p_values["struckouts"]
+                if "lineup_pa" not in team_stats[team_id]:
+                    team_stats[team_id]["lineup_pa"] = {}
+                if p_values["playerId"] not in team_stats[team_id]["lineup_pa"]:
+                    team_stats[team_id]["lineup_pa"][p_values["playerId"]] = 0
+                team_stats[team_id]["lineup_pa"][p_values["playerId"]] += plate_appearances
 
                 if p_values["hits"] >= 4:
                     if p_values["homeRuns"] > 0 and p_values["doubles"] > 0 and p_values["triples"] > 0 and \

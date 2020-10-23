@@ -43,13 +43,16 @@ class BetAdvice(commands.Cog):
                 team_stlats[team_id]["lineup"][batter["id"]] = batter
         return pitcher_stlats, team_stlats
 
-    async def strikeout_odds(self, hp_stlats, opp_stlats, clf, team_stats, day):
+    async def strikeout_odds(self, hp_stlats, opp_stlats, clf, team_stats, day, cumulative_stats):
         stlats_arr = []
         unthwack = float(hp_stlats["unthwackability"])
         ruth = float(hp_stlats["ruthlessness"])
         overp = float(hp_stlats["overpowerment"])
         cold = float(hp_stlats["coldness"])
-        for __, opponent in opp_stlats["lineup"].items():
+        lineup_size = len(opp_stlats["lineup"].items())
+        lineup = []
+        for pid, opponent in opp_stlats["lineup"].items():
+            lineup.append(pid)
             s_arr = []
             for stlat in ["tragicness", "patheticism", "thwackability", "divinity",
                           "moxie", "musclitude", "laserlikeness", "continuation",
@@ -59,12 +62,19 @@ class BetAdvice(commands.Cog):
             stlats_arr.append(s_arr)
         odds_list = clf.predict_proba(stlats_arr)
         odds_sum = 0
-        for odds in odds_list:
-            odds_sum += odds[1]
-        if "plate_appearances" in team_stats:
-            return odds_sum * (team_stats["plate_appearances"] / day)
-        else:
-            return odds_sum * ((team_stats["at_bats"] * 1.05) / day)
+
+        for i in range(len(odds_list)):
+            odds = odds_list[i][1]
+            pid = lineup[i]
+            if pid in cumulative_stats["hitters"]:
+                plate_appearances = cumulative_stats["hitters"][pid]["plateAppearances"]
+            else:
+                plate_appearances = team_stats["plate_appearances"] / lineup_size
+            #print(plate_appearances / day)
+            odds *= plate_appearances / day
+            odds_sum += odds
+        return odds_sum
+
 
     async def daily_message(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
@@ -74,12 +84,15 @@ class BetAdvice(commands.Cog):
         sim_data = html_response.json()
         season = sim_data['season']
         day = sim_data['day'] + 1
+        #day = 97
         clf = load(os.path.join("data", "pendant_data", "so.joblib"))
 
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'r') as file:
             all_players = json.load(file)
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'team_stats.json'), 'r') as file:
             team_stats = json.load(file)
+        with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_current_player_stats.json'), 'r') as file:
+            cumulative_stats = json.load(file)
         pitcher_stlats, team_stlats = await self.get_player_stlats()
         filename = os.path.join('data', 'pendant_data', 'stlats', f's{season}_d{day}_pitcher_stlats.json')
         with open(filename, 'w') as file:
@@ -112,7 +125,8 @@ class BetAdvice(commands.Cog):
                                                                 * team_stats[game["awayTeam"]]["shutout"]
             hp_stlats = pitcher_stlats[game["homePitcher"]]
             opp_stlats = team_stlats[game["awayTeam"]]
-            strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf, team_stats[game["awayTeam"]], day)
+            strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf,
+                                                       team_stats[game["awayTeam"]], day, cumulative_stats)
             results[strikeout_odds] = game["homePitcherName"]
             pitcher_dict[game["homePitcher"]]["k_prediction"] = strikeout_odds
 
@@ -131,15 +145,20 @@ class BetAdvice(commands.Cog):
                                                                 * team_stats[game["homeTeam"]]["shutout"]
             hp_stlats = pitcher_stlats[game["awayPitcher"]]
             opp_stlats = team_stlats[game["homeTeam"]]
-            strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf, team_stats[game["homeTeam"]], day)
+            strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf,
+                                                       team_stats[game["homeTeam"]], day, cumulative_stats)
             results[strikeout_odds] = game["awayPitcherName"]
             pitcher_dict[game["awayPitcher"]]["k_prediction"] = strikeout_odds
 
         sorted_results = {k: v for k, v in
                        sorted(results.items(), key=lambda item: item[0], reverse=True)}
         output_text = ""
+        output_text_2 = ""
         for key, value in sorted_results.items():
-            output_text += f"{value}: {round(key)}\n"
+            rounded_odds = round(key*10)/10
+            output_text += f"{value}: {key}\n"
+            output_text_2 += f"{value}: {rounded_odds}\n"
+        output_text += f"\n{output_text_2}"
         with open(os.path.join('data', 'pendant_data', 'results', f"s{season}_d{day}_so_model_results.txt"), 'a') as fd:
             fd.write((output_text))
 
@@ -166,7 +185,6 @@ class BetAdvice(commands.Cog):
                   f"Ranked by Machine Learning model simulating pitchers vs " \
                   f"the full opposing lineup courtesy of kjc9#9000\n"
         embed_fields = []
-        #top_list = list(sorted_strikeouts.keys())[:2]
         top_list = list(sorted_ml_model.keys())[:5]
         count = 1
         # add projected strikeouts * 200 + expected shutout * 10000
@@ -175,6 +193,7 @@ class BetAdvice(commands.Cog):
             name = values["name"]
             team = self.bot.team_names[values["team"]]
             pred = values["k_prediction"]
+            pred = round(pred * 10) / 10
             opponent = self.bot.team_names[values["opponent"]]
             opp_sho_per = results[values["opponent"]]["shutout_percentage"]
             opp_k_per = results[values["opponent"]]["strikeout_percentage"]
@@ -193,7 +212,7 @@ class BetAdvice(commands.Cog):
                         f'{team} vs **{opponent}** K/AB: **{values["opponentSOAvg"]}** '
             k_message += f"\nPredicted payout: {predicted_payout}. \nKs only: {predicted_payout_ko}"
 
-            embed_fields.append({"name": f"**{count}. {name}** - {round(pred)}",
+            embed_fields.append({"name": f"**{count}. {name}** - {pred}",
                                  "value": k_message})
             count += 1
 

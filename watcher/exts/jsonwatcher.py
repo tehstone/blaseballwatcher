@@ -139,14 +139,21 @@ class JsonWatcher(commands.Cog):
                 return
             latest_allteams = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(latest_allteams[0], current_allteams[0], output_channel, "allteams")
-            messages = await self.check_all_teams(latest_allteams, current_allteams)
-            changed = changed or len(messages) > 0
+            message_parts = await self.check_all_teams(latest_allteams, current_allteams)
+            changed = changed or len(message_parts) > 0
             self.save_files(latest_allteams, "allteams.json", changed)
-            if len(messages) > 0:
+            messages = []
+            if len(message_parts) > 0:
+                cur_message = ""
+                for part in message_parts:
+                    if len(cur_message) + len(part) > 1900:
+                        messages.append(cur_message)
+                        cur_message = ""
+                    cur_message += f"\n{part}"
                 with open(os.path.join("json_data", "allteams.json"), 'rb') as logfile:
-                    await output_channel.send(content='\n'.join(messages),
-                                              file=discord.File(logfile,
-                                                                filename=f'allteams{int(time.time())}.json'))
+                    await output_channel.send(file=discord.File(logfile, filename=f'allteams{int(time.time())}.json'))
+                    for message in messages:
+                        await output_channel.send(message)
         except Exception as e:
             self.bot.logger.warn(f'Failed to acquire allteams data: {e}')
 
@@ -216,6 +223,11 @@ class JsonWatcher(commands.Cog):
 
     @staticmethod
     async def check_for_division_changes(old_divisions, new_divisions):
+        with open(os.path.join("json_data", "allteams.json"), encoding='utf-8') as json_file:
+            current_allteams = json.load(json_file)
+        team_names = {}
+        for team in current_allteams:
+            team_names[team["id"]] = team["fullName"]
         messages = []
         changed = False
         old_div_ids = [div["id"] for div in old_divisions]
@@ -234,11 +246,24 @@ class JsonWatcher(commands.Cog):
                     if o_div["id"] == div["id"]:
                         team_diff = set(div["teams"]) - set(o_div["teams"])
                         if len(team_diff) > 0:
-                            messages.append(f"{div['name']} Division added teams: {team_diff}")
+                            names = []
+                            for team in team_diff:
+                                if team in team_names:
+                                    names.append(team_names[team])
+                                else:
+                                    names.append("?? NEW TEAM ??")
+
+                            messages.append(f"{div['name']} Division added teams: {','.join(names)}")
                             changed = True
                         team_diff = set(o_div["teams"]) - set(div["teams"])
                         if len(team_diff) > 0:
-                            messages.append(f"{div['name']} Division lost teams: {team_diff}")
+                            names = []
+                            for team in team_diff:
+                                if team in team_names:
+                                    names.append(team_names[team])
+                                else:
+                                    names.append("?? NEW TEAM ??")
+                            messages.append(f"{div['name']} Division lost teams: {','.join(names)}")
                             changed = True
         return messages, changed
 
@@ -246,20 +271,39 @@ class JsonWatcher(commands.Cog):
     async def check_all_teams(new_team_list, old_team_list):
         old_teams = {}
         new_teams = {}
+        all_player_ids = []
+        all_players = {}
         for team in old_team_list:
             old_teams[team["id"]] = team
+            for group in ["lineup", "rotation", "bullpen", "bench"]:
+                for pid in team[group]:
+                    if pid not in all_player_ids:
+                        all_player_ids.append(pid)
         for team in new_team_list:
             new_teams[team["id"]] = team
+            for group in ["lineup", "rotation", "bullpen", "bench"]:
+                for pid in team[group]:
+                    if pid not in all_player_ids:
+                        all_player_ids.append(pid)
+
+        chunked_player_ids = [all_player_ids[i:i + 50] for i in range(0, len(all_player_ids), 50)]
+        for chunk in chunked_player_ids:
+            b_url = f"https://www.blaseball.com/database/players?ids={','.join(chunk)}"
+            html_response = await utils.retry_request(b_url)
+            for player in html_response.json():
+                all_players[player["id"]] = player
         messages = []
         for team in old_teams:
             if team in new_teams:
                 for group in ["lineup", "rotation", "bullpen", "bench"]:
                     r_diff = set(old_teams[team][group]) - set(new_teams[team][group])
                     if len(r_diff) > 0:
-                        messages.append(f"{','.join(r_diff)} no longer in {old_teams[team]['nickname']} {group}")
+                        names = [all_players[pid]["name"] for pid in r_diff]
+                        messages.append(f"{','.join(names)} no longer in {old_teams[team]['nickname']} {group}")
                     r_diff = set(new_teams[team][group]) - set(old_teams[team][group])
                     if len(r_diff) > 0:
-                        messages.append(f"{','.join(r_diff)} added to {new_teams[team]['nickname']} {group}")
+                        names = [all_players[pid]["name"] for pid in r_diff]
+                        messages.append(f"{','.join(names)} added to {new_teams[team]['nickname']} {group}")
                 for attrset in ["seasAttr", "permAttr", "weekAttr", "gameAttr"]:
                     a_diff = set(old_teams[team][attrset]) - set(new_teams[team][attrset])
                     if len(a_diff) > 0:
@@ -297,8 +341,8 @@ class JsonWatcher(commands.Cog):
         while not self.bot.is_closed():
             print("checking for json changes")
             await self.check_for_field_updates()
-            await self.check_for_content_updates()
             await self.check_for_comprehensive_updates()
+            await self.check_for_content_updates()
             await self.save()
             await asyncio.sleep(self.bot.config.setdefault('json_watch_interval', 10) * 60)
             continue
