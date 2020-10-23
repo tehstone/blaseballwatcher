@@ -174,6 +174,7 @@ class BetAdvice(commands.Cog):
             values = pitcher_dict[key]
             name = values["name"]
             team = self.bot.team_names[values["team"]]
+            pred = values["k_prediction"]
             opponent = self.bot.team_names[values["opponent"]]
             opp_sho_per = results[values["opponent"]]["shutout_percentage"]
             opp_k_per = results[values["opponent"]]["strikeout_percentage"]
@@ -192,7 +193,7 @@ class BetAdvice(commands.Cog):
                         f'{team} vs **{opponent}** K/AB: **{values["opponentSOAvg"]}** '
             k_message += f"\nPredicted payout: {predicted_payout}. \nKs only: {predicted_payout_ko}"
 
-            embed_fields.append({"name": f"**{count}. {name}**",
+            embed_fields.append({"name": f"**{count}. {name}** - {round(pred)}",
                                  "value": k_message})
             count += 1
 
