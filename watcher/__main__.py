@@ -42,7 +42,7 @@ async def start_task_loops(bot):
         json_watcher = bot.get_cog("JsonWatcher")
         tasks.append(event_loop.create_task(json_watcher.check_loop()))
 
-        tasks.append(event_loop.create_task(utils.game_check_loop(bot)))
+        #tasks.append(event_loop.create_task(utils.game_check_loop(bot)))
         logger.info('Loops initiated')
     except KeyboardInterrupt:
         [task.cancel() for task in tasks]
