@@ -80,6 +80,14 @@ class AdminCommands(commands.Cog):
                 ctx.bot._last_result = ret
                 await ctx.send(f'```py\n{value}{ret}\n```')
 
+    @commands.command(name='vote')
+    async def vote_command(self, ctx, *, message):
+        vote_message = await ctx.send(message)
+        await vote_message.add_reaction("👍")
+        await vote_message.add_reaction("👎")
+        #await vote_message.add_reaction("<:ballclark:786049152969867341>")
+        await vote_message.add_reaction("<:ballclark:766457844811431997>")
+
     @commands.command(name='save')
     @checks.is_owner()
     async def save_command(self, ctx):
