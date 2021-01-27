@@ -170,7 +170,7 @@ class WatcherBot(commands.AutoShardedBot):
                         and self._has_string(r"\bblaseball\b", message.clean_content.lower()):
                     await message.add_reaction("❌")
                 if message.clean_content == "sip":
-                    await message.ctx.send("https://imgur.com/zAUU6FD")
+                    await message.channel.send("https://imgur.com/zAUU6FD")
         debug_chan_id = self.config.setdefault('debug_channel', None)
         debug_channel = None
         if debug_chan_id:
