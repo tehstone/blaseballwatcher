@@ -157,12 +157,20 @@ class WatcherBot(commands.AutoShardedBot):
                 elif message.clean_content == "words":
                     await message.add_reaction("🅰️")
                     await message.add_reaction("🔨")
+                elif message.clean_content == "brains":
+                    await message.add_reaction("🧠")
+                    await message.add_reaction("🔨")
+                elif message.clean_content == "maps":
+                    await message.add_reaction("🗺️")
+                    await message.add_reaction("🔨")
                 elif message.clean_content == "math" or message.clean_content == "maths":
                     await message.add_reaction("0️⃣")
                     await message.add_reaction("🔨")
                 if message.channel.id in self.off_topic_channels \
                         and self._has_string(r"\bblaseball\b", message.clean_content.lower()):
                     await message.add_reaction("❌")
+                if message.clean_content == "sip":
+                    await message.ctx.send("https://imgur.com/zAUU6FD")
         debug_chan_id = self.config.setdefault('debug_channel', None)
         debug_channel = None
         if debug_chan_id:
