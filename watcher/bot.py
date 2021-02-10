@@ -135,6 +135,8 @@ class WatcherBot(commands.AutoShardedBot):
             self.config['current_season'] = 9
         if 'live_version' not in self.config:
             self.config['live_version'] = True
+        if "cloudflare_id" not in self.config:
+            self.config["cloudflare_id"] = "d35iw2jmbg6ut8"
 
     @staticmethod
     def _has_string(string, text):
@@ -171,6 +173,8 @@ class WatcherBot(commands.AutoShardedBot):
                     await message.add_reaction("❌")
                 if message.clean_content == "sip":
                     await message.channel.send("https://imgur.com/zAUU6FD")
+                if message.clean_content == "spinny":
+                    await message.channel.send("https://tenor.com/view/ikea-blahaj-doll-spinning-shark-gif-18118200")
         debug_chan_id = self.config.setdefault('debug_channel', None)
         debug_channel = None
         if debug_chan_id:

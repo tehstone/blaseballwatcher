@@ -100,7 +100,7 @@ class RulesWatcher(commands.Cog):
         new_page_text, js_url = None, None
         for i in range(retries):
             try:
-                new_page_text, js_url = await parse_blaseball_book.parse_book_from_javascript()
+                new_page_text, js_url = await parse_blaseball_book.parse_book_from_javascript(self.bot)
                 break
             except:
                 pass

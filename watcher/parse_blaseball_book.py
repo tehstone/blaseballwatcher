@@ -99,14 +99,14 @@ async def request_text(url):
             return await resp.text()
 
 
-async def parse_book_from_javascript():
+async def parse_book_from_javascript(bot):
     response = await request_text("https://blaseball.com/")
     if not response:
         raise Exception("Could not connect to blaseball.com")
 
     soup = BeautifulSoup(response, 'html.parser')
 
-    script_tags = soup.select('script[src^="/static/js/main\."]')
+    script_tags = soup.select(f'script[src^="https://{bot.config["cloudflare_id"]}.cloudfront.net/static/js/main\."]')
     if len(script_tags) == 0:
         raise Exception('Could not find the main JS file.')
     if len(script_tags) > 1:
