@@ -108,6 +108,8 @@ async def parse_book_from_javascript(bot):
 
     script_tags = soup.select(f'script[src^="https://{bot.config["cloudflare_id"]}.cloudfront.net/static/js/main\."]')
     if len(script_tags) == 0:
+        script_tags = soup.select(f'script[src^="/static/js/main\."]')
+    if len(script_tags) == 0:
         raise Exception('Could not find the main JS file.')
     if len(script_tags) > 1:
         raise Exception('More than one main JS files found.')
