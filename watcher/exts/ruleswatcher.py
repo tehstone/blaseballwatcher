@@ -48,7 +48,7 @@ class RulesWatcher(commands.Cog):
         return await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(name='set_rules_ping_role', aliases=['srpr'])
-    async def _set_rules_ping_role(self, ctx, role_id: int):
+    async def _set_rules_ping_role(self, ctx, role_id):
         role_id = utils.sanitize_name(role_id)
         try:
             role_id = int(role_id)
