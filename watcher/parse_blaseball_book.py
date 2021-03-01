@@ -125,7 +125,7 @@ async def parse_book_from_javascript(bot):
 
     js_url = urljoin('https://blaseball.com', src)
     js = await request_text(js_url)
-
+    return None, js_url
     ast = esprima.parse(js)
 
     book_of_blaseball_visitor = BookOfBlaseballVisitor()
