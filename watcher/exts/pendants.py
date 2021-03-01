@@ -467,6 +467,7 @@ class Pendants(commands.Cog):
                     for message in game_watcher_messages:
                         desription += message + "\n"
                     msg_embed = discord.Embed(description=desription[:2047])
+                    self.bot.logger.info(f"Significant stats day {day['day']}:\n{desription}")
                     await output_channel.send(embed=msg_embed)
                 if len(daily_message) > 0:
                     sh_embed.description = sh_description
@@ -490,6 +491,8 @@ class Pendants(commands.Cog):
                             else:
                                 await daily_stats_channel.send(daily_message)
                                 await daily_stats_channel.send(daily_message_two)
+                else:
+                    self.bot.logger.info(f"No daily message sent for {day['day']}")
 
     async def compile_stats(self):
         all_statsheets = []
