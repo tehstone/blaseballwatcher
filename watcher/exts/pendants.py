@@ -43,10 +43,16 @@ class Pendants(commands.Cog):
         return None
 
     async def get_daily_stats(self, all_statsheets, day, season):
-        with open(os.path.join('data', 'pendant_data', 'statsheets', 'pitching_rotations.json'), 'r') as file:
-            pitching_rotations = json.load(file)
-        with open(os.path.join('data', 'pendant_data', 'statsheets', 'team_stats.json'), 'r') as file:
-            team_stats = json.load(file)
+        try:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', 'pitching_rotations.json'), 'r') as file:
+                pitching_rotations = json.load(file)
+        except FileNotFoundError:
+            pitching_rotations = {}
+        try:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', 'team_stats.json'), 'r') as file:
+                team_stats = json.load(file)
+        except FileNotFoundError:
+            team_stats = {}
         games = await self.retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
         for game in games.json():
             if not game["gameComplete"] and game["day"] != 101:
@@ -486,6 +492,7 @@ class Pendants(commands.Cog):
                                 await daily_stats_channel.send(daily_message_two)
 
     async def compile_stats(self):
+        all_statsheets = []
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
             all_statsheets = json.load(file)
         players = {}
