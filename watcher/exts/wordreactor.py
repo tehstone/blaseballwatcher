@@ -12,6 +12,7 @@ class WordReactor(commands.Cog):
         self.bot = bot
         self.word_reacts = {}
         self.load_word_reacts()
+        self.allowed_role = 738108360964178082
 
     def load_word_reacts(self):
         try:
@@ -33,6 +34,8 @@ class WordReactor(commands.Cog):
         (don't include the <> or [] when running the command)
         Also works with '!arl'
         """
+        if not self.has_role(ctx, self.allowed_role):
+            return await ctx.message.delete()
         info = re.split(r',\s+', info)
         if len(info) < 2:
             await ctx.message.add_reaction(self.bot.failed_react)
@@ -86,6 +89,8 @@ class WordReactor(commands.Cog):
                 (don't use a comma in this command!)
                 Also works with '!aerl'
                 """
+        if not self.has_role(ctx, self.allowed_role):
+            return await ctx.message.delete()
         rl_name = f"{ctx.guild.id}_{name.strip()}"
         if rl_name not in self.word_reacts.keys():
             await ctx.send(f"No react list named {name} found.", delete_after=10)
@@ -110,7 +115,12 @@ class WordReactor(commands.Cog):
             await ctx.message.add_reaction(self.bot.failed_react)
             return await ctx.send(f"Could not find emoji {emoji}.", delete_after=10)
 
-
+    def has_role(self, ctx, role):
+        role = discord.utils.get(ctx.guild.roles, id=role)
+        if role is None:
+            return False
+        author = ctx.author
+        return role in author.roles
     # @commands.command(name="list_react_lists", aliases=['lrl'])
     # @commands.has_permissions(manage_roles=True)
     # async def list_react_lists(self, ctx):
@@ -132,7 +142,7 @@ class WordReactor(commands.Cog):
                     for name in self.word_reacts:
                         this_react = self.word_reacts[name]
                         if this_react["guild_id"] == message.guild.id:
-                            if self._has_string(fr'\b{this_react["name"]}\b', check_str):
+                            if check_str == this_react["name"]:
                                 try:
                                     for emoji in this_react["emoji_list"]:
                                         await message.add_reaction(emoji)
