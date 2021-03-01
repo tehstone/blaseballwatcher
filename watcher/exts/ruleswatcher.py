@@ -144,7 +144,7 @@ class RulesWatcher(commands.Cog):
                     messages.append(f'Script URL has changed!\nOld: <{old_url}>\nNew: <{js_url}>')
 
         if not new_page_text:
-            messages.append("Failed to obtain updated page text.")
+            self.bot.logger.warn("Failed to obtain updated page text.")
             return messages, None
         last_page_text = self._get_last_text()
         if not last_page_text:
