@@ -24,6 +24,7 @@ class RulesWatcher(commands.Cog):
         self.no_reply_messages = ["No change to Rule Book text.",
                                   "Failed to find a js URL.",
                                   "Failed to obtain most recent page text."]
+        self.main_guild_id = 738107179294523402
 
     @commands.command(name='set_notify_channel', aliases=['snc'])
     async def _set_notify_channel(self, ctx, item):
@@ -44,6 +45,22 @@ class RulesWatcher(commands.Cog):
     @commands.command(name='set_update_interval', aliases=['sui'])
     async def _set_update_interval(self, ctx, minutes: int):
         self.bot.config['interval_minutes'] = minutes
+        return await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(name='set_rules_ping_role', aliases=['srpr'])
+    async def _set_rules_ping_role(self, ctx, role_id: int):
+        role_id = utils.sanitize_name(role_id)
+        try:
+            role_id = int(role_id)
+            role = discord.utils.get(ctx.guild.roles, id=role_id)
+        except:
+            role = discord.utils.get(ctx.guild.roles, name=role_id)
+        if role is None:
+            await ctx.message.add_reaction(self.bot.failed_react)
+            return await ctx.send(embed=discord.Embed(colour=discord.Colour.red(),
+                                                      description=f"Unable to find role with name or id: **{role_id}**."),
+                                  delete_after=10)
+        self.bot.config['rules_ping_role'] = role.id
         return await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(name='get_update_interval', aliases=['gui'])
@@ -115,7 +132,15 @@ class RulesWatcher(commands.Cog):
         else:
             if old_url != js_url:
                 self.bot.config['last_js_url'] = js_url
-                messages.append(f'Script URL has changed!\nOld: <{old_url}>\nNew: <{js_url}>')
+                appended = False
+                ping_role_id = self.bot.config.setdefault('rules_ping_role', None)
+                if ping_role_id:
+                    guild = await self.bot.fetch_guild(self.main_guild_id)
+                    ping_role = guild.get_role(ping_role_id)
+                    if ping_role:
+                        messages.append(f'Script URL has changed {ping_role.mention}!\nOld: <{old_url}>\nNew: <{js_url}>')
+                if not appended:
+                    messages.append(f'Script URL has changed!\nOld: <{old_url}>\nNew: <{js_url}>')
 
         if not new_page_text:
             messages.append("Failed to obtain updated page text.")
