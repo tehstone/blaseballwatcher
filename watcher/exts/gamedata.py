@@ -463,7 +463,8 @@ class GameData(commands.Cog):
                     if self.bot.config['live_version']:
                         m_worksheet.update(f"B{3}:C{j}", mrows)
                 league_records[teams[team]['league']][teams[team]["name"]] = record
-
+                if fill:
+                    await asyncio.sleep(10)
             print("Updating Weather Events")
 
             def get_outcome_type(outcome):
@@ -622,13 +623,14 @@ class GameData(commands.Cog):
 
     @staticmethod
     def _calculate_payout(odds):
-        cut_high = [.5, .51, .52, .53]
+        cut_high = [.54, .55, .56, .57]
         payouts = [0] * len(cut_high)
         for i in range(len(cut_high)):
             count = 0
             for odd in odds:
                 if odd >= cut_high[i]:
-                    payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
+                    #payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
+                    payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
                     count += 1
                 elif odd < 1 - cut_high[i]:
                     count += 1
