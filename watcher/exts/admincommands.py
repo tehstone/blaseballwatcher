@@ -211,6 +211,15 @@ class AdminCommands(commands.Cog):
         self.bot.config['current_season'] = current_season
         await ctx.message.add_reaction(self.bot.success_react)
 
+    @commands.command(name='toggle_rec_message_publish', aliases=['trmp'])
+    @checks.is_owner()
+    async def _toggle_rec_message_publish(self, ctx):
+        if 'publish_rec_message' not in self.bot.config.keys():
+            self.bot.config['publish_rec_message'] = False
+        publish = self.bot.config['publish_rec_message']
+        self.bot.config['publish_rec_message'] = not publish
+        await ctx.message.add_reaction(self.bot.success_react)
+
     @commands.command(name='set_output_channel', aliases=['soc'])
     @checks.is_owner()
     async def _set_output_channel(self, ctx, channel_in):

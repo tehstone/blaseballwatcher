@@ -1,3 +1,5 @@
+import ssl
+
 import esprima
 import aiohttp
 from bs4 import BeautifulSoup
@@ -100,7 +102,11 @@ async def request_text(url):
 
 
 async def parse_book_from_javascript(bot):
-    response = await request_text("https://blaseball.com/")
+    try:
+        response = await request_text("https://blaseball.com/")
+    except ssl.CertificateError:
+        raise Exception("Could not connect to blaseball.com")
+
     if not response:
         raise Exception("Could not connect to blaseball.com")
 

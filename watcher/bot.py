@@ -184,11 +184,9 @@ class WatcherBot(commands.AutoShardedBot):
             bet_chan_id = self.config['bet_channel']
             current_season = self.config['current_season']
             pendant_cog = self.cogs.get('Pendants')
-            #try:
             await pendant_cog.get_latest_pendant_data(current_season)
             if debug_channel:
                 await debug_channel.send("Pendant data updated.")
-            #
             try:
                 await pendant_cog.update_leaders_sheet(current_season)
             except Exception as e:
@@ -205,7 +203,9 @@ class WatcherBot(commands.AutoShardedBot):
                 if bet_chan_id:
                     output_channel = self.get_channel(bet_chan_id)
                     bet_msg = await output_channel.send(message, embed=m_embed)
-                    await bet_msg.publish()
+                    publish = self.config.setdefault('publish_rec_message', False)
+                    if publish:
+                        await bet_msg.publish()
             except Exception as e:
                 self.logger.warn(f"Failed to send pendant picks: {e}")
 
