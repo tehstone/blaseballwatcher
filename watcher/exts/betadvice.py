@@ -240,7 +240,7 @@ class BetAdvice(commands.Cog):
                     else:
                         break
                 if len(big_message) > 0:
-                    big_message = f"Day {day}:\nTeams Likely to score 10+\n{big_message}"
+                    big_message = f"Day {day+1}:\nTeams Likely to score 10+\n{big_message}"
 
                 sorted_xbig_scores = {k: v for k, v in sorted(results.items(),
                                                               key=lambda item: item[1]['over_twenty'],
