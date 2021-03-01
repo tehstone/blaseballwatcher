@@ -15,7 +15,7 @@ from discord.ext import commands
 
 default_exts = ['admincommands', 'betadvice', 'gamedata', 'gamesim', 'helpcommand',
                 'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher',
-                'teamlookups', 'winexp']
+                'teamlookups', 'winexp', 'wordreactor']
 
 
 def _prefix_callable(bot, msg):
@@ -51,7 +51,7 @@ class WatcherBot(commands.AutoShardedBot):
         self.thumbsup_react = '👍'
         self.empty_str = '\u200b'
         self.initial_start = True
-        self.watch_servers = [738107179294523402]
+        self.watch_servers = [738107179294523402, 671866672562307091]
         self.off_topic_channels = [756667935728074754]
         self.SPREADSHEET_IDS = {'season1': '1yvGP3DwIHC7NOsPIlSCMYKbrZp6Luvir2vRMvVfe4rg',
                                 'season2': '1LT2lE31Azx7iyT-KgHXrknUIXUVjr_WJ5iH7eYIWDmU',
@@ -151,23 +151,8 @@ class WatcherBot(commands.AutoShardedBot):
             return await message.delete()
         if message.guild:
             if message.guild.id in self.watch_servers:
-                if message.clean_content == "computers":
-                    await message.add_reaction("💻")
-                    await message.add_reaction("🔨")
-                elif self._has_string(r"\ba cop\b", message.clean_content.lower()):
+                if self._has_string(r"\ba cop\b", message.clean_content.lower()):
                     await message.add_reaction("🚨")
-                elif message.clean_content == "words":
-                    await message.add_reaction("🅰️")
-                    await message.add_reaction("🔨")
-                elif message.clean_content == "brains":
-                    await message.add_reaction("🧠")
-                    await message.add_reaction("🔨")
-                elif message.clean_content == "maps":
-                    await message.add_reaction("🗺️")
-                    await message.add_reaction("🔨")
-                elif message.clean_content == "math" or message.clean_content == "maths":
-                    await message.add_reaction("0️⃣")
-                    await message.add_reaction("🔨")
                 if message.channel.id in self.off_topic_channels \
                         and self._has_string(r"\bblaseball\b", message.clean_content.lower()):
                     await message.add_reaction("❌")

@@ -124,6 +124,8 @@ class AdminCommands(commands.Cog):
             os.rename(tempname, os.path.join('data', 'serverdict'))
         except Exception as e:
             self.bot.logger.error(f"Failed to save serverdict. Error: {str(e)}")
+        rc_cog = self.bot.cogs.get('WordReactor')
+        rc_cog.save_word_reacts()
 
     async def _print(self, owner, message):
         if 'launcher' in sys.argv[1:]:
