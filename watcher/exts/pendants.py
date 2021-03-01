@@ -316,7 +316,7 @@ class Pendants(commands.Cog):
                 sorted_strikeouts = {k: v for k, v in
                                      sorted(players.items(), key=lambda item: item[1]['strikeouts'],
                                             reverse=True)}
-                daily_message_two += f"\n**Strikeouts**\n{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 7, True)}"
+                daily_message_two += f"\n**Strikeouts**\n{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 8, True)}"
 
                 game_watcher_messages = []
                 sh_embed = discord.Embed(title="**Shutout!**")
