@@ -139,6 +139,7 @@ class RulesWatcher(commands.Cog):
                     ping_role = guild.get_role(ping_role_id)
                     if ping_role:
                         messages.append(f'Script URL has changed {ping_role.mention}!\nOld: <{old_url}>\nNew: <{js_url}>')
+                        appended = True
                 if not appended:
                     messages.append(f'Script URL has changed!\nOld: <{old_url}>\nNew: <{js_url}>')
 
