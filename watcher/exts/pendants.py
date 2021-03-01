@@ -614,10 +614,12 @@ class Pendants(commands.Cog):
         for k, v in sorted_hits.items():
             hits = v["hits"]
             homeruns = sorted_homeruns[k]["homeRuns"]
-            total_one = (hits * 5) + (homeruns * 50)
-            total_ten = (hits * 100) + (homeruns * 550)
-            total_max = (hits * 200) + (homeruns * 1000)
-            total_hit_payouts[k] = {"name": v["name"], "total1": total_one, "total10": total_ten, "totalmax": total_max}
+            total_one = (hits * 5) + (homeruns * 20)
+            total_twentyfive = (hits * 281) + (homeruns * 995)
+            total_fifty = (hits * 656) + (homeruns * 2010)
+            total_max = (hits * 1500) + (homeruns * 4000)
+            total_hit_payouts[k] = {"name": v["name"], "total1": total_one, "total25": total_twentyfive,
+                                    "total50": total_fifty, "totalmax": total_max}
         sorted_total_hit_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
                                                             key=lambda item: item[1]['totalmax'], reverse=True)}
 
