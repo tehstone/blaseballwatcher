@@ -466,7 +466,7 @@ class Pendants(commands.Cog):
                     desription = ""
                     for message in game_watcher_messages:
                         desription += message + "\n"
-                    msg_embed = discord.Embed(description=desription)
+                    msg_embed = discord.Embed(description=desription[:2047])
                     await output_channel.send(embed=msg_embed)
                 if len(daily_message) > 0:
                     sh_embed.description = sh_description

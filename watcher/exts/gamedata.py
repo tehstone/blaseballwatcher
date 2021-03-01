@@ -58,12 +58,14 @@ weather_types = {
     12: 'Feedback',
     13: 'Reverb',
     14: 'Black Hole',
-    15: '???',
-    16: '???',
-    17: '???',
-    18: '???',
+    15: 'Coffee',
+    16: 'Coffee 2',
+    17: 'Coffee 3s',
+    18: 'Flooding',
     19: '???',
-    20: '???'
+    20: '???',
+    21: '???',
+    22: '???'
 }
 
 old_favor_rankings = {
@@ -392,8 +394,8 @@ class GameData(commands.Cog):
                                    '',
                                    '',
                                    '',
-                                   win,
-                                   loss,
+                                   '',
+                                   '',
                                    '',
                                    '',
                                    game_type,
