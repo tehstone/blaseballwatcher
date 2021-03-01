@@ -95,7 +95,9 @@ class WatcherBot(commands.AutoShardedBot):
                         "c73b705c-40ad-4633-a6ed-d357ee2e2bcf": "Lift"
                         }
         self.daily_watch_message = self.config.setdefault('daily_watch_message', 'Go Bet!')
+        self.check_for_games_complete = self.config.setdefault('check_for_games_complete', False)
         self.current_day = 0
+        self.tasks = []
 
         for ext in default_exts:
             try:

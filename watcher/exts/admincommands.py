@@ -1,3 +1,4 @@
+import asyncio
 import errno
 import io
 import json
@@ -87,6 +88,24 @@ class AdminCommands(commands.Cog):
         await vote_message.add_reaction("👎")
         #await vote_message.add_reaction("<:ballclark:786049152969867341>")
         await vote_message.add_reaction("<:ballclark:766457844811431997>")
+
+    @commands.command(name='check_for_games_complete', aliases=['cfgc'])
+    async def _check_for_games_complete(self, ctx, check: bool):
+        if check == self.bot.config['check_for_games_complete']:
+            return await ctx.message.add_reaction(self.bot.success_react)
+        self.bot.config['check_for_games_complete'] = check
+        tasks = self.bot.tasks
+        if check:
+            event_loop = asyncio.get_event_loop()
+            self.bot.tasks.append(event_loop.create_task(utils.game_check_loop(self.bot)))
+        else:
+            for t in range(len(tasks)):
+                task = tasks[t]
+                if task._coro.cr_code.co_name == "game_check_loop":
+                    tasks.pop(t)
+                    task.cancel()
+                    break
+        return await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(name='save')
     @checks.is_owner()

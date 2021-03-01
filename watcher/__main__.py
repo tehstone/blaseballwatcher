@@ -33,19 +33,19 @@ async def _print(owner, message):
 
 
 async def start_task_loops(bot):
-    tasks = []
     try:
         rules_watcher = bot.get_cog("RulesWatcher")
-        tasks.append(event_loop.create_task(rules_watcher.check_book_loop()))
-        tasks.append(event_loop.create_task(rules_watcher.check_players_loop()))
+        bot.tasks.append(event_loop.create_task(rules_watcher.check_book_loop()))
+        bot.tasks.append(event_loop.create_task(rules_watcher.check_players_loop()))
 
         json_watcher = bot.get_cog("JsonWatcher")
-        tasks.append(event_loop.create_task(json_watcher.check_loop()))
+        bot.tasks.append(event_loop.create_task(json_watcher.check_loop()))
 
-        #tasks.append(event_loop.create_task(utils.game_check_loop(bot)))
+        if bot.check_for_games_complete:
+            bot.tasks.append(event_loop.create_task(utils.game_check_loop(bot)))
         logger.info('Loops initiated')
     except KeyboardInterrupt:
-        [task.cancel() for task in tasks]
+        [task.cancel() for task in bot.tasks]
 
 
 @Watcher.event

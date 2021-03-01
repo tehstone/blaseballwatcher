@@ -80,11 +80,11 @@ async def game_check_loop(bot):
                 complete = False
                 break
         if complete and failed == False:
-            interval = 45
+            interval = 35
             debug_channel = bot.get_channel(bot.config['debug_channel'])
-            await debug_channel.send("Internal Bet Reminder")
+            await debug_channel.send(bot.daily_watch_message)
         else:
-            interval = 1
+            interval = 2
         await asyncio.sleep(interval * 60)
 
 
