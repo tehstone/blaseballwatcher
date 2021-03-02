@@ -301,7 +301,7 @@ class Pendants(commands.Cog):
                                    sorted(players.items(), key=lambda item: item[1]['homeRuns'], reverse=True)}
                 sorted_rbis = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['rbis'], reverse=True)}
 
-                hit_message = self.print_top(sorted_hits, 'hits', 'hits', 3)
+                hit_message = self.print_top(sorted_hits, 'hits', 'hits', 4)
                 if len(hit_message) > 0:
                     daily_message += f"\n**Hits**\n{hit_message}"
 
@@ -316,7 +316,7 @@ class Pendants(commands.Cog):
                 sorted_strikeouts = {k: v for k, v in
                                      sorted(players.items(), key=lambda item: item[1]['strikeouts'],
                                             reverse=True)}
-                daily_message_two += f"\n**Strikeouts**\n{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 8, True)}"
+                daily_message_two += f"\n**Strikeouts**\n{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 9, True)}"
 
                 game_watcher_messages = []
                 sh_embed = discord.Embed(title="**Shutout!**")
