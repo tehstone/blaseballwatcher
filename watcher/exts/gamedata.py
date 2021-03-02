@@ -195,7 +195,7 @@ class GameData(commands.Cog):
                         break
 
                 if game['day'] not in odds[seas]:
-                    odds[seas][game['day']] = {"results": {"favored": 0, "underdog": 0}, "odds": []}
+                    odds[seas][game['day']] = {"results": {"favored": 0, "underdog": 0}, "odds": [], "weathers": []}
                 if game["homeScore"] > game["awayScore"]:
                     if game["homeOdds"] > game["awayOdds"]:
                         result = "favored"
@@ -210,9 +210,9 @@ class GameData(commands.Cog):
                     odds[seas][game['day']]["odds"].append(max(game["homeOdds"], game["awayOdds"]))
                 else:
                     odds[seas][game['day']]["odds"].append(min(game["homeOdds"], game["awayOdds"]))
+                odds[seas][game['day']]["weathers"].append(game["weather"])
 
                 odds[seas][game['day']]["results"][result] += 1
-
 
                 season = schedule.setdefault(game["season"], {})
                 home_team = season.setdefault(game["homeTeam"], {})
@@ -634,9 +634,11 @@ class GameData(commands.Cog):
                     header_row.append(f"{round(i*100)}%+ payout")
                 odds_rows.append(header_row)
                 for day in odds[season]:
-                    payouts = self._calculate_payout(odds[season][day]["odds"])
+                    payouts, bet_counts = self._calculate_payout(odds[season][day])
                     rounded_odds = []
-                    for o in odds[season][day]["odds"]:
+                    for i in range(len(odds[season][day]["odds"])):
+                        #if odds[season][day]["weathers"][i] != 1 and odds[season][day]["weathers"][i] != 14:
+                        o = odds[season][day]["odds"][i]
                         rounded_odds.append(round(o * 1000)/10)
 
                     rounded_odds.sort()
@@ -653,12 +655,16 @@ class GameData(commands.Cog):
             await asyncio.sleep(5)
 
     @staticmethod
-    def _calculate_payout(odds):
+    def _calculate_payout(odds_dict):
+        weathers = odds_dict["weathers"]
+        odds = odds_dict["odds"]
         cut_high = [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]
         payouts = [0] * len(cut_high)
+        bet_counts = [0] * len(cut_high)
         for i in range(len(cut_high)):
             count = 0
-            for odd in odds:
+            for j in range(len(odds)):
+                odd = odds[j]
                 if odd >= cut_high[i]:
                     #payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
                     payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
@@ -666,7 +672,8 @@ class GameData(commands.Cog):
                 elif odd < 1 - cut_high[i]:
                     count += 1
             payouts[i] = payouts[i] - (1000 * count)
-        return payouts
+            bet_counts[i] = count
+        return payouts, bet_counts
 
     @commands.command(name='update_divine_favor', aliases=['favor', 'divine', 'udf'])
     async def _update_divine_favor(self, ctx):
