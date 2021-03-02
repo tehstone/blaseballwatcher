@@ -86,7 +86,17 @@ class JsonWatcher(commands.Cog):
             changed = await self.check_single_json(cur_json[0], teamstatsheet[0], output_channel, "teamstatsheet")
             self.save_files(cur_json, "teamstatsheet.json", changed)
 
-            sid = cur_json[0]['playerStats'][0]
+            static_playerstatsheet_id = 'bdd47469-1311-4d9b-a7e5-6d40ca710d52'
+            static_player_id = '7b55d484-6ea9-4670-8145-986cb9e32412'
+            use_static = False
+            if len(cur_json[0]['playerStats']) < 1:
+                use_static = True
+                self.bot.logger.info("Current games contain no player, will use static ids to check for "
+                                     "changes to playerstatsheet and player")
+            if use_static:
+                sid = static_playerstatsheet_id
+            else:
+                sid = cur_json[0]['playerStats'][0]
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/playerstatsheets?ids={sid}")
             if not html_response:
                 self.bot.logger.warn('Failed to acquire playerstatsheet data')
@@ -95,7 +105,10 @@ class JsonWatcher(commands.Cog):
             changed = await self.check_single_json(cur_json[0], playerstatsheet[0], output_channel, "playerstatsheet")
             self.save_files(cur_json, "playerstatsheet.json", changed)
 
-            sid = cur_json[0]['playerId']
+            if use_static:
+                sid = static_player_id
+            else:
+                sid = cur_json[0]['playerId']
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/players?ids={sid}")
             if not html_response:
                 self.bot.logger.warn('Failed to acquire playerstatsheet data')
@@ -103,6 +116,7 @@ class JsonWatcher(commands.Cog):
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json[0], player_json[0], output_channel, "player")
             self.save_files(cur_json, "player.json", changed)
+
         except Exception as e:
             self.bot.logger.warn('Failed to acquire game data, cascading failures to gamestatsheet, '
                                  f'teamstatsheet, playerstatsheet, player\n{e}')
