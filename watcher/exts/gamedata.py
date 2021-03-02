@@ -604,10 +604,11 @@ class GameData(commands.Cog):
                         running_totals[i] += payouts[i]
                     rounded_odds = []
                     for o in odds[season][day]["odds"]:
-                        if round(o * 100) == 50:
-                            rounded_odds.append(round(o * 1000)/10)
-                        else:
-                            rounded_odds.append(round(o * 100))
+                        rounded_odds.append(round(o * 1000)/10)
+                        # if round(o * 100) == 50:
+                        #     rounded_odds.append(round(o * 1000)/10)
+                        # else:
+                        #     rounded_odds.append(round(o * 100))
 
                     rounded_odds.sort()
                     rounded_odds += [''] * (10 - len(rounded_odds))
