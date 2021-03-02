@@ -467,7 +467,6 @@ class Pendants(commands.Cog):
                     for message in game_watcher_messages:
                         desription += message + "\n"
                     msg_embed = discord.Embed(description=desription[:2047])
-                    self.bot.logger.info(f"Significant stats day {day['day']}:\n{desription}")
                     await output_channel.send(embed=msg_embed)
                 if len(daily_message) > 0:
                     sh_embed.description = sh_description
@@ -508,7 +507,7 @@ class Pendants(commands.Cog):
                     for key in ["atBats", "caughtStealing", "doubles", "earnedRuns", "groundIntoDp", "hits",
                                 "hitsAllowed", "homeRuns", "losses", "outsRecorded", "rbis", "runs", "stolenBases",
                                 "strikeouts", "struckouts", "triples", "walks", "walksIssued", "wins",
-                                "hitByPitch", "hitBatters"]:
+                                "hitByPitch", "hitBatters", "shutout"]:
                         if key in player:
                             if key in players[player["playerId"]]:
                                 players[player["playerId"]][key] += player[key]
