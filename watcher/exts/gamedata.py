@@ -3,6 +3,8 @@ import os
 import asyncio
 
 import json
+import re
+
 import gspread
 
 from discord.ext import commands
@@ -263,6 +265,35 @@ class GameData(commands.Cog):
                     }
         return schedule, teams, odds
 
+    @staticmethod
+    def get_outcome_type(outcome):
+        if "reverb" in outcome.lower():
+            return "Reverb"
+        if "feedback" in outcome.lower():
+            return "Feedback"
+        if "blooddrain" in outcome.lower():
+            return "Blooddrain"
+        if "with a pitch" in outcome.lower():
+            return "Hit by Pitch"
+        if "allergic reaction" in outcome.lower():
+            return "Allergic Reaction"
+        if "yummy reaction" in outcome.lower():
+            return "Yummy Reaction"
+        if "is red hot" in outcome.lower():
+            return "Red Hot"
+        if "no longer red hot" in outcome.lower():
+            return "Cooled Down"
+        if "incinerated" in outcome.lower():
+            return "Incineration"
+        if "partying" in outcome.lower():
+            return "Partying!"
+        if "crashes into the field" in outcome.lower():
+            return "Shelled"
+        if "set a win" in outcome.lower():
+            return "Sunset"
+        if "black hole swallowed" in outcome.lower():
+            return "Black Hole"
+
     async def update_spreadsheets(self, seasons=[1, 2, 3, 4, 5, 6], fill=False):
         gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
         schedule, teams, odds = self.base_season_parser(seasons, fill)
@@ -290,7 +321,8 @@ class GameData(commands.Cog):
                           "o500": {"win": 0, "loss": 0},
                           "single_run": {"win": 0, "loss": 0},
                           "scored": 0, "given": 0,
-                          "shames": 0, "times_shamed": 0}
+                          "shames": 0, "times_shamed": 0,
+                          "win_modifier": 0}
                 for oteam in teams:
                     if oteam != team:
                         record[teams[oteam]["name"]] = {"win": 0, "loss": 0}
@@ -387,6 +419,24 @@ class GameData(commands.Cog):
                                 else:
                                     if o not in season_outcomes[game["day"]]:
                                         season_outcomes[game["day"]].append(o)
+                                outcome_type = self.get_outcome_type(o)
+                                team_name = teams[team]['name']
+                                if outcome_type == "Sunset":
+                                    match = re.search(r"upon the ([a-zA-Z ]+)", o)
+                                    if match:
+                                        if len(match.groups()) > 0:
+                                            target_team = match.groups()[0]
+                                            if target_team == team_name:
+                                                record["win_modifier"] += 1
+                                elif outcome_type == "Black Hole":
+                                    match = re.search(r"from the ([a-zA-Z ]+)", o)
+                                    if match:
+                                        if len(match.groups()) > 0:
+                                            target_team = match.groups()[0]
+                                            if target_team == team_name:
+                                                record["win_modifier"] -= 1
+
+
                         game_outcomes = [o.strip() for o in game["outcomes"]]
                         if fill:
                             row = [game["day"] + 1,
@@ -469,38 +519,12 @@ class GameData(commands.Cog):
                     await asyncio.sleep(10)
             print("Updating Weather Events")
 
-            def get_outcome_type(outcome):
-                if "reverb" in outcome.lower():
-                    return "Reverb"
-                if "feedback" in outcome.lower():
-                    return "Feedback"
-                if "blooddrain" in outcome.lower():
-                    return "Blooddrain"
-                if "with a pitch" in outcome.lower():
-                    return "Hit by Pitch"
-                if "allergic reaction" in outcome.lower():
-                    return "Allergic Reaction"
-                if "yummy reaction" in outcome.lower():
-                    return "Yummy Reaction"
-                if "is red hot" in outcome.lower():
-                    return "Red Hot"
-                if "no longer red hot" in outcome.lower():
-                    return "Cooled Down"
-                if "incinerated" in outcome.lower():
-                    return "Incineration"
-                if "partying" in outcome.lower():
-                    return "Partying!"
-                if "crashes into the field" in outcome.lower():
-                    return "Shelled"
-                if "set a win" in outcome.lower():
-                    return "Sunset"
-                if "black hole swallowed" in outcome.lower():
-                    return "Black Hole"
+
 
             orows, otypes = [], []
             for day in sorted(season_outcomes.keys()):
                 for outcome in season_outcomes[day]:
-                    outcome_type = get_outcome_type(outcome)
+                    outcome_type = self.get_outcome_type(outcome)
                     orows.append([day+1, outcome.strip()])
                     otypes.append([outcome_type])
             o_worksheet = sheet.worksheet("Blaseball")
@@ -543,10 +567,13 @@ class GameData(commands.Cog):
 
             def update_league(league, start_i):
                 sorted_league = {k: v for k, v in
-                                 sorted(league.items(), key=lambda item: item[1]["total"]["win"], reverse=True)}
+                                 sorted(league.items(),
+                                        key=lambda item: item[1]["total"]["win"] + item[1]["win_modifier"],
+                                        reverse=True)}
                 teams = []
                 for team, record in sorted_league.items():
-                    teams.append([team, record['total']['win'], record['total']['loss']])
+                    teams.append([team, record['total']['win'] + record["win_modifier"],
+                                  record['total']['loss'], record['total']['win']])
                 for i in range(len(teams)):
                     gb_string = ""
                     team, wins, losses = teams[i][0], teams[i][1], teams[i][2]
@@ -560,34 +587,37 @@ class GameData(commands.Cog):
                     if teams[i][3] == teams[i+1][3]:
                         if self.bot.favor_rankings[teams[i+1][0]] < self.bot.favor_rankings[teams[i][0]]:
                             teams[i], teams[i+1] = teams[i+1], teams[i]
-                            if teams[i][4] == 0:
-                                teams[i][4] = ""
-                            teams[i+1][4] = f"{teams[i+1][4]}*"
+                            if teams[i][5] == 0:
+                                teams[i][5] = ""
+                            teams[i+1][5] = f"{teams[i+1][5]}*"
 
                 for i in range(len(teams)):
+                    teams[i][2] = f"{teams[i][3]}-{teams[i][2]}"
+                    teams[i].pop(3)
                     if i <= 3:
                       if teams[i][5] <= 0:
-
                             teams[i][5] = "Clinched"
                     else:
                         if teams[i][5] <= 0:
                             teams[i][5] = "Party Time!"
+
                     record = sorted_league[teams[i][0]]
                     home_record = f"{record['home']['win']}-{record['home']['loss']}"
                     away_record = f"{record['away']['win']}-{record['away']['loss']}"
                     teams[i] += home_record, away_record, record["scored"] - record["given"]
                     generate_per_team_records(teams[i], record)
                     teams[i] += [f"{record['single_run']['win']}-{record['single_run']['loss']}"]
+                    teams[i] += record["scored"], record["given"]
 
                 if self.bot.config['live_version']:
-                    s_worksheet.update(f"A{start_i-1}:AH{start_i -1}",
-                                       [["Team", "Wins", "Losses", "Pct.", "GB", "Magic #",
+                    s_worksheet.update(f"A{start_i-1}:AJ{start_i -1}",
+                                       [["Team", "Wins", "Record", "Pct.", "GB", "Magic #",
                                         "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
                                         "Lovers", "Crabs", "Millennials", "Firefighters", "Jazz Hands", "Spies",
                                          "Flowers", "Sunbeams", "Dale", "Tacos", "Tigers", "Moist Talkers",
                                          "Garages", "Steaks", "Breath Mints", "Fridays", "Pies", "Wild Wings",
-                                         "Shoe Thieves", "Magic", "1-Run"]])
-                    s_worksheet.update(f"A{start_i}:AH{start_i + len(teams)}", teams)
+                                         "Shoe Thieves", "Magic", "1-Run", "R Scored", "R Allowed"]])
+                    s_worksheet.update(f"A{start_i}:AJ{start_i + len(teams)}", teams)
 
             if day <= 98:
                 print("Updating Standings")
