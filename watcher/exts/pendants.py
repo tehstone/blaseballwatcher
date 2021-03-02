@@ -495,9 +495,11 @@ class Pendants(commands.Cog):
                     self.bot.logger.info(f"No daily message sent for {day['day']}")
 
     async def compile_stats(self):
-        all_statsheets = []
-        with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
-            all_statsheets = json.load(file)
+        try:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
+                all_statsheets = json.load(file)
+        except FileNotFoundError:
+            all_statsheets = []
         players = {}
         for day in all_statsheets:
             for pid in day['statsheets']:
@@ -635,12 +637,18 @@ class Pendants(commands.Cog):
 
         # York Silk
         ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
-        ys_row = ["York Silk", sorted_hits[ys_id]["hits"], sorted_homeruns[ys_id]["homeRuns"]]
-        #ys_max = total_hit_payouts["86d4e22b-f107-4bcf-9625-32d387fcb521"]["totalmax"]
+        ys_row = ["York Silk", 0, 0]
+        if ys_id in sorted_hits:
+            ys_row[1] = [sorted_hits[ys_id].setdefault("hits", 0)]
+        if ys_id in sorted_homeruns:
+            ys_row[2] = [sorted_homeruns[ys_id].setdefault("homeRuns", 0)]
         # Wyatt Glover
         wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
-        wg_row = ["Wyatt Glover", sorted_hits[wg_id]["hits"], sorted_homeruns[wg_id]["homeRuns"]]
-        #wg_max = total_hit_payouts["e16c3f28-eecd-4571-be1a-606bbac36b2b"]["totalmax"]
+        wg_row = ["Wyatt Glover", 0, 0]
+        if wg_id in sorted_hits:
+            wg_row[1] = [sorted_hits[wg_id].setdefault("hits", 0)]
+        if ys_id in sorted_homeruns:
+            wg_row[2] = [sorted_homeruns[wg_id].setdefault("homeRuns", 0)]
         p_worksheet.update("A21:C22", [ys_row, wg_row], raw=False)
 
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
@@ -649,7 +657,7 @@ class Pendants(commands.Cog):
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):
         await ctx.message.add_reaction("⏲️")
-        #await self.get_latest_pendant_data(season)
+        await self.get_latest_pendant_data(season)
         await self.update_leaders_sheet(season)
         await ctx.message.add_reaction(self.bot.success_react)
 
