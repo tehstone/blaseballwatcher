@@ -630,11 +630,13 @@ class GameData(commands.Cog):
                 odds_rows = []
                 header_row = ["Days", "Favored Wins", "Underdog Wins", "Game 1", "Game 2", "Game 3",
                               "Game 4", "Game 5", "Game 6", "Game 7", "Game 8", "Game 9", "Game 10"]
-                for i in [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]:
+                bet_tiers = [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]
+                for i in bet_tiers:
                     header_row.append(f"{round(i*100)}%+ payout")
                 odds_rows.append(header_row)
+                total_betcounts = [0] * len(bet_tiers)
                 for day in odds[season]:
-                    payouts, bet_counts = self._calculate_payout(odds[season][day])
+                    payouts, bet_counts = self._calculate_payout(odds[season][day], bet_tiers)
                     rounded_odds = []
                     for i in range(len(odds[season][day]["odds"])):
                         #if odds[season][day]["weathers"][i] != 1 and odds[season][day]["weathers"][i] != 14:
@@ -647,29 +649,31 @@ class GameData(commands.Cog):
                     row += rounded_odds
                     row += payouts
                     odds_rows.append(row)
+                    for c in range(len(bet_counts)):
+                        total_betcounts[c] += bet_counts[c]
                 od_worksheet = sheet.worksheet("Daily Results")
                 if self.bot.config['live_version']:
                     od_worksheet.update(f"A{4}:Z{4 + len(odds_rows)}", odds_rows)
+                    od_worksheet.update(f"N{2}:Z{2}", [total_betcounts])
 
             print("Updates Complete")
             await asyncio.sleep(5)
 
     @staticmethod
-    def _calculate_payout(odds_dict):
+    def _calculate_payout(odds_dict, bet_tiers):
         weathers = odds_dict["weathers"]
         odds = odds_dict["odds"]
-        cut_high = [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]
-        payouts = [0] * len(cut_high)
-        bet_counts = [0] * len(cut_high)
-        for i in range(len(cut_high)):
+        payouts = [0] * len(bet_tiers)
+        bet_counts = [0] * len(bet_tiers)
+        for i in range(len(bet_tiers)):
             count = 0
             for j in range(len(odds)):
                 odd = odds[j]
-                if odd >= cut_high[i]:
+                if odd >= bet_tiers[i]:
                     #payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
                     payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
                     count += 1
-                elif odd < 1 - cut_high[i]:
+                elif odd < 1 - bet_tiers[i]:
                     count += 1
             payouts[i] = payouts[i] - (1000 * count)
             bet_counts[i] = count
