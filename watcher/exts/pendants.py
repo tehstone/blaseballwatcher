@@ -523,6 +523,7 @@ class Pendants(commands.Cog):
         return players
 
     async def update_leaders_sheet(self, season):
+        season -= 1
         gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
         if self.bot.config['live_version'] == True:
             sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season+1}"])
@@ -633,10 +634,14 @@ class Pendants(commands.Cog):
         p_worksheet.update("A4:B18", rows)
 
         # York Silk
-        ys_max = total_hit_payouts["86d4e22b-f107-4bcf-9625-32d387fcb521"]["totalmax"]
+        ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
+        ys_row = ["York Silk", sorted_hits[ys_id]["hits"], sorted_homeruns[ys_id]["homeRuns"]]
+        #ys_max = total_hit_payouts["86d4e22b-f107-4bcf-9625-32d387fcb521"]["totalmax"]
         # Wyatt Glover
-        wg_max = total_hit_payouts["e16c3f28-eecd-4571-be1a-606bbac36b2b"]["totalmax"]
-        p_worksheet.update("B21:B22", [[f"={ys_max}*C21"], [f"={wg_max}*C22"]], raw=False)
+        wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
+        wg_row = ["Wyatt Glover", sorted_hits[wg_id]["hits"], sorted_homeruns[wg_id]["homeRuns"]]
+        #wg_max = total_hit_payouts["e16c3f28-eecd-4571-be1a-606bbac36b2b"]["totalmax"]
+        p_worksheet.update("A21:C22", [ys_row, wg_row], raw=False)
 
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
             json.dump(all_players, file)
@@ -644,7 +649,7 @@ class Pendants(commands.Cog):
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):
         await ctx.message.add_reaction("⏲️")
-        await self.get_latest_pendant_data(season)
+        #await self.get_latest_pendant_data(season)
         await self.update_leaders_sheet(season)
         await ctx.message.add_reaction(self.bot.success_react)
 
