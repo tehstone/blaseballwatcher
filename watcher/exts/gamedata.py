@@ -618,6 +618,7 @@ class GameData(commands.Cog):
                                          "Garages", "Steaks", "Breath Mints", "Fridays", "Pies", "Wild Wings",
                                          "Shoe Thieves", "Magic", "1-Run", "R Scored", "R Allowed"]])
                     s_worksheet.update(f"A{start_i}:AJ{start_i + len(teams)}", teams)
+                    s_worksheet.update(f"C28", [[99-day]])
 
             if day <= 98:
                 print("Updating Standings")
@@ -627,36 +628,33 @@ class GameData(commands.Cog):
             print("Updating Odds")
             if season in odds:
                 odds_rows = []
-                running_totals = [0, 0, 0, 0]
+                header_row = ["Days", "Favored Wins", "Underdog Wins", "Game 1", "Game 2", "Game 3",
+                              "Game 4", "Game 5", "Game 6", "Game 7", "Game 8", "Game 9", "Game 10"]
+                for i in [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]:
+                    header_row.append(f"{round(i*100)}%+ payout")
+                odds_rows.append(header_row)
                 for day in odds[season]:
                     payouts = self._calculate_payout(odds[season][day]["odds"])
-                    for i in range(len(payouts)):
-                        running_totals[i] += payouts[i]
                     rounded_odds = []
                     for o in odds[season][day]["odds"]:
                         rounded_odds.append(round(o * 1000)/10)
-                        # if round(o * 100) == 50:
-                        #     rounded_odds.append(round(o * 1000)/10)
-                        # else:
-                        #     rounded_odds.append(round(o * 100))
 
                     rounded_odds.sort()
                     rounded_odds += [''] * (10 - len(rounded_odds))
                     row = [day+1, odds[season][day]["results"]["favored"], odds[season][day]["results"]["underdog"]]
                     row += rounded_odds
-                    payout_row = [val for pair in zip(payouts, running_totals) for val in pair]
-                    row += payout_row
+                    row += payouts
                     odds_rows.append(row)
                 od_worksheet = sheet.worksheet("Daily Results")
                 if self.bot.config['live_version']:
-                    od_worksheet.update(f"A{5}:U{5 + len(odds_rows)}", odds_rows)
+                    od_worksheet.update(f"A{4}:Z{4 + len(odds_rows)}", odds_rows)
 
             print("Updates Complete")
             await asyncio.sleep(5)
 
     @staticmethod
     def _calculate_payout(odds):
-        cut_high = [.54, .55, .56, .57]
+        cut_high = [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]
         payouts = [0] * len(cut_high)
         for i in range(len(cut_high)):
             count = 0
