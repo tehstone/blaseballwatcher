@@ -316,7 +316,8 @@ class Pendants(commands.Cog):
                 sorted_strikeouts = {k: v for k, v in
                                      sorted(players.items(), key=lambda item: item[1]['strikeouts'],
                                             reverse=True)}
-                daily_message_two += f"\n**Strikeouts**\n{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 9, True)}"
+                daily_message_two += f"{self.bot.empty_str}\n**Strikeouts**\n" \
+                                     f"{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 9, True)}"
 
                 game_watcher_messages = []
                 sh_embed = discord.Embed(title="**Shutout!**")
@@ -521,10 +522,10 @@ class Pendants(commands.Cog):
                         players[player["playerId"]]["position"] = player["position"]
         return players
 
-    async def update_leaders_sheet(self, season=5):
+    async def update_leaders_sheet(self, season):
         gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
-        if self.bot.config['live_version']:
-            sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}"])
+        if self.bot.config['live_version'] == True:
+            sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season+1}"])
         else:
             sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
         p_worksheet = sheet.worksheet("Pendants")
@@ -642,6 +643,7 @@ class Pendants(commands.Cog):
 
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):
+        await ctx.message.add_reaction("⏲️")
         await self.get_latest_pendant_data(season)
         await self.update_leaders_sheet(season)
         await ctx.message.add_reaction(self.bot.success_react)

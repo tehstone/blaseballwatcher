@@ -298,15 +298,15 @@ class GameData(commands.Cog):
         if "black hole swallowed" in outcome.lower():
             return "Black Hole"
 
-    async def update_spreadsheets(self, seasons=[1, 2, 3, 4, 5, 6], fill=False):
+    async def update_spreadsheets(self, seasons, fill=False):
         gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
         schedule, teams, odds, weathers = self.base_season_parser(seasons, fill)
         league_records = {"Wild": {}, "Mild": {}}
 
         for season in schedule:
             season_outcomes = {}
-            if self.bot.config['live_version']:
-                sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}"])
+            if self.bot.config['live_version'] == True:
+                sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season+1}"])
             else:
                 sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
             print("Updating Team Schedules")
@@ -636,13 +636,17 @@ class GameData(commands.Cog):
                 odds_rows = []
                 header_row = ["Days", "Favored Wins", "Underdog Wins", "Game 1", "Game 2", "Game 3",
                               "Game 4", "Game 5", "Game 6", "Game 7", "Game 8", "Game 9", "Game 10"]
-                bet_tiers = [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]
+
+                if season < 11:
+                    bet_tiers = [.5, .51, .52, .53, .54, .55, .56, .57, .58, .59, .6, .61, .62]
+                else:
+                    bet_tiers = [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]
                 for i in bet_tiers:
                     header_row.append(f"{round(i*100)}%+ payout")
                 odds_rows.append(header_row)
                 total_betcounts = [0] * len(bet_tiers)
                 for day in odds[season]:
-                    payouts, bet_counts = self._calculate_payout(odds[season][day], bet_tiers)
+                    payouts, bet_counts = self._calculate_payout(odds[season][day], bet_tiers, season)
                     rounded_odds = []
                     for i in range(len(odds[season][day]["odds"])):
                         #if odds[season][day]["weathers"][i] != 1 and odds[season][day]["weathers"][i] != 14:
@@ -665,7 +669,7 @@ class GameData(commands.Cog):
             await asyncio.sleep(5)
 
     @staticmethod
-    def _calculate_payout(odds_dict, bet_tiers):
+    def _calculate_payout(odds_dict, bet_tiers, season):
         weathers = odds_dict["weathers"]
         odds = odds_dict["odds"]
         payouts = [0] * len(bet_tiers)
@@ -675,8 +679,12 @@ class GameData(commands.Cog):
             for j in range(len(odds)):
                 odd = odds[j]
                 if odd >= bet_tiers[i]:
-                    #payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
-                    payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
+                    if odd == .5:
+                        payouts[i] += round(2*1000)
+                    if season < 11:
+                        payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
+                    else:
+                        payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
                     count += 1
                 elif odd < 1 - bet_tiers[i]:
                     count += 1
@@ -716,6 +724,7 @@ class GameData(commands.Cog):
 
     @commands.command(name='update_spreadsheets', aliases=['us'])
     async def _update_spreadsheets(self, ctx, current_season: int, fill: bool = False):
+        await ctx.message.add_reaction("⏲️")
         current_season -= 1
         await self.save_json_range(current_season, fill)
         await self.update_spreadsheets([current_season], fill)
