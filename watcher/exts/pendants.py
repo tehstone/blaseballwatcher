@@ -570,7 +570,7 @@ class Pendants(commands.Cog):
             values = all_players[key]
             name = values["name"]
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
-            rows.append([values["rotation"], name, values["strikeouts"], k_9_value])
+            rows.append([values["rotation"], name, '', values["strikeouts"], k_9_value])
         p_worksheet.update("K20:O27", rows)
 
         rows = []
@@ -591,7 +591,7 @@ class Pendants(commands.Cog):
         for key in top_keys:
             values = sorted_shutouts[key]
             name = values["name"]
-            rows.append([values["rotation"], name, values["shutout"]])
+            rows.append([values["rotation"], name, '', values["shutout"]])
         p_worksheet.update("K30:N34", rows)
 
         rows = []
