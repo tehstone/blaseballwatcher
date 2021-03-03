@@ -570,7 +570,7 @@ class Pendants(commands.Cog):
                     name = values["name"]
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
                     rows.append([values["rotation"], name, values["strikeouts"], k_9_value])
-        p_worksheet.update("D4:G18", rows)
+        p_worksheet.update("D4:H18", rows)
 
         rows = []
         sorted_strikeouts = {k: v
@@ -586,7 +586,7 @@ class Pendants(commands.Cog):
             name = values["name"]
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, values["strikeouts"], k_9_value])
-        p_worksheet.update("L4:O11", rows)
+        p_worksheet.update("N4:Q11", rows)
 
         rows = []
         for i in range(1, 6):
@@ -597,7 +597,7 @@ class Pendants(commands.Cog):
                 values = sorted_shutouts[key]
                 name = values["name"]
                 rows.append([name, values["shutout"]])
-        p_worksheet.update("I4:J18", rows)
+        p_worksheet.update("J4:L18", rows)
 
         rows = []
         sorted_shutouts = {k: v for k, v in sorted(pitcher_dict.items(), key=lambda item: item[1]['shutout'],
@@ -607,7 +607,7 @@ class Pendants(commands.Cog):
             values = sorted_shutouts[key]
             name = values["name"]
             rows.append([values["rotation"], name, values["shutout"]])
-        p_worksheet.update("L15:N20", rows)
+        p_worksheet.update("S4:U9", rows)
 
         rows = []
         total_hit_payouts = {}
@@ -639,16 +639,16 @@ class Pendants(commands.Cog):
         ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
         ys_row = ["York Silk", 0, 0]
         if ys_id in sorted_hits:
-            ys_row[1] = [sorted_hits[ys_id].setdefault("hits", 0)]
+            ys_row[1] = sorted_hits[ys_id].setdefault("hits", 0)
         if ys_id in sorted_homeruns:
-            ys_row[2] = [sorted_homeruns[ys_id].setdefault("homeRuns", 0)]
+            ys_row[2] = sorted_homeruns[ys_id].setdefault("homeRuns", 0)
         # Wyatt Glover
         wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
         wg_row = ["Wyatt Glover", 0, 0]
         if wg_id in sorted_hits:
-            wg_row[1] = [sorted_hits[wg_id].setdefault("hits", 0)]
-        if ys_id in sorted_homeruns:
-            wg_row[2] = [sorted_homeruns[wg_id].setdefault("homeRuns", 0)]
+            wg_row[1] = sorted_hits[wg_id].setdefault("hits", 0)
+        if wg_id in sorted_homeruns:
+            wg_row[2] = sorted_homeruns[wg_id].setdefault("homeRuns", 0)
         p_worksheet.update("A21:C22", [ys_row, wg_row], raw=False)
 
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
