@@ -20,7 +20,7 @@ from watcher import utils
     Maybe just automate the update of as much of this as possible
 """
 
-spreadsheet_names = {
+spreadsheet_names_old = {
     'adc5b394-8f76-416d-9ce9-813706877b84': {'schedule': 'Mints Schedule', 'matchups': 'Mints Matchups'},
     '8d87c468-699a-47a8-b40d-cfb73a5660ad': {'schedule': 'Crabs Schedule', 'matchups': 'Crabs Matchups'},
     'b63be8c2-576a-4d6e-8daf-814f8bcea96f': {'schedule': 'Dale Schedule', 'matchups': 'Dale Matchups'},
@@ -41,7 +41,37 @@ spreadsheet_names = {
     'f02aeae2-5e6a-4098-9842-02d2273f25c7': {'schedule': 'Sunbeams Schedule', 'matchups': 'Sunbeams Matchups'},
     '878c1bf6-0d21-4659-bfee-916c8314d69c': {'schedule': 'Tacos Schedule', 'matchups': 'Tacos Matchups'},
     '747b8e4a-7e50-4638-a973-ea7950a3e739': {'schedule': 'Tigers Schedule', 'matchups': 'Tigers Matchups'},
+    'd9f89a8a-c563-493e-9d64-78e4f9a55d4a': {'schedule': 'Georgias Schedule', 'matchups': 'Georgias Matchups'},
+    'bb4a9de5-c924-4923-a0cb-9d1445f1ee5d': {'schedule': 'Worms Schedule', 'matchups': 'Worms Matchups'},
+    '46358869-dce9-4a01-bfba-ac24fc56f57e': {'schedule': 'Mechanics Schedule', 'matchups': 'Mechanics Matchups'},
     '57ec08cc-0411-4643-b304-0e80dbc15ac7': {'schedule': 'Wings Schedule', 'matchups': 'Wings Matchups'}
+}
+
+spreadsheet_names = {
+    'adc5b394-8f76-416d-9ce9-813706877b84': {'schedule': 'Mints Sched', 'matchups': 'Mints M/U'},
+    '8d87c468-699a-47a8-b40d-cfb73a5660ad': {'schedule': 'Crabs Sched', 'matchups': 'Crabs M/U'},
+    'b63be8c2-576a-4d6e-8daf-814f8bcea96f': {'schedule': 'Dale Sched', 'matchups': 'Dale M/U'},
+    'ca3f1c8c-c025-4d8e-8eef-5be6accbeb16': {'schedule': 'Firefighters Sched', 'matchups': 'Firefighters M/U'},
+    '3f8bbb15-61c0-4e3f-8e4a-907a5fb1565e': {'schedule': 'Flowers Sched', 'matchups': 'Flowers M/U'},
+    '979aee4a-6d80-4863-bf1c-ee1a78e06024': {'schedule': 'Fridays Sched', 'matchups': 'Fridays M/U'},
+    '105bc3ff-1320-4e37-8ef0-8d595cb95dd0': {'schedule': 'Garages Sched', 'matchups': 'Garages M/U'},
+    'a37f9158-7f82-46bc-908c-c9e2dda7c33b': {'schedule': 'Hands Sched', 'matchups': 'Hands M/U'},
+    'c73b705c-40ad-4633-a6ed-d357ee2e2bcf': {'schedule': 'Lift Sched', 'matchups': 'Lift M/U'},
+    'b72f3061-f573-40d7-832a-5ad475bd7909': {'schedule': 'Lovers Sched', 'matchups': 'Lovers M/U'},
+    '7966eb04-efcc-499b-8f03-d13916330531': {'schedule': 'Magic Sched', 'matchups': 'Magic M/U'},
+    '36569151-a2fb-43c1-9df7-2df512424c82': {'schedule': 'Millennials Sched', 'matchups': 'Millenials M/U'},
+    'eb67ae5e-c4bf-46ca-bbbc-425cd34182ff': {'schedule': 'Talkers Sched', 'matchups': 'Talkers M/U'},
+    '23e4cbc1-e9cd-47fa-a35b-bfa06f726cb7': {'schedule': 'Pies Sched', 'matchups': 'Pies M/U'},
+    'bfd38797-8404-4b38-8b82-341da28b1f83': {'schedule': 'Shoe Sched', 'matchups': 'Shoes M/U'},
+    '9debc64f-74b7-4ae1-a4d6-fce0144b6ea5': {'schedule': 'Spies Sched', 'matchups': 'Spies M/U'},
+    'b024e975-1c4a-4575-8936-a3754a08806a': {'schedule': 'Steaks Sched', 'matchups': 'Steaks M/U'},
+    'f02aeae2-5e6a-4098-9842-02d2273f25c7': {'schedule': 'Sunbeams Sched', 'matchups': 'Sunbeams M/U'},
+    '878c1bf6-0d21-4659-bfee-916c8314d69c': {'schedule': 'Tacos Sched', 'matchups': 'Tacos M/U'},
+    '747b8e4a-7e50-4638-a973-ea7950a3e739': {'schedule': 'Tigers Sched', 'matchups': 'Tigers M/U'},
+    'd9f89a8a-c563-493e-9d64-78e4f9a55d4a': {'schedule': 'Georgias Sched', 'matchups': 'Georgias M/U'},
+    'bb4a9de5-c924-4923-a0cb-9d1445f1ee5d': {'schedule': 'Worms Sched', 'matchups': 'Worms M/U'},
+    '46358869-dce9-4a01-bfba-ac24fc56f57e': {'schedule': 'Mechanics Sched', 'matchups': 'Mechanics M/U'},
+    '57ec08cc-0411-4643-b304-0e80dbc15ac7': {'schedule': 'Wings Sched', 'matchups': 'Wings M/U'}
 }
 
 weather_types = {
@@ -312,8 +342,12 @@ class GameData(commands.Cog):
             print("Updating Team Schedules")
             day = 0
             for team in schedule[season]:
-                s_worksheet = sheet.worksheet(spreadsheet_names[team]["schedule"])
-                m_worksheet = sheet.worksheet(spreadsheet_names[team]["matchups"])
+                if season < 12:
+                    s_worksheet = sheet.worksheet(spreadsheet_names_old[team]["schedule"])
+                    m_worksheet = sheet.worksheet(spreadsheet_names_old[team]["matchups"])
+                else:
+                    s_worksheet = sheet.worksheet(spreadsheet_names[team]["schedule"])
+                    m_worksheet = sheet.worksheet(spreadsheet_names[team]["matchups"])
                 srows = [["Day", "Opponent", "Team Score", "Opp Score", "Winner",
                           "Winning Pitcher", "Losing Pitcher", "Streak", "Record",
                           "Game Type", "Win", "Home",
@@ -543,10 +577,10 @@ class GameData(commands.Cog):
                 o_worksheet.update(f"K{9}:M{9 + len(weather_rows)}", weather_rows)
 
             def generate_per_team_records(team_list, record):
-                n_divisions = {"Wild High": ["Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands"],
-                             "Wild Low": ["Spies", "Flowers", "Sunbeams", "Dale", "Tacos"],
-                             "Mild High": ["Lovers", "Pies", "Garages", "Steaks", "Millennials"],
-                             "Mild Low": ["Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic"]
+                n_divisions = {"Wild High": ["Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands", "Georgias"],
+                             "Wild Low": ["Spies", "Flowers", "Sunbeams", "Dale", "Tacos", "Worms"],
+                             "Mild High": ["Lovers", "Pies", "Garages", "Steaks", "Millennials", "Mechanics"],
+                             "Mild Low": ["Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic", "Crabs"]
                              }
 
                 div_records = {"Wild High": {"win": 0, "loss": 0},
@@ -562,9 +596,12 @@ class GameData(commands.Cog):
                         if team == team_list[0]:
                             team_columns.append("-")
                         else:
-                            t_record = f'{record[team]["win"]}-{record[team]["loss"]}'
-                            div_records[division]["win"] += record[team]["win"]
-                            div_records[division]["loss"] += record[team]["loss"]
+                            if team not in record:
+                                t_record = '0-0'
+                            else:
+                                t_record = f'{record[team]["win"]}-{record[team]["loss"]}'
+                                div_records[division]["win"] += record[team]["win"]
+                                div_records[division]["loss"] += record[team]["loss"]
                             team_columns.append(t_record)
                 for division in div_records:
                     d_record = f'{div_records[division]["win"]}-{div_records[division]["loss"]}'
@@ -615,23 +652,23 @@ class GameData(commands.Cog):
                     teams[i] += [f"{record['single_run']['win']}-{record['single_run']['loss']}"]
                     teams[i] += record["scored"], record["given"]
 
-                s_worksheet.update(f"A{start_i-1}:AJ{start_i -1}",
+                s_worksheet.update(f"A{start_i-1}:AN{start_i -1}",
                                    [["Team", "Wins", "Record", "Pct.", "GB", "Magic #",
                                     "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
-                                     "Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands",
-                                     "Spies", "Flowers", "Sunbeams", "Dale", "Tacos",
-                                     "Lovers", "Pies", "Garages", "Steaks", "Millennials",
-                                     "Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic",
+                                     "Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands", "Georgias",
+                                     "Spies", "Flowers", "Sunbeams", "Dale", "Tacos", "Worms",
+                                     "Lovers", "Pies", "Garages", "Steaks", "Millennials", "Mechanics",
+                                     "Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic", "Crabs",
                                      "1-Run", "R Scored", "R Allowed"]])
 
-                s_worksheet.update(f"A{start_i}:AJ{start_i + len(teams)}", teams)
+                s_worksheet.update(f"A{start_i}:AN{start_i + len(teams)}", teams)
                 s_worksheet.update(f"C28", [[99-day]])
 
             s_worksheet = sheet.worksheet("Standings")
             if day <= 98:
                 print("Updating Standings")
                 update_league(league_records["Wild"], 4)
-                update_league(league_records["Mild"], 17)
+                update_league(league_records["Mild"], 19)
 
             print("Updating Odds")
             if season in odds:
@@ -642,7 +679,8 @@ class GameData(commands.Cog):
                 if season < 11:
                     bet_tiers = [.5, .51, .52, .53, .54, .55, .56, .57, .58, .59, .6, .61, .62]
                 else:
-                    bet_tiers = [.56, .57, .58, .59, .6, .61, .62, .63, .64, .65, .66, .67, .68]
+                    bet_tiers = [.5, .51, .52, .53, .54, .55, .56, .57, .58, .59,
+                                 .6, .61, .62, .63, .64, .65, .66, .67, .68]
                 for i in bet_tiers:
                     header_row.append(f"{round(i*100)}%+ payout")
                 odds_rows.append(header_row)
@@ -664,8 +702,8 @@ class GameData(commands.Cog):
                     for c in range(len(bet_counts)):
                         total_betcounts[c] += bet_counts[c]
                 od_worksheet = sheet.worksheet("Daily Results")
-                od_worksheet.update(f"A{4}:Z{4 + len(odds_rows)}", odds_rows)
-                od_worksheet.update(f"N{2}:Z{2}", [total_betcounts])
+                od_worksheet.update(f"A{4}:AF{4 + len(odds_rows)}", odds_rows)
+                od_worksheet.update(f"N{2}:AF{2}", [total_betcounts])
 
             print("Updates Complete")
             await asyncio.sleep(5)
@@ -686,7 +724,8 @@ class GameData(commands.Cog):
                     if season < 11:
                         payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
                     else:
-                        payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
+                        if odd > .5:
+                            payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
                     count += 1
                 elif odd < 1 - bet_tiers[i]:
                     count += 1

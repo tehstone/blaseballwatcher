@@ -65,9 +65,8 @@ class WatcherBot(commands.AutoShardedBot):
                                 'season10': '1PM-0Ph2qk0bF8oo2Ir5mb6YsLH_6f451BtoejcYQbio',
                                 'season11': '1XwpooTCzeiLYuV7UlreLEXBvBIBISrLtOUbw1221Xw0',
                                 'season12': '1eqjTTUnKokuQyvxQtUkYATXPO8updy8iMNE8yRXIT84',
-                                'season13': '1FegS38KEfZaOhgARswP9HWGZiPPjE8y9JgZ4rVTjEhs',
-                                'season14': '1xwGz7c-T_jSmwdGwXmPMq43LiDYMha5RiYJj_339x_g',
-                                'season15': '1LyW3L-qebzXN7kB_ONMZ62dFTo28QrAAYrXYhJlye9A',
+                                'season13': '15H7A6oug4vTKOtKRaDXQpxS9NzNyCbkYcOWiCt9gi5o',
+                                'season14': '1ACuJjarKCpoZtxZM9ogsrrYsD7T0GKoWzOI2xcdKGlk',
                                 'seasontest': '1eS-8UdJEautAS1sbna-ViPn1efCTYpaXwaber5ckqHA'
                                 }
         self.favor_rankings = self.config.setdefault('favor_rankings', {})
@@ -92,7 +91,10 @@ class WatcherBot(commands.AutoShardedBot):
                         "b63be8c2-576a-4d6e-8daf-814f8bcea96f": "Dale",
                         "105bc3ff-1320-4e37-8ef0-8d595cb95dd0": "Garages",
                         "a37f9158-7f82-46bc-908c-c9e2dda7c33b": "Jazz Hands",
-                        "c73b705c-40ad-4633-a6ed-d357ee2e2bcf": "Lift"
+                        "c73b705c-40ad-4633-a6ed-d357ee2e2bcf": "Lift",
+                        "d9f89a8a-c563-493e-9d64-78e4f9a55d4a": "Georgias",
+                        "bb4a9de5-c924-4923-a0cb-9d1445f1ee5d": "Worms",
+                        "46358869-dce9-4a01-bfba-ac24fc56f57e": "Mechanics"
                         }
         self.daily_watch_message = self.config.setdefault('daily_watch_message', 'Go Bet!')
         self.check_for_games_complete = self.config.setdefault('check_for_games_complete', False)

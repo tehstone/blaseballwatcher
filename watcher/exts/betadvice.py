@@ -75,7 +75,6 @@ class BetAdvice(commands.Cog):
             odds_sum += odds
         return odds_sum
 
-
     async def daily_message(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
         if not html_response:
@@ -84,7 +83,6 @@ class BetAdvice(commands.Cog):
         sim_data = html_response.json()
         season = sim_data['season']
         day = sim_data['day'] + 1
-        #day = 97
         clf = load(os.path.join("data", "pendant_data", "so.joblib"))
 
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'r') as file:
