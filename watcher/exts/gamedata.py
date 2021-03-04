@@ -618,10 +618,12 @@ class GameData(commands.Cog):
                 s_worksheet.update(f"A{start_i-1}:AJ{start_i -1}",
                                    [["Team", "Wins", "Record", "Pct.", "GB", "Magic #",
                                     "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
-                                    "Lovers", "Crabs", "Millennials", "Firefighters", "Jazz Hands", "Spies",
-                                     "Flowers", "Sunbeams", "Dale", "Tacos", "Tigers", "Moist Talkers",
-                                     "Garages", "Steaks", "Breath Mints", "Fridays", "Pies", "Wild Wings",
-                                     "Shoe Thieves", "Magic", "1-Run", "R Scored", "R Allowed"]])
+                                     "Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands",
+                                     "Spies", "Flowers", "Sunbeams", "Dale", "Tacos",
+                                     "Lovers", "Pies", "Garages", "Steaks", "Millennials",
+                                     "Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic",
+                                     "1-Run", "R Scored", "R Allowed"]])
+
                 s_worksheet.update(f"A{start_i}:AJ{start_i + len(teams)}", teams)
                 s_worksheet.update(f"C28", [[99-day]])
 
