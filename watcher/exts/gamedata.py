@@ -323,10 +323,16 @@ class GameData(commands.Cog):
             return "Partying!"
         if "crashes into the field" in outcome.lower():
             return "Shelled"
+        if "tasted the infinite and shelled" in outcome.lower():
+            return "Shelled"
         if "set a win" in outcome.lower():
             return "Sunset"
         if "black hole swallowed" in outcome.lower():
             return "Black Hole"
+        if "was swept elsewhere" in outcome.lower():
+            return "Swept Elsewhere"
+        if "returned from elsewhere" in outcome.lower():
+            return "Returned from Elsewhere"
 
     async def update_spreadsheets(self, seasons, fill=False):
         gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
