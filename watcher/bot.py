@@ -67,7 +67,8 @@ class WatcherBot(commands.AutoShardedBot):
                                 'season12': '1eqjTTUnKokuQyvxQtUkYATXPO8updy8iMNE8yRXIT84',
                                 'season13': '15H7A6oug4vTKOtKRaDXQpxS9NzNyCbkYcOWiCt9gi5o',
                                 'season14': '1ACuJjarKCpoZtxZM9ogsrrYsD7T0GKoWzOI2xcdKGlk',
-                                'seasontest': '1eS-8UdJEautAS1sbna-ViPn1efCTYpaXwaber5ckqHA'
+                                'seasontest': '1ojfPPpGp5aVDxF7egl-QM__NKIWLMXMKAgaR3kOpC_8'
+                                #'seasontest': '1eS-8UdJEautAS1sbna-ViPn1efCTYpaXwaber5ckqHA'
                                 }
         self.favor_rankings = self.config.setdefault('favor_rankings', {})
         self.team_names = {

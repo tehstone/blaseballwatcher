@@ -288,6 +288,8 @@ class Pendants(commands.Cog):
         while notable:
             notable = await self.get_daily_stats(all_statsheets, latest_day, current_season)
             latest_day += 1
+            if latest_day == 99:
+                break
 
         for day in all_statsheets:
             if day['season'] != current_season:
@@ -355,7 +357,7 @@ class Pendants(commands.Cog):
                         sh_description += sh_message
 
                     if 'cycle' in notable:
-                        for __, event in notable["cycle"].items():
+                        for player_id, event in notable["cycle"].items():
                             doubles_str = f"{event['doubles']} double"
                             if event['doubles'] != 1:
                                 doubles_str += "s"
@@ -379,13 +381,15 @@ class Pendants(commands.Cog):
                             at_bats_str = ".\n"
                             if "atBats" in event:
                                 at_bats_str = f" in {event['atBats']} at bats.\n"
+                            natural_cycle = await self._check_feed_natural_cycle(player_id, day['day'])
                             message = f"\n**{event['name']} hit {base_message}!**{at_bats_str} with {event['hits']}" \
                                       f" hits, {doubles_str}, {triples_str}, {quad_str}" \
                                       f"and {hr_str}.\n" \
-                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
+                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})" \
+
                             if "statsheet_id" in event:
                                 message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
-                            message += "\n"
+                            message += f"\n{natural_cycle}\n"
                             if not self.bot.config['live_version']:
                                 daily_message_two += message
                             game_watcher_messages.append(message)
@@ -493,6 +497,31 @@ class Pendants(commands.Cog):
                                 await daily_stats_channel.send(daily_message_two)
                 else:
                     self.bot.logger.info(f"No daily message sent for {day['day']}")
+
+    @staticmethod
+    async def _check_feed_natural_cycle(player_id, day):
+        player_feed = await utils.retry_request(f"https://www.blaseball.com/database/feed/player?id={player_id}")
+        feed_json = player_feed.json()
+        filtered_items = list(filter(lambda d: d['day'] == {day}, feed_json))
+        sorted_items = sorted(filtered_items, key=lambda item: item['metadata']['play'])
+
+        for i in range(len(sorted_items)):
+            if i + 3 > len(sorted_items):
+                break
+            if "hits a Single" in sorted_items[i]['description']:
+                if "hits a Double" in sorted_items[i+1]['description']:
+                    if "hits a Triple" in sorted_items[i+2]['description']:
+                        if "home run" in sorted_items[i+3]['description']:
+                            return "Natural Cycle!"
+        for i in range(len(sorted_items)):
+            if i + 3 > len(sorted_items):
+                break
+            if "home run" in sorted_items[i]['description']:
+                if "hits a Triple" in sorted_items[i + 1]['description']:
+                    if "hits a Double" in sorted_items[i + 2]['description']:
+                        if "hits a Single" in sorted_items[i + 3]['description']:
+                            return "Reverse Cycle!"
+        return "Not a natural cycle."
 
     async def compile_stats(self):
         try:

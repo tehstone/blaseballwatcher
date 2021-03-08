@@ -6,6 +6,7 @@ import json
 import re
 
 import gspread
+from gspread_formatting import *
 
 from discord.ext import commands
 
@@ -680,13 +681,14 @@ class GameData(commands.Cog):
             if season in odds:
                 odds_rows = []
                 header_row = ["Days", "Favored Wins", "Underdog Wins", "Game 1", "Game 2", "Game 3",
-                              "Game 4", "Game 5", "Game 6", "Game 7", "Game 8", "Game 9", "Game 10"]
+                              "Game 4", "Game 5", "Game 6", "Game 7", "Game 8", "Game 9", "Game 10",
+                              "Game 11", "Game 12"]
 
                 if season < 11:
                     bet_tiers = [.5, .51, .52, .53, .54, .55, .56, .57, .58, .59, .6, .61, .62]
                 else:
                     bet_tiers = [.5, .51, .52, .53, .54, .55, .56, .57, .58, .59,
-                                 .6, .61, .62, .63, .64, .65, .66, .67, .68]
+                                 .6, .61, .62, .63, .64, .65]
                 for i in bet_tiers:
                     header_row.append(f"{round(i*100)}%+ payout")
                 odds_rows.append(header_row)
@@ -731,7 +733,8 @@ class GameData(commands.Cog):
                         payouts[i] += round(1000 * (2 - 0.000335 * math.pow(100 * (odd - 0.5), 2.045)))
                     else:
                         if odd > .5:
-                            payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
+                            #payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
+                            payouts[i] += round(1000 * (3.206 / (1 + math.pow(.443 * (odd - 0.5), .95)) - 1.206))
                     count += 1
                 elif odd < 1 - bet_tiers[i]:
                     count += 1
@@ -835,6 +838,31 @@ class GameData(commands.Cog):
             self.bot.logger.warn(f"Failed to update tiebreakers: {e}")
             return await ctx.message.add_reaction(self.bot.failed_react)
         await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(name="apply_conditional_rules", aliases=['acr'])
+    async def _apply_conditional_rules(self, ctx):
+        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
+        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
+        od_worksheet = sheet.worksheet("Daily Results")
+        rules = get_conditional_format_rules(od_worksheet)
+        for i in range(8, 106):
+            rule = ConditionalFormatRule(
+                ranges=[GridRange.from_a1_range(f'O{i}', od_worksheet),
+                        GridRange.from_a1_range(f'Q{i}', od_worksheet),
+                        GridRange.from_a1_range(f'S{i}', od_worksheet),
+                        GridRange.from_a1_range(f'U{i}', od_worksheet),
+                        GridRange.from_a1_range(f'W{i}', od_worksheet),
+                        GridRange.from_a1_range(f'Y{i}', od_worksheet),
+                        GridRange.from_a1_range(f'AA{i}', od_worksheet),
+                        GridRange.from_a1_range(f'AC{i}', od_worksheet),
+                        GridRange.from_a1_range(f'AE{i}', od_worksheet)],
+                gradientRule=GradientRule(minpoint=InterpolationPoint(color=Color.fromHex("#e67e75"), type='min'),
+                                          midpoint=InterpolationPoint(color=Color.fromHex("#ffffff"),
+                                                                      type='NUMBER', value='0'),
+                                          maxpoint=InterpolationPoint(color=Color.fromHex("#5bbd8d"), type='max'))
+                )
+            rules.append(rule)
+        rules.save()
 
 
 def setup(bot):
