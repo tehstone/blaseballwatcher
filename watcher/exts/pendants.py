@@ -639,7 +639,14 @@ class Pendants(commands.Cog):
         sorted_total_hit_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
                                                             key=lambda item: item[1]['totalmax'], reverse=True)}
 
-        top_keys = list(sorted_total_hit_payouts.keys())
+        sb_max = 3
+        hit_max = 10
+        top_sb_keys = list(sorted_stolenBases.keys())[:sb_max]
+        top_keys = list(sorted_total_hit_payouts.keys())[:hit_max]
+        for i in range(sb_max):
+            if top_sb_keys[i] not in top_keys:
+                hit_max -= 1
+
         count = 0
         for key in top_keys:
             if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
@@ -647,8 +654,14 @@ class Pendants(commands.Cog):
             values = sorted_total_hit_payouts[key]
             rows.append([values["name"], '', values["hits"], values["homeRuns"], values["stolenBases"]])
             count += 1
-            if count == 10:
+            if count == hit_max:
                 break
+
+        for key in top_sb_keys:
+            if key not in top_keys:
+                values = sorted_stolenBases[key]
+                rows.append([values["name"], '', values["hits"], values["homeRuns"], values["stolenBases"]])
+
         p_worksheet.update("A9:E18", rows)
 
         # York Silk
