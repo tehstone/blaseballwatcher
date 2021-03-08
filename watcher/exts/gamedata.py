@@ -688,7 +688,7 @@ class GameData(commands.Cog):
                     bet_tiers = [.5, .51, .52, .53, .54, .55, .56, .57, .58, .59, .6, .61, .62]
                 else:
                     bet_tiers = [.5, .51, .52, .53, .54, .55, .56, .57, .58, .59,
-                                 .6, .61, .62, .63, .64, .65]
+                                 .6, .61, .62, .63, .64]
                 for i in bet_tiers:
                     header_row.append(f"{round(i*100)}%+ payout")
                 odds_rows.append(header_row)
@@ -710,8 +710,8 @@ class GameData(commands.Cog):
                     for c in range(len(bet_counts)):
                         total_betcounts[c] += bet_counts[c]
                 od_worksheet = sheet.worksheet("Daily Results")
-                od_worksheet.update(f"A{4}:AF{4 + len(odds_rows)}", odds_rows)
-                od_worksheet.update(f"N{2}:AF{2}", [total_betcounts])
+                od_worksheet.update(f"A{4}:AD{4 + len(odds_rows)}", odds_rows)
+                od_worksheet.update(f"P{2}:AD{2}", [total_betcounts])
 
             print("Updates Complete")
             await asyncio.sleep(5)
