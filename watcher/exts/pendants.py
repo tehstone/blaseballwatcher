@@ -296,24 +296,29 @@ class Pendants(commands.Cog):
                 continue
             if day['day'] > last_day:
                 players = day['statsheets']
-                daily_message = f"**Daily leaders for day {day['day']+1}**\n"
+                daily_message = [f"**Daily leaders for day {day['day']+1}**\n"]
                 daily_message_two = ""
                 sorted_hits = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['hits'], reverse=True)}
                 sorted_homeruns = {k: v for k, v in
                                    sorted(players.items(), key=lambda item: item[1]['homeRuns'], reverse=True)}
                 sorted_rbis = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['rbis'], reverse=True)}
+                sorted_stolenbases = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['stolenBases'], reverse=True)}
 
                 hit_message = self.print_top(sorted_hits, 'hits', 'hits', 4)
                 if len(hit_message) > 0:
-                    daily_message += f"\n**Hits**\n{hit_message}"
+                    daily_message.append(f"\n**Hits**\n{hit_message}")
 
                 hr_message = self.print_top(sorted_homeruns, 'homeRuns', 'home runs', 2)
                 if len(hr_message) > 0:
-                    daily_message += f"\n**Home Runs**\n{hr_message}"
+                    daily_message.append(f"\n**Home Runs**\n{hr_message}")
 
                 rbi_message = self.print_top(sorted_rbis, 'rbis', 'RBIs', 4)
                 if len(rbi_message) > 0:
-                    daily_message += f"\n**RBIs**\n{rbi_message}"
+                    daily_message.append(f"\n**RBIs**\n{rbi_message}")
+
+                sb_message = self.print_top(sorted_stolenbases, 'stolenBases', 'stolen bases', 2)
+                if len(sb_message) > 0:
+                    daily_message.append(f"\n**Stolen Bases**\n{sb_message}")
 
                 sorted_strikeouts = {k: v for k, v in
                                      sorted(players.items(), key=lambda item: item[1]['strikeouts'],
@@ -480,20 +485,24 @@ class Pendants(commands.Cog):
                         debug_channel = self.bot.get_channel(debug_chan_id)
                         if debug_channel:
                             if len(sh_description) > 0:
-                                await debug_channel.send(daily_message)
+                                await utils.send_message_in_chunks(daily_message, debug_channel)
+                                #await debug_channel.send(daily_message)
                                 await debug_channel.send(daily_message_two, embed=sh_embed)
                             else:
-                                await debug_channel.send(daily_message)
+                                await utils.send_message_in_chunks(daily_message, debug_channel)
+                                #await debug_channel.send(daily_message)
                                 await debug_channel.send(daily_message_two)
                     daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
                     if daily_stats_channel_id:
                         daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
                         if daily_stats_channel:
                             if len(sh_description) > 0:
-                                await daily_stats_channel.send(daily_message)
+                                await utils.send_message_in_chunks(daily_message, daily_stats_channel)
+                                #await daily_stats_channel.send(daily_message)
                                 await daily_stats_channel.send(daily_message_two, embed=sh_embed)
                             else:
-                                await daily_stats_channel.send(daily_message)
+                                await utils.send_message_in_chunks(daily_message, daily_stats_channel)
+                                #await daily_stats_channel.send(daily_message)
                                 await daily_stats_channel.send(daily_message_two)
                 else:
                     self.bot.logger.info(f"No daily message sent for {day['day']}")

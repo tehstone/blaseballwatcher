@@ -43,6 +43,17 @@ async def get_channel_by_name_or_id(ctx, name):
     return channel
 
 
+async def send_message_in_chunks(message_parts, channel):
+    current_msg = ""
+    for part in message_parts:
+        if len(current_msg) + len(part) > 1999:
+            await channel.send(current_msg)
+            current_msg = ""
+        current_msg += part
+    if len(current_msg) > 0:
+        await channel.send(current_msg)
+
+
 async def retry_request(url, tries=10):
     headers = {
         'User-Agent': 'sibrDataWatcher/0.5test (tehstone#8448@sibr)'
