@@ -564,6 +564,8 @@ class Pendants(commands.Cog):
         all_players = await self.compile_stats()
         sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
                                                reverse=True)}
+        sorted_stolenBases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
+                                                      reverse=True)}
         sorted_homeruns = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['homeRuns'],
                                                    reverse=True)}
         rows = []
@@ -583,8 +585,8 @@ class Pendants(commands.Cog):
                     values = all_players[key]
                     name = values["name"]
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
-                    rows.append([values["rotation"], name, '', values["strikeouts"], k_9_value])
-        p_worksheet.update("A20:E34", rows)
+                    rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
+        p_worksheet.update("A23:F37", rows)
 
         rows = []
         sorted_strikeouts = {k: v
@@ -600,7 +602,7 @@ class Pendants(commands.Cog):
             name = values["name"]
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, '', values["strikeouts"], k_9_value])
-        p_worksheet.update("K20:O27", rows)
+        p_worksheet.update("L23:P29", rows)
 
         rows = []
         for i in range(1, 6):
@@ -611,7 +613,7 @@ class Pendants(commands.Cog):
                 values = sorted_shutouts[key]
                 name = values["name"]
                 rows.append([name, '', values["shutout"]])
-        p_worksheet.update("G20:I34", rows)
+        p_worksheet.update("H23:J37", rows)
 
         rows = []
         sorted_shutouts = {k: v for k, v in sorted(pitcher_dict.items(), key=lambda item: item[1]['shutout'],
@@ -621,7 +623,7 @@ class Pendants(commands.Cog):
             values = sorted_shutouts[key]
             name = values["name"]
             rows.append([values["rotation"], name, '', values["shutout"]])
-        p_worksheet.update("K30:N34", rows)
+        p_worksheet.update("L33:O37", rows)
 
         rows = []
         total_hit_payouts = {}
@@ -631,7 +633,9 @@ class Pendants(commands.Cog):
 
             total_max = (hits * 1500) + (homeruns * 4000)
             total_hit_payouts[k] = {"name": v["name"], "hits": v["hits"],
-                                    "homeRuns": sorted_homeruns[k]["homeRuns"], "totalmax": total_max}
+                                    "homeRuns": sorted_homeruns[k]["homeRuns"],
+                                    "stolenBases": sorted_stolenBases[k]["stolenBases"],
+                                    "totalmax": total_max}
         sorted_total_hit_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
                                                             key=lambda item: item[1]['totalmax'], reverse=True)}
 
@@ -641,30 +645,42 @@ class Pendants(commands.Cog):
             if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
                 continue
             values = sorted_total_hit_payouts[key]
-            rows.append([values["name"], '', values["hits"], values["homeRuns"]])
+            rows.append([values["name"], '', values["hits"], values["homeRuns"], values["stolenBases"]])
             count += 1
             if count == 10:
                 break
-        p_worksheet.update("A6:D15", rows)
+        p_worksheet.update("A9:E18", rows)
 
         # York Silk
         ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
-        ys_row = ["York Silk", '', 0, 0]
+        ys_row = ["York Silk", '', 0, 0, 0]
         if ys_id in sorted_hits:
             ys_row[2] = sorted_hits[ys_id].setdefault("hits", 0)
         if ys_id in sorted_homeruns:
             ys_row[3] = sorted_homeruns[ys_id].setdefault("homeRuns", 0)
+        if ys_id in sorted_stolenBases:
+            ys_row[4] = sorted_stolenBases[ys_id].setdefault("stolenBases", 0)
         # Wyatt Glover
         wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
-        wg_row = ["Wyatt Glover", '', 0, 0]
+        wg_row = ["Wyatt Glover", '', 0, 0, 0]
         if wg_id in sorted_hits:
             wg_row[2] = sorted_hits[wg_id].setdefault("hits", 0)
         if wg_id in sorted_homeruns:
             wg_row[3] = sorted_homeruns[wg_id].setdefault("homeRuns", 0)
-        p_worksheet.update("A3:D4", [ys_row, wg_row], raw=False)
+        if wg_id in sorted_stolenBases:
+            wg_row[4] = sorted_stolenBases[wg_id].setdefault("stolenBases", 0)
+        p_worksheet.update("A6:E7", [ys_row, wg_row], raw=False)
 
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
             json.dump(all_players, file)
+
+        with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_day_weather.json'), 'r') as file:
+            day_weather = json.load(file)
+        black_holes = 0
+        for __, weather_map in day_weather.items():
+            if "Black Hole" in weather_map:
+                black_holes += weather_map["Black Hole"]
+        p_worksheet.update("B2:B2", [[black_holes]], raw=False)
 
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):

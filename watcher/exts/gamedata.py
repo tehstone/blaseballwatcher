@@ -85,7 +85,7 @@ weather_types = {
     6: 'Acidic',
     7: 'Solar Eclipse',
     8: 'Glitter',
-    9: 'Bloodwind',
+    9: 'Blooddrain',
     10: 'Peanuts',
     11: 'Bird',
     12: 'Feedback',
@@ -563,10 +563,21 @@ class GameData(commands.Cog):
                     await asyncio.sleep(10)
 
             print("Updating Weather Events")
+            try:
+                with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_day_weather.json'), 'r') as file:
+                    day_weather = json.load(file)
+            except FileNotFoundError:
+                day_weather = {}
+
             orows, otypes = [], []
             for day in sorted(season_outcomes.keys()):
+                if day not in day_weather.keys():
+                    day_weather[day] = {}
                 for outcome in season_outcomes[day]:
                     outcome_type = self.get_outcome_type(outcome)
+                    if outcome_type not in day_weather[day].keys():
+                        day_weather[day][outcome_type] = 0
+                    day_weather[day][outcome_type] += 1
                     orows.append([day+1, outcome.strip()])
                     otypes.append([outcome_type])
             o_worksheet = sheet.worksheet("Blaseball")
@@ -574,6 +585,9 @@ class GameData(commands.Cog):
             o_worksheet.merge_cells(f"B{9}:H{9 + len(orows)}", merge_type="MERGE_ROWS")
             o_worksheet.update(f"A{9}:B{9 + len(orows)}", orows)
             o_worksheet.update(f"I{9}:I{9 + len(otypes)}", otypes)
+
+            with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_day_weather.json'), 'w') as file:
+                json.dump(day_weather, file)
 
             if fill:
                 weather_rows = []
