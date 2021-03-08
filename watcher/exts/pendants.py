@@ -763,6 +763,9 @@ class Pendants(commands.Cog):
                     season_flood_count += day_info['flood_count']
                 if "runner_count" in day_info:
                     season_runner_count += day_info['runner_count']
+        with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
+                  'w') as file:
+            json.dump(flood_lookups, file)
         return season_flood_count, season_runner_count
 
     @commands.command(aliases=['upp'])
