@@ -575,13 +575,13 @@ class GameData(commands.Cog):
 
             orows, otypes = [], []
             for day in sorted(season_outcomes.keys()):
-                if day not in day_weather.keys():
-                    day_weather[day] = {}
+                if str(day) not in day_weather.keys():
+                    day_weather[str(day)] = {}
                 for outcome in season_outcomes[day]:
                     outcome_type = self.get_outcome_type(outcome)
-                    if outcome_type not in day_weather[day].keys():
-                        day_weather[day][outcome_type] = 0
-                    day_weather[day][outcome_type] += 1
+                    if outcome_type not in day_weather[str(day)].keys():
+                        day_weather[str(day)][outcome_type] = 0
+                    day_weather[str(day)][outcome_type] += 1
                     orows.append([day+1, outcome.strip()])
                     otypes.append([outcome_type])
             o_worksheet = sheet.worksheet("Blaseball")
@@ -608,7 +608,7 @@ class GameData(commands.Cog):
                 except FileNotFoundError:
                     flood_lookups = {}
                 for day, floods in flood_count.items():
-                    flood_lookups[day] = {"lookedup": False, "floods": floods}
+                    flood_lookups[str(day)] = {"lookedup": False, "floods": floods}
                 with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
                           'w') as file:
                     json.dump(flood_lookups, file)
