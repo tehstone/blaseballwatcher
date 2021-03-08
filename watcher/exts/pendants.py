@@ -716,6 +716,36 @@ class Pendants(commands.Cog):
                 black_holes += weather_map["Black Hole"]
         p_worksheet.update("B2:B2", [[black_holes]], raw=False)
 
+        flood_count = await self._lookup_floods(season)
+        p_worksheet.update("L2:L2", [[flood_count]], raw=False)
+
+    async def _lookup_floods(self, season):
+        season_flood_count = 0
+        try:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
+                      'r') as file:
+                flood_lookups = json.load(file)
+        except FileNotFoundError:
+            flood_lookups = {}
+            self.bot.logger.warn("No flood lookup data found.")
+        for day, day_info in flood_lookups.items():
+            if day_info['lookedup'] == False:
+                day_flood_count = 0
+                for game_id in day_info["floods"]:
+                    game_feed = await utils.retry_request(
+                        f"https://www.blaseball.com/database/feed/game?id={game_id}")
+                    feed_json = game_feed.json()
+                    for food in feed_json:
+                        if "Immateria" in food['description']:
+                            day_flood_count += 1
+                day_info['lookedup'] = True
+                day_info['flood_count'] = day_flood_count
+                season_flood_count += day_flood_count
+            else:
+                if "flood_count" in day_info:
+                    season_flood_count += day_info['flood_count']
+        return season_flood_count
+
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):
         await ctx.message.add_reaction("⏲️")

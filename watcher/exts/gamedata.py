@@ -212,7 +212,7 @@ class GameData(commands.Cog):
             json.dump(new_season_data, json_file)
 
     def base_season_parser(self, seasons, fill):
-        schedule, teams, odds, weathers = {}, {}, {}, {}
+        schedule, teams, odds, weathers, flood_count = {}, {}, {}, {}, {}
         with open(os.path.join("data", "divisions.json")) as json_file:
             divisions = json.load(json_file)
         for seas in seasons:
@@ -225,6 +225,10 @@ class GameData(commands.Cog):
                 if not fill:
                     if not game["gameComplete"]:
                         break
+                    if game['weather'] == 18:
+                        if not game['day'] in flood_count:
+                            flood_count[game['day']] = []
+                        flood_count[game['day']].append(game['id'])
                 if game['weather'] not in weathers[seas]:
                     weathers[seas][game['weather']] = 0
                 weathers[seas][game['weather']] += 1
@@ -298,7 +302,7 @@ class GameData(commands.Cog):
                         "day": game["day"],
                         "outcomes": game["outcomes"]
                     }
-        return schedule, teams, odds, weathers
+        return schedule, teams, odds, weathers, flood_count
 
     @staticmethod
     def get_outcome_type(outcome):
@@ -337,7 +341,7 @@ class GameData(commands.Cog):
 
     async def update_spreadsheets(self, seasons, fill=False):
         gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
-        schedule, teams, odds, weathers = self.base_season_parser(seasons, fill)
+        schedule, teams, odds, weathers, flood_count = self.base_season_parser(seasons, fill)
         league_records = {"Wild": {}, "Mild": {}}
 
         for season in schedule:
@@ -596,6 +600,18 @@ class GameData(commands.Cog):
                     w_row = [weather_name, count, f"{round((count/990)*1000)/10}%"]
                     weather_rows.append(w_row)
                 o_worksheet.update(f"K{9}:M{9 + len(weather_rows)}", weather_rows)
+            else:
+                try:
+                    with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
+                              'r') as file:
+                        flood_lookups = json.load(file)
+                except FileNotFoundError:
+                    flood_lookups = {}
+                for day, floods in flood_count.items():
+                    flood_lookups[day] = {"lookedup": False, "floods": floods}
+                with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
+                          'w') as file:
+                    json.dump(flood_lookups, file)
 
             def generate_per_team_records(team_list, record):
                 n_divisions = {"Wild High": ["Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands", "Georgias"],
@@ -859,17 +875,13 @@ class GameData(commands.Cog):
         sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
         od_worksheet = sheet.worksheet("Daily Results")
         rules = get_conditional_format_rules(od_worksheet)
-        for i in range(8, 106):
+        for i in range(5, 106):
             rule = ConditionalFormatRule(
-                ranges=[GridRange.from_a1_range(f'O{i}', od_worksheet),
-                        GridRange.from_a1_range(f'Q{i}', od_worksheet),
-                        GridRange.from_a1_range(f'S{i}', od_worksheet),
-                        GridRange.from_a1_range(f'U{i}', od_worksheet),
-                        GridRange.from_a1_range(f'W{i}', od_worksheet),
-                        GridRange.from_a1_range(f'Y{i}', od_worksheet),
-                        GridRange.from_a1_range(f'AA{i}', od_worksheet),
-                        GridRange.from_a1_range(f'AC{i}', od_worksheet),
-                        GridRange.from_a1_range(f'AE{i}', od_worksheet)],
+                ranges=[GridRange.from_a1_range(f'AF{i}', od_worksheet),
+                        GridRange.from_a1_range(f'AG{i}', od_worksheet),
+                        GridRange.from_a1_range(f'AH{i}', od_worksheet),
+                        GridRange.from_a1_range(f'AI{i}', od_worksheet),
+                        GridRange.from_a1_range(f'AJ{i}', od_worksheet)],
                 gradientRule=GradientRule(minpoint=InterpolationPoint(color=Color.fromHex("#e67e75"), type='min'),
                                           midpoint=InterpolationPoint(color=Color.fromHex("#ffffff"),
                                                                       type='NUMBER', value='0'),
