@@ -486,11 +486,9 @@ class Pendants(commands.Cog):
                         if debug_channel:
                             if len(sh_description) > 0:
                                 await utils.send_message_in_chunks(daily_message, debug_channel)
-                                #await debug_channel.send(daily_message)
                                 await debug_channel.send(daily_message_two, embed=sh_embed)
                             else:
                                 await utils.send_message_in_chunks(daily_message, debug_channel)
-                                #await debug_channel.send(daily_message)
                                 await debug_channel.send(daily_message_two)
                     daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
                     if daily_stats_channel_id:
@@ -498,11 +496,9 @@ class Pendants(commands.Cog):
                         if daily_stats_channel:
                             if len(sh_description) > 0:
                                 await utils.send_message_in_chunks(daily_message, daily_stats_channel)
-                                #await daily_stats_channel.send(daily_message)
                                 await daily_stats_channel.send(daily_message_two, embed=sh_embed)
                             else:
                                 await utils.send_message_in_chunks(daily_message, daily_stats_channel)
-                                #await daily_stats_channel.send(daily_message)
                                 await daily_stats_channel.send(daily_message_two)
                 else:
                     self.bot.logger.info(f"No daily message sent for {day['day']}")
@@ -569,8 +565,16 @@ class Pendants(commands.Cog):
             sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season+1}"])
         else:
             sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
-        p_worksheet = sheet.worksheet("Pendants")
+        if season >= 12:
+            p_worksheet = sheet.worksheet("Snack Income")
+        else:
+            p_worksheet = sheet.worksheet("Pendants")
         all_players = await self.compile_stats()
+        with open(os.path.join('data', 'allTeams.json'), 'r', encoding='utf-8') as file:
+            allTeams = json.load(file)
+        team_short_map = {}
+        for team in allTeams:
+            team_short_map[team["id"]] = team["shorthand"]
         sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
                                                reverse=True)}
         sorted_stolenBases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
@@ -592,7 +596,8 @@ class Pendants(commands.Cog):
                 top_keys = top_list[:3]
                 for key in top_keys:
                     values = all_players[key]
-                    name = values["name"]
+                    team = team_short_map[values["teamId"]]
+                    name = f"({team}) {values['name']}"
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
                     rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
         p_worksheet.update("A23:F37", rows)
@@ -608,7 +613,8 @@ class Pendants(commands.Cog):
         top_keys = top_list[:7]
         for key in top_keys:
             values = all_players[key]
-            name = values["name"]
+            team = team_short_map[values["teamId"]]
+            name = f"({team}) {values['name']}"
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, '', values["strikeouts"], k_9_value])
         p_worksheet.update("L23:P29", rows)
@@ -620,7 +626,8 @@ class Pendants(commands.Cog):
             top_keys = list(sorted_shutouts.keys())[:3]
             for key in top_keys:
                 values = sorted_shutouts[key]
-                name = values["name"]
+                team = team_short_map[values["teamId"]]
+                name = f"({team}) {values['name']}"
                 rows.append([name, '', values["shutout"]])
         p_worksheet.update("H23:J37", rows)
 
@@ -630,7 +637,8 @@ class Pendants(commands.Cog):
         top_keys = list(sorted_shutouts.keys())[:5]
         for key in top_keys:
             values = sorted_shutouts[key]
-            name = values["name"]
+            team = team_short_map[values["teamId"]]
+            name = f"({team}) {values['name']}"
             rows.append([values["rotation"], name, '', values["shutout"]])
         p_worksheet.update("L33:O37", rows)
 
@@ -641,7 +649,7 @@ class Pendants(commands.Cog):
             homeruns = sorted_homeruns[k]["homeRuns"]
 
             total_max = (hits * 1500) + (homeruns * 4000)
-            total_hit_payouts[k] = {"name": v["name"], "hits": v["hits"],
+            total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hits"],
                                     "homeRuns": sorted_homeruns[k]["homeRuns"],
                                     "stolenBases": sorted_stolenBases[k]["stolenBases"],
                                     "totalmax": total_max}
@@ -661,7 +669,9 @@ class Pendants(commands.Cog):
             if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
                 continue
             values = sorted_total_hit_payouts[key]
-            rows.append([values["name"], '', values["hits"], values["homeRuns"], values["stolenBases"]])
+            team = team_short_map[values["teamId"]]
+            name = f"({team}) {values['name']}"
+            rows.append([name, '', values["hits"], values["homeRuns"], values["stolenBases"]])
             count += 1
             if count == hit_max:
                 break
@@ -669,7 +679,9 @@ class Pendants(commands.Cog):
         for key in top_sb_keys:
             if key not in top_keys:
                 values = sorted_stolenBases[key]
-                rows.append([values["name"], '', values["hits"], values["homeRuns"], values["stolenBases"]])
+                team = team_short_map[values["teamId"]]
+                name = f"({team}) {values['name']}"
+                rows.append([name, '', values["hits"], values["homeRuns"], values["stolenBases"]])
 
         p_worksheet.update("A9:E18", rows)
 
