@@ -577,13 +577,13 @@ class GameData(commands.Cog):
             for day in sorted(season_outcomes.keys()):
                 if str(day) not in day_weather.keys():
                     day_weather[str(day)] = {}
-                for outcome in season_outcomes[day]:
-                    outcome_type = self.get_outcome_type(outcome)
-                    if outcome_type not in day_weather[str(day)].keys():
-                        day_weather[str(day)][outcome_type] = 0
-                    day_weather[str(day)][outcome_type] += 1
-                    orows.append([day+1, outcome.strip()])
-                    otypes.append([outcome_type])
+                    for outcome in season_outcomes[day]:
+                        outcome_type = self.get_outcome_type(outcome)
+                        if outcome_type not in day_weather[str(day)].keys():
+                            day_weather[str(day)][outcome_type] = 0
+                        day_weather[str(day)][outcome_type] += 1
+                        orows.append([day+1, outcome.strip()])
+                        otypes.append([outcome_type])
             o_worksheet = sheet.worksheet("Blaseball")
 
             o_worksheet.merge_cells(f"B{9}:H{9 + len(orows)}", merge_type="MERGE_ROWS")
@@ -808,6 +808,7 @@ class GameData(commands.Cog):
         current_season -= 1
         await self.save_json_range(current_season, fill)
         await self.update_spreadsheets([current_season], fill)
+        await ctx.message.add_reaction(self.bot.success_react)
         await ctx.send("Spreadsheets updated.")
 
     @commands.command(name="anc")
