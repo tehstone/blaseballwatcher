@@ -276,6 +276,7 @@ class GameData(commands.Cog):
                 a_series = away_team.setdefault(series_count, {})
                 if series_game not in h_series:
                     h_series[series_game] = {
+                        "id": game["id"],
                         "teamScore": game["homeScore"],
                         "opponentScore": game["awayScore"],
                         "opponent": game["awayTeam"],
@@ -290,6 +291,7 @@ class GameData(commands.Cog):
                     }
                 if series_game not in a_series:
                     a_series[series_game] = {
+                        "id": game["id"],
                         "opponentScore": game["homeScore"],
                         "teamScore": game["awayScore"],
                         "opponent": game["homeTeam"],
@@ -465,12 +467,10 @@ class GameData(commands.Cog):
                         else:
                             w_str = "None"
                         if len(game["outcomes"]) > 0:
+                            season_outcomes.setdefault(game['day'], {})
+                            season_outcomes[game["day"]][game["id"]] = game["outcomes"]
+
                             for o in game["outcomes"]:
-                                if game["day"] not in season_outcomes:
-                                    season_outcomes[game["day"]] = [o]
-                                else:
-                                    if o not in season_outcomes[game["day"]]:
-                                        season_outcomes[game["day"]].append(o)
                                 outcome_type = self.get_outcome_type(o)
                                 team_name = teams[team]['name']
                                 if outcome_type == "Sunset":
@@ -487,7 +487,6 @@ class GameData(commands.Cog):
                                             target_team = match.groups()[0]
                                             if target_team == team_name:
                                                 record["win_modifier"] -= 1
-
 
                         game_outcomes = [o.strip() for o in game["outcomes"]]
                         if fill:
@@ -579,14 +578,15 @@ class GameData(commands.Cog):
                 if str(day) not in day_weather.keys():
                     day_weather[str(day)] = {}
                     new_day = True
-                for outcome in season_outcomes[day]:
-                    outcome_type = self.get_outcome_type(outcome)
-                    if new_day:
-                        if outcome_type not in day_weather[str(day)].keys():
-                            day_weather[str(day)][outcome_type] = 0
-                        day_weather[str(day)][outcome_type] += 1
-                    orows.append([day+1, outcome.strip()])
-                    otypes.append([outcome_type])
+                for game in season_outcomes[day]:
+                    for outcome in season_outcomes[day][game]:
+                        outcome_type = self.get_outcome_type(outcome)
+                        if new_day:
+                            if outcome_type not in day_weather[str(day)].keys():
+                                day_weather[str(day)][outcome_type] = 0
+                            day_weather[str(day)][outcome_type] += 1
+                        orows.append([day+1, outcome.strip()])
+                        otypes.append([outcome_type])
             o_worksheet = sheet.worksheet("Blaseball")
 
             o_worksheet.merge_cells(f"B{9}:H{9 + len(orows)}", merge_type="MERGE_ROWS")
