@@ -575,15 +575,18 @@ class GameData(commands.Cog):
 
             orows, otypes = [], []
             for day in sorted(season_outcomes.keys()):
+                new_day = False
                 if str(day) not in day_weather.keys():
                     day_weather[str(day)] = {}
-                    for outcome in season_outcomes[day]:
-                        outcome_type = self.get_outcome_type(outcome)
+                    new_day = True
+                for outcome in season_outcomes[day]:
+                    outcome_type = self.get_outcome_type(outcome)
+                    if new_day:
                         if outcome_type not in day_weather[str(day)].keys():
                             day_weather[str(day)][outcome_type] = 0
                         day_weather[str(day)][outcome_type] += 1
-                        orows.append([day+1, outcome.strip()])
-                        otypes.append([outcome_type])
+                    orows.append([day+1, outcome.strip()])
+                    otypes.append([outcome_type])
             o_worksheet = sheet.worksheet("Blaseball")
 
             o_worksheet.merge_cells(f"B{9}:H{9 + len(orows)}", merge_type="MERGE_ROWS")
@@ -890,6 +893,32 @@ class GameData(commands.Cog):
                 )
             rules.append(rule)
         rules.save()
+
+    @commands.command(name='test_feed')
+    async def _test_feed(self, ctx):
+        game_ids = []
+        for i in [12, 13]:
+            with open(os.path.join("season_data", f"season{i}.json")) as json_file:
+                season_data = json.load(json_file)
+            for game in season_data:
+                if game['weather'] == 18 and game["gameComplete"]:
+                    game_ids.append(game['id'])
+
+        total_runners = 0
+        floods = 0
+        for game_id in game_ids:
+            game_feed = await utils.retry_request(f"https://api.blaseball-reference.com/v1/events?gameId={game_id}&baseRunners=true")
+            feed_json = game_feed.json()
+            last_event = None
+            for food in feed_json['results']:
+                for text in food['event_text']:
+                    if "Immateria" in text:
+                        floods += 1
+                        total_runners += len(last_event['base_runners'])
+                        print(f"{game_id} - event {food['id']} - runners: {len(last_event['base_runners'])}")
+                last_event = food
+            print(f"total runners so far: {total_runners}")
+        print(f"total floods: {floods}")
 
 
 def setup(bot):
