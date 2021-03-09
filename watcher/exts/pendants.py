@@ -29,6 +29,14 @@ class Pendants(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    async def get_short_map(self):
+        with open(os.path.join('data', 'allTeams.json'), 'r', encoding='utf-8') as file:
+            all_teams = json.load(file)
+        team_short_map = {}
+        for team in all_teams:
+            team_short_map[team["id"]] = team["shorthand"]
+        return team_short_map
+
     @staticmethod
     async def retry_request(url, tries=10):
         for i in range(tries):
@@ -178,8 +186,8 @@ class Pendants(commands.Cog):
                 team_id = p_values["teamId"]
                 if team_id not in team_stats:
                     team_stats[team_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0,
-                                          "struckouts": 0, "name": self.bot.team_names[team_id],
-                                          "lineup_pa": {}}
+                                           "struckouts": 0, "name": self.bot.team_names[team_id],
+                                           "lineup_pa": {}}
                 team_stats[team_id]["at_bats"] += p_values["atBats"]
                 if "plate_appearances" not in team_stats[team_id]:
                     team_stats[team_id]["plate_appearances"] = 0
@@ -296,13 +304,14 @@ class Pendants(commands.Cog):
                 continue
             if day['day'] > last_day:
                 players = day['statsheets']
-                daily_message = [f"**Daily leaders for day {day['day']+1}**\n"]
+                daily_message = [f"**Daily leaders for day {day['day'] + 1}**\n"]
                 daily_message_two = ""
                 sorted_hits = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['hits'], reverse=True)}
                 sorted_homeruns = {k: v for k, v in
                                    sorted(players.items(), key=lambda item: item[1]['homeRuns'], reverse=True)}
                 sorted_rbis = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['rbis'], reverse=True)}
-                sorted_stolenbases = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['stolenBases'], reverse=True)}
+                sorted_stolenbases = {k: v for k, v in
+                                      sorted(players.items(), key=lambda item: item[1]['stolenBases'], reverse=True)}
 
                 hit_message = self.print_top(sorted_hits, 'hits', 'hits', 4)
                 if len(hit_message) > 0:
@@ -353,7 +362,6 @@ class Pendants(commands.Cog):
                             daily_message_two += message
                         game_watcher_messages.append(message)
                     for __, event in notable["shutout"].items():
-
                         sh_message = f"{event['name']} with {event['strikeouts']} strikeouts " \
                                      f"in {event['outsRecorded']} outs. {event['hitsAllowed']} hits allowed and " \
                                      f"{event['walksIssued']} batters walked.\n" \
@@ -390,7 +398,7 @@ class Pendants(commands.Cog):
                             message = f"\n**{event['name']} hit {base_message}!**{at_bats_str} with {event['hits']}" \
                                       f" hits, {doubles_str}, {triples_str}, {quad_str}" \
                                       f"and {hr_str}.\n" \
-                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})" \
+                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
 
                             if "statsheet_id" in event:
                                 message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
@@ -502,6 +510,7 @@ class Pendants(commands.Cog):
                                 await daily_stats_channel.send(daily_message_two)
                 else:
                     self.bot.logger.info(f"No daily message sent for {day['day']}")
+        return latest_day
 
     @staticmethod
     async def _check_feed_natural_cycle(player_id, day):
@@ -514,9 +523,9 @@ class Pendants(commands.Cog):
             if i + 3 > len(sorted_items):
                 break
             if "hits a Single" in sorted_items[i]['description']:
-                if "hits a Double" in sorted_items[i+1]['description']:
-                    if "hits a Triple" in sorted_items[i+2]['description']:
-                        if "home run" in sorted_items[i+3]['description']:
+                if "hits a Double" in sorted_items[i + 1]['description']:
+                    if "hits a Triple" in sorted_items[i + 2]['description']:
+                        if "home run" in sorted_items[i + 3]['description']:
                             return "Natural Cycle!"
         for i in range(len(sorted_items)):
             if i + 3 > len(sorted_items):
@@ -558,11 +567,11 @@ class Pendants(commands.Cog):
                         players[player["playerId"]]["position"] = player["position"]
         return players
 
-    async def update_leaders_sheet(self, season):
+    async def update_leaders_sheet(self, season, day):
         season -= 1
         gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
         if self.bot.config['live_version'] == True:
-            sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season+1}"])
+            sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season + 1}"])
         else:
             sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
         if season >= 12:
@@ -570,25 +579,18 @@ class Pendants(commands.Cog):
         else:
             p_worksheet = sheet.worksheet("Pendants")
         all_players = await self.compile_stats()
-        with open(os.path.join('data', 'allTeams.json'), 'r', encoding='utf-8') as file:
-            allTeams = json.load(file)
-        team_short_map = {}
-        for team in allTeams:
-            team_short_map[team["id"]] = team["shorthand"]
-        sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
-                                               reverse=True)}
-        sorted_stolenBases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
-                                                      reverse=True)}
-        sorted_homeruns = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['homeRuns'],
-                                                   reverse=True)}
+
+        sorted_hits, sorted_homeruns, \
+            sorted_total_hit_payouts, sorted_stolenbases = self.save_daily_top_players(all_players, day)
         rows = []
 
         pitcher_dict = {k: v for k, v in all_players.items() if v['outsRecorded'] > 0}
+        team_short_map = await self.get_short_map()
         for i in range(1, 6):
             sorted_strikeouts = {k: v
                                  for k, v in sorted(pitcher_dict.items(),
                                                     key=lambda item: round((item[1]['strikeouts'] / (
-                                                                item[1]['outsRecorded'] / 27)) * 10) / 10,
+                                                            item[1]['outsRecorded'] / 27)) * 10) / 10,
                                                     reverse=True) if v["rotation"] == i and not v["rotation_changed"]}
             top_list = list(sorted_strikeouts.keys())
 
@@ -622,7 +624,8 @@ class Pendants(commands.Cog):
         rows = []
         for i in range(1, 6):
             sorted_shutouts = {k: v for k, v in sorted(pitcher_dict.items(), key=lambda item: item[1]['shutout'],
-                                                       reverse=True) if v["rotation"] == i and not v["rotation_changed"]}
+                                                       reverse=True) if
+                               v["rotation"] == i and not v["rotation_changed"]}
             top_keys = list(sorted_shutouts.keys())[:3]
             for key in top_keys:
                 values = sorted_shutouts[key]
@@ -643,22 +646,10 @@ class Pendants(commands.Cog):
         p_worksheet.update("L33:O37", rows)
 
         rows = []
-        total_hit_payouts = {}
-        for k, v in sorted_hits.items():
-            hits = v["hits"]
-            homeruns = sorted_homeruns[k]["homeRuns"]
-
-            total_max = (hits * 1500) + (homeruns * 4000)
-            total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hits"],
-                                    "homeRuns": sorted_homeruns[k]["homeRuns"],
-                                    "stolenBases": sorted_stolenBases[k]["stolenBases"],
-                                    "totalmax": total_max}
-        sorted_total_hit_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
-                                                            key=lambda item: item[1]['totalmax'], reverse=True)}
 
         sb_max = 3
         hit_max = 10
-        top_sb_keys = list(sorted_stolenBases.keys())[:sb_max]
+        top_sb_keys = list(sorted_stolenbases.keys())[:sb_max]
         top_keys = list(sorted_total_hit_payouts.keys())[:hit_max]
         for i in range(sb_max):
             if top_sb_keys[i] not in top_keys:
@@ -678,7 +669,7 @@ class Pendants(commands.Cog):
 
         for key in top_sb_keys:
             if key not in top_keys:
-                values = sorted_stolenBases[key]
+                values = sorted_stolenbases[key]
                 team = team_short_map[values["teamId"]]
                 name = f"({team}) {values['name']}"
                 rows.append([name, '', values["hits"], values["homeRuns"], values["stolenBases"]])
@@ -692,8 +683,8 @@ class Pendants(commands.Cog):
             ys_row[2] = sorted_hits[ys_id].setdefault("hits", 0)
         if ys_id in sorted_homeruns:
             ys_row[3] = sorted_homeruns[ys_id].setdefault("homeRuns", 0)
-        if ys_id in sorted_stolenBases:
-            ys_row[4] = sorted_stolenBases[ys_id].setdefault("stolenBases", 0)
+        if ys_id in sorted_stolenbases:
+            ys_row[4] = sorted_stolenbases[ys_id].setdefault("stolenBases", 0)
         # Wyatt Glover
         wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
         wg_row = ["Wyatt Glover", '', 0, 0, 0]
@@ -701,8 +692,8 @@ class Pendants(commands.Cog):
             wg_row[2] = sorted_hits[wg_id].setdefault("hits", 0)
         if wg_id in sorted_homeruns:
             wg_row[3] = sorted_homeruns[wg_id].setdefault("homeRuns", 0)
-        if wg_id in sorted_stolenBases:
-            wg_row[4] = sorted_stolenBases[wg_id].setdefault("stolenBases", 0)
+        if wg_id in sorted_stolenbases:
+            wg_row[4] = sorted_stolenbases[wg_id].setdefault("stolenBases", 0)
         p_worksheet.update("A6:E7", [ys_row, wg_row], raw=False)
 
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
@@ -718,6 +709,48 @@ class Pendants(commands.Cog):
 
         flood_count, runner_count = await self._lookup_floods(season)
         p_worksheet.update("L2:M2", [[flood_count, runner_count]], raw=False)
+
+    @staticmethod
+    def save_daily_top_players(all_players, day):
+        sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
+                                               reverse=True)}
+        sorted_homeruns = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['homeRuns'],
+                                                   reverse=True)}
+        sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
+                                                      reverse=True)}
+        total_hit_payouts = {}
+        for k, v in sorted_hits.items():
+            hits = v["hits"]
+            homeruns = sorted_homeruns[k]["homeRuns"]
+            stolenbases = sorted_stolenbases[k]["stolenBases"]
+
+            seed_dog = (hits * 1500) + (homeruns * 4000)
+            combo = (hits * 1500) + (homeruns * 4000) + (stolenbases * 3000)
+            total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hits"],
+                                    "homeRuns": sorted_homeruns[k]["homeRuns"],
+                                    "stolenBases": sorted_stolenbases[k]["stolenBases"],
+                                    "seed_dog": seed_dog, "combo": combo}
+        sorted_seed_dog_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
+                                                           key=lambda item: item[1]['seed_dog'], reverse=True)}
+        sorted_combo_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
+                                                        key=lambda item: item[1]['combo'], reverse=True)}
+
+        daily_leaders = {"hits": [], "home_runs": [], "stolen_bases": [], "seed_dog": [], "combo": []}
+        for key in list(sorted_hits.keys())[:10]:
+            daily_leaders["hits"].append(all_players[key])
+        for key in list(sorted_homeruns.keys())[:10]:
+            daily_leaders["home_runs"].append(all_players[key])
+        for key in list(sorted_stolenbases.keys())[:10]:
+            daily_leaders["stolen_bases"].append(all_players[key])
+        for key in list(sorted_seed_dog_payouts.keys())[:10]:
+            daily_leaders["seed_dog"].append(all_players[key])
+        for key in list(sorted_combo_payouts.keys())[:10]:
+            daily_leaders["combo"].append(all_players[key])
+
+        with open(os.path.join('data', 'pendant_data', 'statsheets', f'd{day}_leaders.json'), 'w') as file:
+            json.dump(daily_leaders, file)
+
+        return sorted_hits, sorted_homeruns, sorted_seed_dog_payouts, sorted_stolenbases
 
     async def _lookup_floods(self, season):
         season_flood_count, season_runner_count = 0, 0
@@ -771,8 +804,8 @@ class Pendants(commands.Cog):
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):
         await ctx.message.add_reaction("⏲️")
-        await self.get_latest_pendant_data(season)
-        await self.update_leaders_sheet(season)
+        latest_day = await self.get_latest_pendant_data(season)
+        await self.update_leaders_sheet(season, latest_day)
         await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(aliases=['sld'])

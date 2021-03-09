@@ -174,11 +174,11 @@ class WatcherBot(commands.AutoShardedBot):
             bet_chan_id = self.config['bet_channel']
             current_season = self.config['current_season']
             pendant_cog = self.cogs.get('Pendants')
-            await pendant_cog.get_latest_pendant_data(current_season)
+            latest_day = await pendant_cog.get_latest_pendant_data(current_season)
             if debug_channel:
                 await debug_channel.send("Pendant data updated.")
             try:
-                await pendant_cog.update_leaders_sheet(current_season)
+                await pendant_cog.update_leaders_sheet(current_season, latest_day)
             except Exception as e:
                 self.logger.warn(f"Failed to update pendant leaders: {e}")
 
