@@ -40,16 +40,16 @@ class RulesBlogTable(BaseModel):
 
 class UserSnaxTable(BaseModel):
     user_id = BigIntegerField(index=True)
-    snake_oil = IntegerField(null=True)
-    fresh_popcorn = IntegerField(null=True)
-    stale_popcorn = IntegerField(null=True)
-    chips = IntegerField(null=True)
-    burger = IntegerField(null=True)
-    hot_dog = IntegerField(null=True)
-    seeds = IntegerField(null=True)
-    pickles = IntegerField(null=True)
-    slushie = IntegerField(null=True)
-    wet_pretzel = IntegerField(null=True)
+    snake_oil = IntegerField(null=True, default=0)
+    fresh_popcorn = IntegerField(null=True, default=0)
+    stale_popcorn = IntegerField(null=True, default=0)
+    chips = IntegerField(null=True, default=0)
+    burger = IntegerField(null=True, default=0)
+    hot_dog = IntegerField(null=True, default=0)
+    seeds = IntegerField(null=True, default=0)
+    pickles = IntegerField(null=True, default=0)
+    slushie = IntegerField(null=True, default=0)
+    wet_pretzel = IntegerField(null=True, default=0)
 
 
 class SnaxInstance:

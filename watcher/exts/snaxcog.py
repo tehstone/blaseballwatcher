@@ -115,20 +115,7 @@ class SnaxCog(commands.Cog):
         so far this season. Count is optional, has a default of 3 and has a hard limit of 10. This
         command is much more useful if you have set up your snaxfolio using the !set_snax command.
         """
-        user_result = (UserSnaxTable.select(
-                        UserSnaxTable.user_id,
-                        UserSnaxTable.snake_oil,
-                        UserSnaxTable.fresh_popcorn,
-                        UserSnaxTable.stale_popcorn,
-                        UserSnaxTable.chips,
-                        UserSnaxTable.burger,
-                        UserSnaxTable.hot_dog,
-                        UserSnaxTable.seeds,
-                        UserSnaxTable.pickles,
-                        UserSnaxTable.slushie,
-                        UserSnaxTable.wet_pretzel
-                    ).where(UserSnaxTable.user_id == ctx.author.id))
-        user_snax = user_result.objects(SnaxInstance)
+        user_snax = self._get_user_snax(ctx.author.id)
         if len(user_snax) > 0:
             snax_set = True
             title = "The most lucrative batters this season based on your snaxfolio:\n"
@@ -165,20 +152,7 @@ class SnaxCog(commands.Cog):
         the results to what you can actually afford right now. This command is not very useful unless
         you have set up your snaxfolio using the !set_snax command.
         """
-        user_result = (UserSnaxTable.select(
-            UserSnaxTable.user_id,
-            UserSnaxTable.snake_oil,
-            UserSnaxTable.fresh_popcorn,
-            UserSnaxTable.stale_popcorn,
-            UserSnaxTable.chips,
-            UserSnaxTable.burger,
-            UserSnaxTable.hot_dog,
-            UserSnaxTable.seeds,
-            UserSnaxTable.pickles,
-            UserSnaxTable.slushie,
-            UserSnaxTable.wet_pretzel
-        ).where(UserSnaxTable.user_id == ctx.author.id))
-        user_snax = user_result.objects(SnaxInstance)
+        user_snax = self._get_user_snax(ctx.author.id)
 
         coins = min(coins, 500000)
         coins = max(coins, 100)
@@ -199,16 +173,20 @@ class SnaxCog(commands.Cog):
             return await ctx.send(embed=embed)
 
         message = ""
+        limit = 6
         if len(proposal_dict["buy_list"]) < 3:
             message += "Your buy list is pretty small, consider providing a higher coin count" \
                        "with this command. The default is 50,000."
-        for item in proposal_dict["buy_list"]:
+        for item in proposal_dict["buy_list"][:limit]:
             if len(message) > 1800:
                 message += "Reached maximum recommendation length."
                 break
+            ratio = round(item['ratio']*1000)/1000
             message += f"Buy {item['which']} for {item['cost']}\n"
-            message += f"Expected marginal profit this season: {item['dx']}\n\n"
+            message += f"Expected marginal profit this season: {item['dx']} ({ratio})\n\n"
 
+        message += "Value in parantheses indicates expected profitability this season.\nAny value > 1 " \
+                   "will result in profit during the current season."
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=title, description=message)
 
@@ -216,6 +194,46 @@ class SnaxCog(commands.Cog):
             embed.set_footer(text="You'll get better results if you set your snaxfolio!")
 
         return await ctx.send(embed=embed)
+
+    @commands.command(name="snaxfolio", aliases=['snax_folio', 'snax_portfolio', 'my_snax', 'mysnax'])
+    async def _snaxfolio(self, ctx):
+        snax_channel_id = self.bot.config.get('snax_channel', 0)
+        if ctx.channel.id != snax_channel_id:
+            return await ctx.message.delete()
+        user_snax = self._get_user_snax(ctx.author.id)
+        if len(user_snax) < 0:
+            embed = discord.Embed(colour=discord.Colour.red(),
+                                  title="I couldn't find your snaxfolio.",
+                                  description="Use the `!set_snax` command to set it up.")
+            return await ctx.send(embed=embed)
+
+        snax_msg = ""
+        snaxfolio = user_snax[0].get_as_dict()
+        for snack, quantity in snaxfolio.items():
+            if quantity > 0:
+                snax_msg += f"{snack.capitalize()}: {quantity}\n"
+        embed = discord.Embed(colour=discord.Colour.green(),
+                              title="Your current snaxfolio.",
+                              description=snax_msg)
+        return await ctx.send(embed=embed)
+
+    @staticmethod
+    def _get_user_snax(user_id):
+        user_result = (UserSnaxTable.select(
+            UserSnaxTable.user_id,
+            UserSnaxTable.snake_oil,
+            UserSnaxTable.fresh_popcorn,
+            UserSnaxTable.stale_popcorn,
+            UserSnaxTable.chips,
+            UserSnaxTable.burger,
+            UserSnaxTable.hot_dog,
+            UserSnaxTable.seeds,
+            UserSnaxTable.pickles,
+            UserSnaxTable.slushie,
+            UserSnaxTable.wet_pretzel
+        ).where(UserSnaxTable.user_id == user_id))
+        user_snax = user_result.objects(SnaxInstance)
+        return user_snax
 
 
 def setup(bot):
