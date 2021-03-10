@@ -4,6 +4,7 @@ import re
 import discord
 from discord.ext import commands
 
+from watcher import utils
 from watcher.exts.db.watcher_db import UserSnaxTable, WatcherDB, SnaxInstance
 from watcher.snaximum import Snaximum
 
@@ -18,8 +19,20 @@ class SnaxCog(commands.Cog):
         self.snaximum_instance.set_flood_count(floods)
         self.snaximum_instance.refresh_all()
 
+    @commands.command(hidden=True, name='set_snax_channel', aliases=['ssc'])
+    @commands.has_permissions(manage_roles=True)
+    async def _set_snax_channel(self, ctx, channel_id):
+        output_channel = await utils.get_channel_by_name_or_id(ctx, channel_id)
+        if output_channel is None:
+            return await ctx.message.add_reaction(self.bot.failed_react)
+        self.bot.config['snax_channel'] = output_channel.id
+        return await ctx.message.add_reaction(self.bot.success_react)
+
     @commands.command(name='set_snax')
     async def _set_snax(self, ctx, *, snax_info):
+        snax_channel_id = self.bot.config.get('snax_channel', 0)
+        if ctx.channel.id != snax_channel_id:
+            return await ctx.message.delete()
         """
         Usage: !set_snax snackname=quantity [,snackname=quantity...]
         Can accept any number of snack name/quantity pairs. Each pair should be separated by a comma
@@ -91,8 +104,11 @@ class SnaxCog(commands.Cog):
                 succcess_msg += f"{part}\n"
             await ctx.send(succcess_msg)
 
-    @commands.command(name='lucrative_batters', aliases=['lucrativeb', 'lucb'])
+    @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lucrativeb', 'lucb'])
     async def _lucrative_batters(self, ctx, count: int = 3):
+        snax_channel_id = self.bot.config.get('snax_channel', 0)
+        if ctx.channel.id != snax_channel_id:
+            return await ctx.message.delete()
         """
         Usage: !lucrative_batters [count] - count is optional.
         Will return the best hitting idol choices for you based on the real performance of each player
@@ -123,6 +139,8 @@ class SnaxCog(commands.Cog):
             luc_list = self.snaximum_instance.get_lucrative_batters()
 
         count = min(count, 10)
+        count = max(count, 1)
+
         message = ""
         for player in luc_list[:count]:
             name = player[1]["player"]["fullName"]
@@ -136,8 +154,11 @@ class SnaxCog(commands.Cog):
             embed.set_footer(text="You'll get better results if you set your snaxfolio!")
         await ctx.send(embed=embed)
 
-    @commands.command(name='propose_upgrades', aliases=['pu', 'what_next', "what_to_buy"])
+    @commands.command(name='propose_upgrades', aliases=['propose_upgrade', 'what_next', "what_to_buy", 'pu'])
     async def _propose_upgrades(self, ctx, coins=50000):
+        snax_channel_id = self.bot.config.get('snax_channel', 0)
+        if ctx.channel.id != snax_channel_id:
+            return await ctx.message.delete()
         """
         Usage: !propose_upgrades [coins] - coins is optional.
         Will return the most optimal next purchases for you. Coins is optional but is useful to filter
@@ -158,6 +179,10 @@ class SnaxCog(commands.Cog):
             UserSnaxTable.wet_pretzel
         ).where(UserSnaxTable.user_id == ctx.author.id))
         user_snax = user_result.objects(SnaxInstance)
+
+        coins = min(coins, 500000)
+        coins = max(coins, 100)
+
         if len(user_snax) > 0:
             snaxfolio = user_snax[0].get_as_dict()
             proposal_dict = self.snaximum_instance.propose_upgrades(coins, snaxfolio)
@@ -174,6 +199,9 @@ class SnaxCog(commands.Cog):
             return await ctx.send(embed=embed)
 
         message = ""
+        if len(proposal_dict["buy_list"]) < 3:
+            message += "Your buy list is pretty small, consider providing a higher coin count" \
+                       "with this command. The default is 50,000."
         for item in proposal_dict["buy_list"]:
             if len(message) > 1800:
                 message += "Reached maximum recommendation length."
