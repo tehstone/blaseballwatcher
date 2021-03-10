@@ -1,4 +1,5 @@
 import asyncio
+import math
 import re
 
 import discord
@@ -75,6 +76,7 @@ class SnaxCog(commands.Cog):
 
         insert_values = []
         for key, value in user_snacks.items():
+            key = key.lower()
             if key not in snax_fields:
                 errored_parts.append(f"{key}={value}")
                 continue
@@ -106,16 +108,27 @@ class SnaxCog(commands.Cog):
             await ctx.send(succcess_msg)
 
     @commands.command(name='set_ignore')
-    async def _set_ignore(self, ctx, *, ignore_info):
+    async def _set_ignore(self, ctx, *, ignore_info=None):
+        """
+        Usage: !set_ignore snack[,snack2...]
+        Will accept any number of snacks separated by commas. Each time you use this command your previously
+        saved ignore list will be overwritten.
+        """
         if ctx.guild:
             snax_channel_id = self.bot.config.get('snax_channel', 0)
             if ctx.channel.id != snax_channel_id:
                 return await ctx.message.delete()
+        if not ignore_info:
+            __, __ = UserSnaxIgnoreTable.get_or_create(user_id=ctx.author.id)
+            query_str = f"update UserSnaxIgnoreTable set ignore_list = '' where user_id == {ctx.author.id}"
+            WatcherDB._db.execute_sql(query_str)
+            return await ctx.send("Ignore list cleared!")
+
         info_parts = re.split(r',\s+', ignore_info)
         errored_parts = []
         success_parts = []
         for part in info_parts:
-            part = part.strip()
+            part = part.strip().lower()
             if part in snax_fields:
                 normalized_part = snax_fields[part]
                 success_parts.append(normalized_part)
@@ -221,12 +234,15 @@ class SnaxCog(commands.Cog):
         limit = 6
         if len(proposal_dict["buy_list"]) < 3:
             message += "Your buy list is pretty small, consider providing a higher coin count" \
-                       "with this command. The default is 50,000."
+                       "with this command. The default is 50,000.\n"
         for item in proposal_dict["buy_list"][:limit]:
             if len(message) > 1800:
                 message += "Reached maximum recommendation length."
                 break
-            ratio = round(item['ratio']*1000)/1000
+            if math.isinf(item['ratio']):
+                ratio = "infinite"
+            else:
+                ratio = round(item['ratio']*1000)/1000
             message += f"Buy {item['which']} for {item['cost']}\n"
             message += f"Expected marginal profit this season: {item['dx']} ({ratio})\n\n"
 

@@ -73,8 +73,8 @@ class SnaxInstance:
         self.wet_pretzel = wet_pretzel
 
     def get_as_dict(self):
-        return {'dogs': self.hot_dog, 'seeds': self.seeds, 'pickles': self.pickles,
-                'slushies': self.slushies, 'wetzels': self.wet_pretzel, 'snoil': self.snake_oil,
+        return {'hot_dog': self.hot_dog, 'seeds': self.seeds, 'pickles': self.pickles,
+                'slushies': self.slushies, 'wet_pretzel': self.wet_pretzel, 'snake_oil': self.snake_oil,
                 'fresh': self.fresh_popcorn, "stale": self.stale_popcorn,
                 "burgers": self.burger, "chips": self.chips}
 
