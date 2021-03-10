@@ -137,7 +137,7 @@ class SnaxCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='propose_upgrades', aliases=['pu', 'what_next', "what_to_buy"])
-    async def _propose_upgrades(self, ctx, coins=5000):
+    async def _propose_upgrades(self, ctx, coins=50000):
         """
         Usage: !propose_upgrades [coins] - coins is optional.
         Will return the most optimal next purchases for you. Coins is optional but is useful to filter
