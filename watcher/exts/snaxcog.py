@@ -30,9 +30,10 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name='set_snax')
     async def _set_snax(self, ctx, *, snax_info):
-        snax_channel_id = self.bot.config.get('snax_channel', 0)
-        if ctx.channel.id != snax_channel_id:
-            return await ctx.message.delete()
+        if ctx.guild:
+            snax_channel_id = self.bot.config.get('snax_channel', 0)
+            if ctx.channel.id != snax_channel_id:
+                return await ctx.message.delete()
         """
         Usage: !set_snax snackname=quantity [,snackname=quantity...]
         Can accept any number of snack name/quantity pairs. Each pair should be separated by a comma
@@ -106,9 +107,10 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lucrativeb', 'lucb'])
     async def _lucrative_batters(self, ctx, count: int = 3):
-        snax_channel_id = self.bot.config.get('snax_channel', 0)
-        if ctx.channel.id != snax_channel_id:
-            return await ctx.message.delete()
+        if ctx.guild:
+            snax_channel_id = self.bot.config.get('snax_channel', 0)
+            if ctx.channel.id != snax_channel_id:
+                return await ctx.message.delete()
         """
         Usage: !lucrative_batters [count] - count is optional.
         Will return the best hitting idol choices for you based on the real performance of each player
@@ -143,9 +145,10 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name='propose_upgrades', aliases=['propose_upgrade', 'what_next', "what_to_buy", 'pu'])
     async def _propose_upgrades(self, ctx, coins=50000):
-        snax_channel_id = self.bot.config.get('snax_channel', 0)
-        if ctx.channel.id != snax_channel_id:
-            return await ctx.message.delete()
+        if ctx.guild:
+            snax_channel_id = self.bot.config.get('snax_channel', 0)
+            if ctx.channel.id != snax_channel_id:
+                return await ctx.message.delete()
         """
         Usage: !propose_upgrades [coins] - coins is optional.
         Will return the most optimal next purchases for you. Coins is optional but is useful to filter
@@ -197,9 +200,10 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name="snaxfolio", aliases=['snax_folio', 'snax_portfolio', 'my_snax', 'mysnax'])
     async def _snaxfolio(self, ctx):
-        snax_channel_id = self.bot.config.get('snax_channel', 0)
-        if ctx.channel.id != snax_channel_id:
-            return await ctx.message.delete()
+        if ctx.guild:
+            snax_channel_id = self.bot.config.get('snax_channel', 0)
+            if ctx.channel.id != snax_channel_id:
+                return await ctx.message.delete()
         user_snax = self._get_user_snax(ctx.author.id)
         if len(user_snax) < 0:
             embed = discord.Embed(colour=discord.Colour.red(),
