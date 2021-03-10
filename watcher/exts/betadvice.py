@@ -240,7 +240,7 @@ class BetAdvice(commands.Cog):
     async def _run_daily_sim(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
         if not html_response:
-            self.bot.logger.warn('Bet Advice daily message failed to acquire sim data and exited.')
+            self.bot.logger.warning('Bet Advice daily message failed to acquire sim data and exited.')
             return
         sim_data = html_response.json()
         season = sim_data['season']

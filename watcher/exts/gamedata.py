@@ -161,7 +161,7 @@ class GameData(commands.Cog):
 
     def get_weather(self, weather_id):
         if weather_id not in weather_types:
-            self.bot.logger.warn(f"Unknown weather id: {weather_id}.")
+            self.bot.logger.warning(f"Unknown weather id: {weather_id}.")
             return "Unknown"
         return weather_types[weather_id]
 
@@ -193,12 +193,12 @@ class GameData(commands.Cog):
                 if len(day_data) < 1:
                     break
                 if len(day_data) < 10:
-                    self.bot.logger.warn(f"Fewer than 10 games found for day{day}")
+                    self.bot.logger.warning(f"Fewer than 10 games found for day{day}")
                     if day < 99:
                         day -= 1
                         day_retries += 1
                         if day_retries == 5:
-                            self.bot.logger.warn(f"Unable to get 10 games for day{day}")
+                            self.bot.logger.warning(f"Unable to get 10 games for day{day}")
                             break
                 for game in day_data:
                     if not fill and not game["gameComplete"]:
@@ -852,24 +852,24 @@ class GameData(commands.Cog):
         try:
             html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire sim data')
+                self.bot.logger.warning('Failed to acquire sim data')
                 return
             sim_data = html_response.json()
             league_id = sim_data['league']
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/league?id={league_id}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire league data')
+                self.bot.logger.warning('Failed to acquire league data')
                 return
             league_json = json.loads(html_response.content.decode('utf-8'))
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/tiebreakers?id={league_json['tiebreakers']}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire tiebreakers data')
+                self.bot.logger.warning('Failed to acquire tiebreakers data')
                 return
             new_ties_json = html_response.json()
             json_watcher = self.bot.get_cog("JsonWatcher")
             await json_watcher.update_bot_tiebreakers(new_ties_json)
         except Exception as e:
-            self.bot.logger.warn(f"Failed to update tiebreakers: {e}")
+            self.bot.logger.warning(f"Failed to update tiebreakers: {e}")
             return await ctx.message.add_reaction(self.bot.failed_react)
         await ctx.message.add_reaction(self.bot.success_react)
 

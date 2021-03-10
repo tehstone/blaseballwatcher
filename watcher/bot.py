@@ -14,7 +14,7 @@ import discord
 from discord.ext import commands
 
 default_exts = ['admincommands', 'betadvice', 'gamedata', 'gamesim', 'helpcommand',
-                'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher',
+                'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher', 'snaxcog',
                 'teamlookups', 'winexp', 'wordreactor']
 
 
@@ -180,7 +180,7 @@ class WatcherBot(commands.AutoShardedBot):
             try:
                 await pendant_cog.update_leaders_sheet(current_season, latest_day)
             except Exception as e:
-                self.logger.warn(f"Failed to update pendant leaders: {e}")
+                self.logger.warning(f"Failed to update pendant leaders: {e}")
 
             await utils.update_cumulative_statsheets(self.config['current_season'])
 
@@ -197,7 +197,7 @@ class WatcherBot(commands.AutoShardedBot):
                     if publish:
                         await bet_msg.publish()
             except Exception as e:
-                self.logger.warn(f"Failed to send pendant picks: {e}")
+                self.logger.warning(f"Failed to send pendant picks: {e}")
 
             gamedata_cog = self.cogs.get('GameData')
             await gamedata_cog.save_json_range(current_season-1)

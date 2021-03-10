@@ -73,7 +73,7 @@ async def on_ready():
         Watcher.initial_start = False
         await start_task_loops(Watcher)
     else:
-        logger.warn("bot failed to resume")
+        logger.warning("bot failed to resume")
 
 
 try:

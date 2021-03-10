@@ -34,7 +34,7 @@ class JsonWatcher(commands.Cog):
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
         if not html_response:
-            self.bot.logger.warn('Failed to acquire sim data')
+            self.bot.logger.warning('Failed to acquire sim data')
             return
         sim_data = html_response.json()
         season = sim_data['season']
@@ -62,7 +62,7 @@ class JsonWatcher(commands.Cog):
         try:
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/games?season={season}&day={day}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire game data')
+                self.bot.logger.warning('Failed to acquire game data')
                 return
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json[0], game_json[0], output_channel, "games")
@@ -71,7 +71,7 @@ class JsonWatcher(commands.Cog):
             sid = cur_json[0]['statsheet']
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/gamestatsheets?ids={sid}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire gamestatsheet data')
+                self.bot.logger.warning('Failed to acquire gamestatsheet data')
                 return
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json[0], gamestatsheet[0], output_channel, "gamestatsheet")
@@ -80,7 +80,7 @@ class JsonWatcher(commands.Cog):
             sid = cur_json[0]['awayTeamStats']
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/teamstatsheets?ids={sid}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire teamstatsheet data')
+                self.bot.logger.warning('Failed to acquire teamstatsheet data')
                 return
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json[0], teamstatsheet[0], output_channel, "teamstatsheet")
@@ -99,7 +99,7 @@ class JsonWatcher(commands.Cog):
                 sid = cur_json[0]['playerStats'][0]
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/playerstatsheets?ids={sid}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire playerstatsheet data')
+                self.bot.logger.warning('Failed to acquire playerstatsheet data')
                 return
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json[0], playerstatsheet[0], output_channel, "playerstatsheet")
@@ -111,20 +111,20 @@ class JsonWatcher(commands.Cog):
                 sid = cur_json[0]['playerId']
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/players?ids={sid}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire playerstatsheet data')
+                self.bot.logger.warning('Failed to acquire playerstatsheet data')
                 return
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json[0], player_json[0], output_channel, "player")
             self.save_files(cur_json, "player.json", changed)
 
         except Exception as e:
-            self.bot.logger.warn('Failed to acquire game data, cascading failures to gamestatsheet, '
+            self.bot.logger.warning('Failed to acquire game data, cascading failures to gamestatsheet, '
                                  f'teamstatsheet, playerstatsheet, player\n{e}')
 
         try:
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/league?id={league_id}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire league data')
+                self.bot.logger.warning('Failed to acquire league data')
                 return
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json, league_json, output_channel, "league")
@@ -134,13 +134,13 @@ class JsonWatcher(commands.Cog):
             sid = cur_json['subleagues'][0]
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/subleague?id={sid}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire subleague data')
+                self.bot.logger.warning('Failed to acquire subleague data')
                 return
             cur_json = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(cur_json, subleague_json, output_channel, "subleague")
             self.save_files(cur_json, "subleague.json", changed)
         except:
-            self.bot.logger.warn('Failed to acquire league data. Cascading failure to subleague')
+            self.bot.logger.warning('Failed to acquire league data. Cascading failure to subleague')
 
     async def check_for_comprehensive_updates(self):
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
@@ -149,7 +149,7 @@ class JsonWatcher(commands.Cog):
         try:
             html_response = await utils.retry_request("https://www.blaseball.com/database/allteams")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire allteams data')
+                self.bot.logger.warning('Failed to acquire allteams data')
                 return
             latest_allteams = json.loads(html_response.content.decode('utf-8'))
             changed = await self.check_single_json(latest_allteams[0], current_allteams[0], output_channel, "allteams")
@@ -170,7 +170,7 @@ class JsonWatcher(commands.Cog):
                     for message in messages:
                         await output_channel.send(message)
         except Exception as e:
-            self.bot.logger.warn(f'Failed to acquire allteams data: {e}')
+            self.bot.logger.warning(f'Failed to acquire allteams data: {e}')
 
     async def check_for_content_updates(self):
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
@@ -179,7 +179,7 @@ class JsonWatcher(commands.Cog):
             simulationdata_json = json.load(json_file)
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
         if not html_response:
-            self.bot.logger.warn('Failed to acquire sim data')
+            self.bot.logger.warning('Failed to acquire sim data')
             return
         new_sim_data = html_response.json()
         changed = await self.check_single_json(new_sim_data, simulationdata_json, output_channel, "simulationdata")
@@ -189,7 +189,7 @@ class JsonWatcher(commands.Cog):
             offseasonsetup_json = json.load(json_file)
         html_response = await utils.retry_request("https://www.blaseball.com/database/offseasonsetup")
         if not html_response:
-            self.bot.logger.warn('Failed to acquire offseasonsetup data')
+            self.bot.logger.warning('Failed to acquire offseasonsetup data')
             return
         new_oss_data = html_response.json()
         changed = await self.check_single_json(new_oss_data, offseasonsetup_json, output_channel, "offseasonsetup")
@@ -199,7 +199,7 @@ class JsonWatcher(commands.Cog):
             alldivisions_json = json.load(json_file)
         html_response = await utils.retry_request("https://www.blaseball.com/database/alldivisions")
         if not html_response:
-            self.bot.logger.warn('Failed to acquire divisions data')
+            self.bot.logger.warning('Failed to acquire divisions data')
             return
         new_div_data = html_response.json()
         messages, changed = await self.check_for_division_changes(alldivisions_json, new_div_data)
@@ -215,7 +215,7 @@ class JsonWatcher(commands.Cog):
                 tiebreakers_json = json.load(json_file)
             html_response = await utils.retry_request(f"https://www.blaseball.com/database/tiebreakers?id={tie_id}")
             if not html_response:
-                self.bot.logger.warn('Failed to acquire tiebreakers data')
+                self.bot.logger.warning('Failed to acquire tiebreakers data')
                 return
             new_ties_json = html_response.json()
             self.save_files(new_ties_json, "tiebreakers.json", tiebreakers_json != new_ties_json)

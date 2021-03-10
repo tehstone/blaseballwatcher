@@ -108,7 +108,7 @@ class RulesWatcher(commands.Cog):
                             json.dump(player, file)
                 rituals[player['id']] = player
         else:
-            self.bot.logger.warn("Could not get updated player pages.")
+            self.bot.logger.warning("Could not get updated player pages.")
         await self.save()
 
     async def _check_for_rules_update(self):
@@ -144,7 +144,7 @@ class RulesWatcher(commands.Cog):
                     messages.append(f'Script URL has changed!\nOld: <{old_url}>\nNew: <{js_url}>')
 
         if not new_page_text:
-            #self.bot.logger.warn("Failed to obtain updated page text.")
+            #self.bot.logger.warning("Failed to obtain updated page text.")
             return messages, None
         last_page_text = self._get_last_text()
         if not last_page_text:
@@ -213,7 +213,7 @@ class RulesWatcher(commands.Cog):
         # url = "https://blaseball.com/static/js/main.e71dc0e8.chunk.js"
         response = self.retryrequest(url)
         if not response:
-            self.bot.logger.warn("Failed to get a response loading js file.")
+            self.bot.logger.warning("Failed to get a response loading js file.")
         else:
             script_text = response.text
             # while "handleComplete" in script_text:

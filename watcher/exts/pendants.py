@@ -394,7 +394,7 @@ class Pendants(commands.Cog):
                             at_bats_str = ".\n"
                             if "atBats" in event:
                                 at_bats_str = f" in {event['atBats']} at bats.\n"
-                            natural_cycle = await self._check_feed_natural_cycle(player_id, day['day'])
+                            natural_cycle = await self._check_feed_natural_cycle(event['name'], player_id, day['day'])
                             message = f"\n**{event['name']} hit {base_message}!**{at_bats_str} with {event['hits']}" \
                                       f" hits, {doubles_str}, {triples_str}, {quad_str}" \
                                       f"and {hr_str}.\n" \
@@ -513,27 +513,32 @@ class Pendants(commands.Cog):
         return latest_day
 
     @staticmethod
-    async def _check_feed_natural_cycle(player_id, day):
+    async def _check_feed_natural_cycle(player_name, player_id, day):
         player_feed = await utils.retry_request(f"https://www.blaseball.com/database/feed/player?id={player_id}")
         feed_json = player_feed.json()
-        filtered_items = list(filter(lambda d: d['day'] == {day}, feed_json))
-        sorted_items = sorted(filtered_items, key=lambda item: item['metadata']['play'])
+        day_items = list(filter(lambda d: d['day'] == day, feed_json))
+        sorted_items = sorted(day_items, key=lambda item: item['metadata']['play'])
 
-        for i in range(len(sorted_items)):
-            if i + 3 > len(sorted_items):
+        filtered_items = []
+        for item in sorted_items:
+            if f"{player_name} hits a" in item['description']:
+                filtered_items.append(item)
+
+        for i in range(len(filtered_items)):
+            if i + 3 > len(filtered_items):
                 break
-            if "hits a Single" in sorted_items[i]['description']:
-                if "hits a Double" in sorted_items[i + 1]['description']:
-                    if "hits a Triple" in sorted_items[i + 2]['description']:
-                        if "home run" in sorted_items[i + 3]['description']:
+            if "hits a Single" in filtered_items[i]['description']:
+                if "hits a Double" in filtered_items[i + 1]['description']:
+                    if "hits a Triple" in filtered_items[i + 2]['description']:
+                        if "home run" in filtered_items[i + 3]['description']:
                             return "Natural Cycle!"
-        for i in range(len(sorted_items)):
-            if i + 3 > len(sorted_items):
+        for i in range(len(filtered_items)):
+            if i + 3 > len(filtered_items):
                 break
-            if "home run" in sorted_items[i]['description']:
-                if "hits a Triple" in sorted_items[i + 1]['description']:
-                    if "hits a Double" in sorted_items[i + 2]['description']:
-                        if "hits a Single" in sorted_items[i + 3]['description']:
+            if "home run" in filtered_items[i]['description']:
+                if "hits a Triple" in filtered_items[i + 1]['description']:
+                    if "hits a Double" in filtered_items[i + 2]['description']:
+                        if "hits a Single" in filtered_items[i + 3]['description']:
                             return "Reverse Cycle!"
         return "Not a natural cycle."
 
@@ -709,6 +714,8 @@ class Pendants(commands.Cog):
 
         flood_count, runner_count = await self._lookup_floods(season)
         p_worksheet.update("L2:M2", [[flood_count, runner_count]], raw=False)
+        snax_cog = self.bot.cogs.get('SnaxCog')
+        snax_cog.update_counts(black_holes, flood_count)
 
     @staticmethod
     def save_daily_top_players(all_players, day):
@@ -767,7 +774,7 @@ class Pendants(commands.Cog):
                 flood_lookups = json.load(file)
         except FileNotFoundError:
             flood_lookups = {}
-            self.bot.logger.warn("No flood lookup data found.")
+            self.bot.logger.warning("No flood lookup data found.")
         for day, day_info in flood_lookups.items():
             if day_info['lookedup'] == False:
                 day_flood_count = 0
