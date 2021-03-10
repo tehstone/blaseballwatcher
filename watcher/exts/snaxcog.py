@@ -5,8 +5,24 @@ import discord
 from discord.ext import commands
 
 from watcher import utils
-from watcher.exts.db.watcher_db import UserSnaxTable, WatcherDB, SnaxInstance
+from watcher.exts.db.watcher_db import UserSnaxTable, WatcherDB, SnaxInstance, UserSnaxIgnoreTable
 from watcher.snaximum import Snaximum
+
+snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake_oil", "snoil": "snake_oil",
+               "fresh": "fresh_popcorn", "popcorn": "fresh_popcorn",
+               "fresh popcorn": "fresh_popcorn", "fresh_popcorn": "fresh_popcorn",
+               "stale": "stale_popcorn", "stale popcorn": "stale_popcorn", "stale_popcorn": "stale_popcorn",
+               "chips": "chips", "burger": "burger", "burgers": "burger",
+               "seed": "seeds", "sunflower": "seeds", "sunflower seeds": "seeds", "seeds": "seeds",
+               "pickle": "pickles", "pickles": "pickles",
+               "hot dog": "hot_dog", "hot dogs": "hot_dog", "hot_dog": "hot_dog", "hot_dogs": "hot_dog",
+               "dog": "hot_dog", "dogs": "hot_dog",
+               "slushie": "slushies", "slushies": "slushies", "slush": "slushies",
+               "wetzle": "wet_pretzel", "wetzel": "wet_pretzel",
+               "wetzles": "wet_pretzel", "wetzels": "wet_pretzel",
+               "pretzel": "wet_pretzel", "pretzels": "wet_pretzel",
+               "wet pretzel": "wet_pretzel", "wet_pretzel": "wet_pretzel"
+               }
 
 
 class SnaxCog(commands.Cog):
@@ -30,10 +46,6 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name='set_snax')
     async def _set_snax(self, ctx, *, snax_info):
-        if ctx.guild:
-            snax_channel_id = self.bot.config.get('snax_channel', 0)
-            if ctx.channel.id != snax_channel_id:
-                return await ctx.message.delete()
         """
         Usage: !set_snax snackname=quantity [,snackname=quantity...]
         Can accept any number of snack name/quantity pairs. Each pair should be separated by a comma
@@ -44,6 +56,10 @@ class SnaxCog(commands.Cog):
         !set_snax seeds=50, hot dogs = 100
         !set_snax wetzels = 10, snoil=50
         """
+        if ctx.guild:
+            snax_channel_id = self.bot.config.get('snax_channel', 0)
+            if ctx.channel.id != snax_channel_id:
+                return await ctx.message.delete()
         info_parts = re.split(r',\s+', snax_info)
         errored_parts = []
         success_parts = []
@@ -57,25 +73,9 @@ class SnaxCog(commands.Cog):
             snack, quantity = part_bits[0].strip(), part_bits[1].strip()
             user_snacks[snack] = quantity
 
-        fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake_oil", "snoil": "snake_oil",
-                  "fresh": "fresh_popcorn", "popcorn": "fresh_popcorn",
-                  "fresh popcorn": "fresh_popcorn", "fresh_popcorn": "fresh_popcorn",
-                  "stale": "stale_popcorn", "stale popcorn": "stale_popcorn", "stale_popcorn": "stale_popcorn",
-                  "chips": "chips", "burger": "burger", "burgers": "burger",
-                  "seed": "seeds", "sunflower": "seeds", "sunflower seeds": "seeds", "seeds": "seeds",
-                  "pickle": "pickles", "pickles": "pickles",
-                  "hot dog": "hot_dog", "hot dogs": "hot_dog", "hot_dog": "hot_dog", "hot_dogs": "hot_dog",
-                  "dog": "hot_dog", "dogs": "hot_dog",
-                  "slushie": "slushie", "slushies": "slushie", "slush": "slushie",
-                  "wetzle": "wet_pretzel", "wetzel": "wet_pretzel",
-                  "wetzles": "wet_pretzel", "wetzels": "wet_pretzel",
-                  "pretzel": "wet_pretzel", "pretzels": "wet_pretzel",
-                  "wet pretzel": "wet_pretzel", "wet_pretzel": "wet_pretzel"
-                  }
-
         insert_values = []
         for key, value in user_snacks.items():
-            if key not in fields:
+            if key not in snax_fields:
                 errored_parts.append(f"{key}={value}")
                 continue
             try:
@@ -84,8 +84,8 @@ class SnaxCog(commands.Cog):
                 errored_parts.append(f"{key}={value}")
                 continue
 
-            insert_values.append(f"{fields[key]}={str(insert_value)}")
-            success_parts.append(f"{fields[key]} - {str(insert_value)}")
+            insert_values.append(f"{snax_fields[key]}={str(insert_value)}")
+            success_parts.append(f"{snax_fields[key]} - {str(insert_value)}")
 
         insert_value_str = ",".join(insert_values)
         if len(insert_value_str) > 0:
@@ -104,6 +104,39 @@ class SnaxCog(commands.Cog):
             for part in success_parts:
                 succcess_msg += f"{part}\n"
             await ctx.send(succcess_msg)
+
+    @commands.command(name='set_ignore')
+    async def _set_ignore(self, ctx, *, ignore_info):
+        if ctx.guild:
+            snax_channel_id = self.bot.config.get('snax_channel', 0)
+            if ctx.channel.id != snax_channel_id:
+                return await ctx.message.delete()
+        info_parts = re.split(r',\s+', ignore_info)
+        errored_parts = []
+        success_parts = []
+        for part in info_parts:
+            part = part.strip()
+            if part in snax_fields:
+                normalized_part = snax_fields[part]
+                success_parts.append(normalized_part)
+            else:
+                errored_parts.append(part)
+        if len(success_parts) > 0:
+            input_str = ','.join(success_parts)
+            __, __ = UserSnaxIgnoreTable.get_or_create(user_id=ctx.author.id)
+            query_str = f"update UserSnaxIgnoreTable set ignore_list = '{input_str}' where user_id == {ctx.author.id}"
+            WatcherDB._db.execute_sql(query_str)
+            succcess_msg = "Successfully ignored:\n"
+            for part in success_parts:
+                succcess_msg += f"{part}\n"
+            await ctx.send(succcess_msg)
+
+        if len(errored_parts) > 0:
+            error_msg = "Failed to update the following: \n"
+            for part in errored_parts:
+                error_msg += f"{part}\n"
+            await ctx.send(error_msg)
+
 
     @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lucrativeb', 'lucb'])
     async def _lucrative_batters(self, ctx, count: int = 3):
@@ -157,16 +190,25 @@ class SnaxCog(commands.Cog):
         """
         user_snax = self._get_user_snax(ctx.author.id)
 
+        ignore_list = []
+        ignore_result = (UserSnaxIgnoreTable.select(
+            UserSnaxIgnoreTable.user_id,
+            UserSnaxIgnoreTable.ignore_list
+        ).where(UserSnaxIgnoreTable.user_id == ctx.author.id))
+        if len(ignore_result) > 0:
+            ignore_list_str = ignore_result[0].ignore_list
+            ignore_list = ignore_list_str.split(',')
+
         coins = min(coins, 500000)
         coins = max(coins, 100)
 
         if len(user_snax) > 0:
             snaxfolio = user_snax[0].get_as_dict()
-            proposal_dict = self.snaximum_instance.propose_upgrades(coins, snaxfolio)
+            proposal_dict = self.snaximum_instance.propose_upgrades(coins, snaxfolio, ignore_list)
             title = "What you should buy next based on your snaxfolio:\n"
             snax_set = True
         else:
-            proposal_dict = self.snaximum_instance.propose_upgrades(coins)
+            proposal_dict = self.snaximum_instance.propose_upgrades(coins, None, ignore_list)
             title = "What you should buy next\n"
             snax_set = False
 
@@ -233,7 +275,7 @@ class SnaxCog(commands.Cog):
             UserSnaxTable.hot_dog,
             UserSnaxTable.seeds,
             UserSnaxTable.pickles,
-            UserSnaxTable.slushie,
+            UserSnaxTable.slushies,
             UserSnaxTable.wet_pretzel
         ).where(UserSnaxTable.user_id == user_id))
         user_snax = user_result.objects(SnaxInstance)

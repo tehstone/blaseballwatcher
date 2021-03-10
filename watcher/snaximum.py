@@ -145,14 +145,14 @@ class Snaximum:
         self.player_map: Dict[str, Dict[str, object]] = {}
         self.data = None
         self.upgrade_map = {
-            'dogs': 'idolHomersTiers',
+            'hot_dog': 'idolHomersTiers',
             'seeds': 'idolHitsTiers',
             'pickles': 'idolStealTiers',
-            'wetzels': 'blackHoleTiers',
+            'wet_pretzel': 'blackHoleTiers',
             'slushies': 'floodClearTiers',
             'popcorn': 'teamWinCoinTiers',
             'stalecorn': 'teamLossCoinTiers',
-            'snoil': 'maxBetTiers',
+            'snake_oil': 'maxBetTiers',
             'chips': 'idolStrikeoutsTiers',
             'burgers': 'idolShutoutsTiers',
         }
@@ -232,7 +232,7 @@ class Snaximum:
     def calculate_payouts(self, stats, player,
                           seeds: int, dogs: int, pickles: int):
         hit_payout = self.get_payout('seeds', seeds)
-        hr_payout = self.get_payout('dogs', dogs)
+        hr_payout = self.get_payout('hot_dog', dogs)
         sb_payout = self.get_payout('pickles', pickles)
 
         modifier = self.payout_modifier(player)
@@ -266,7 +266,7 @@ class Snaximum:
             payout = self.calculate_payouts(
                 stats, player,
                 snaxfolio['seeds'],
-                snaxfolio['dogs'],
+                snaxfolio['hot_dog'],
                 snaxfolio['pickles']
             )
             batters.append((payout, split, player))
@@ -296,9 +296,9 @@ class Snaximum:
         data = snaxfolio.copy()
         data[which] += 1
 
-        if which == 'wetzels':
-            current_value = self.black_holes * self.get_payout('wetzels', snaxfolio[which])
-            new_value = self.black_holes * self.get_payout('wetzels', data[which])
+        if which == 'wet_pretzel':
+            current_value = self.black_holes * self.get_payout('wet_pretzel', snaxfolio[which])
+            new_value = self.black_holes * self.get_payout('wet_pretzel', data[which])
             dx = new_value - current_value
             idol = None
         elif which == 'slushies':
@@ -306,13 +306,13 @@ class Snaximum:
             new_value = self.flooded_runners * self.get_payout('slushies', data[which])
             dx = new_value - current_value
             idol = None
-        elif which == 'snoil':
+        elif which == 'snake_oil':
             current_value = self.bets.payout(
-                bet=self.get_payout('snoil', snaxfolio[which]),
+                bet=self.get_payout('snake_oil', snaxfolio[which]),
                 threshold=self.betting_threshold
             )
             new_value = self.bets.payout(
-                bet=self.get_payout('snoil', data[which]),
+                bet=self.get_payout('snake_oil', data[which]),
                 threshold=self.betting_threshold
             )
             # Human tax!
@@ -340,17 +340,18 @@ class Snaximum:
             'idol': idol,
         }
 
-    def calc_upgrade_costs(self, snaxfolio):
+    def calc_upgrade_costs(self, snaxfolio, ignore_list=None):
+        if ignore_list is None:
+            ignore_list = []
         snaxfolio = self.mksnax(snaxfolio)
         best = self.get_lucrative_batters(snaxfolio)[0]
-        choices = [
-            self.what_if(best, snaxfolio, 'pickles'),
-            self.what_if(best, snaxfolio, 'seeds'),
-            self.what_if(best, snaxfolio, 'dogs'),
-            self.what_if(best, snaxfolio, 'wetzels'),
-            self.what_if(best, snaxfolio, 'slushies'),
-            self.what_if(best, snaxfolio, 'snoil'),
-        ]
+
+        choice_list = ['pickles', 'seeds', 'hot_dog', 'wet_pretzel', 'slushies', 'snake_oil']
+        choices = []
+        for item in choice_list:
+            if item not in ignore_list:
+                choices.append(self.what_if(best, snaxfolio, item))
+
         choices = sorted(filter(None, choices),
                          key=lambda x: x['ratio'],
                          reverse=True)
@@ -367,7 +368,7 @@ class Snaximum:
                 choice['ratio'],
             )
 
-    def propose_upgrades(self, cash: int = 10, snaxfolio=None) -> Dict:
+    def propose_upgrades(self, cash: int = 10, snaxfolio=None, ignore_list=None) -> Dict:
         snaxfolio = self.mksnax(snaxfolio)
 
         idol = None
@@ -377,7 +378,7 @@ class Snaximum:
         proposal_dict = {"change_idol": False, "buy_list": [], "none_available": False}
         while True:
             i += 1
-            proposals = self.calc_upgrade_costs(snaxfolio)
+            proposals = self.calc_upgrade_costs(snaxfolio, ignore_list)
             if not proposals:
                 proposal_dict["none_available"] = True
                 break

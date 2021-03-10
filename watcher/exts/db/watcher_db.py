@@ -15,7 +15,7 @@ class WatcherDB:
         })
         cls._db.initialize(handle)
         # ensure db matches current schema
-        cls._db.create_tables([RulesBlogTable, UserSnaxTable])
+        cls._db.create_tables([RulesBlogTable, UserSnaxIgnoreTable, UserSnaxTable])
         cls.init()
         cls._migrator = SqliteMigrator(cls._db)
 
@@ -48,13 +48,18 @@ class UserSnaxTable(BaseModel):
     hot_dog = IntegerField(null=True, default=0)
     seeds = IntegerField(null=True, default=0)
     pickles = IntegerField(null=True, default=0)
-    slushie = IntegerField(null=True, default=0)
+    slushies = IntegerField(null=True, default=0)
     wet_pretzel = IntegerField(null=True, default=0)
+
+
+class UserSnaxIgnoreTable(BaseModel):
+    user_id = BigIntegerField(index=True)
+    ignore_list = TextField(default="")
 
 
 class SnaxInstance:
     def __init__(self, user_id, snake_oil, fresh_popcorn, stale_popcorn,
-                 chips, burger, hot_dog, seeds, pickles, slushie, wet_pretzel):
+                 chips, burger, hot_dog, seeds, pickles, slushies, wet_pretzel):
         self.user_id = user_id
         self.snake_oil = snake_oil
         self.fresh_popcorn = fresh_popcorn
@@ -64,10 +69,12 @@ class SnaxInstance:
         self.hot_dog = hot_dog
         self.seeds = seeds
         self.pickles = pickles
-        self.slushie = slushie
+        self.slushies = slushies
         self.wet_pretzel = wet_pretzel
 
     def get_as_dict(self):
         return {'dogs': self.hot_dog, 'seeds': self.seeds, 'pickles': self.pickles,
-                'slushies': self.slushie, 'wetzels': self.wet_pretzel, 'snoil': self.snake_oil}
+                'slushies': self.slushies, 'wetzels': self.wet_pretzel, 'snoil': self.snake_oil,
+                'fresh': self.fresh_popcorn, "stale": self.stale_popcorn,
+                "burgers": self.burger, "chips": self.chips}
 
