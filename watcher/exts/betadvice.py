@@ -117,7 +117,8 @@ class BetAdvice(commands.Cog):
 
         message = f"Daily Outlook for **day {day+1}**\n" \
                   "Hitting ranks display performance so far this season indicating the current best choice. " \
-                  "These lists can fluctuate from day to day to pick a good hitter and stick with them." \
+                  "These lists can fluctuate from day to day to pick a good hitter and stick with them. " \
+                  "Multipliers (where applicable) are factored in to the rating.\n" \
                   f"Strikeout predictions are ranked by a Machine Learning model simulating pitchers vs " \
                   f"the full opposing lineup courtesy of kjc9#9000\n"
 
@@ -133,9 +134,13 @@ class BetAdvice(commands.Cog):
             shorthand = team_short_map[player["teamId"]]
             hits = player["hits"]
             home_runs = player["homeRuns"]
+            mult_text = ""
+            if "multiplier" in player:
+                if int(player["multiplier"]) > 1:
+                    mult_text = f' ({str(player["multiplier"])}x)'
             entry = f"[{name}]({'https://blaseball-reference.com/players/' + player['playerId']}) "
             entry += f"([{shorthand}]({'https://www.blaseball.com/team/' + player['teamId']}))"
-            entry += f"\n{hits} hits, {home_runs} HRs"
+            entry += f"\n{hits} hits, {home_runs} HRs{mult_text}"
             hitter_list.append(entry)
 
         embed_fields.append({"name": "Best Idols - Hold the Pickles",

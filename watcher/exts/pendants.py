@@ -718,18 +718,25 @@ class Pendants(commands.Cog):
                                                    reverse=True)}
         sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
                                                       reverse=True)}
+        boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2, "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5}
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
             hits = v["hits"]
             homeruns = sorted_homeruns[k]["homeRuns"]
             stolenbases = sorted_stolenbases[k]["stolenBases"]
 
-            seed_dog = (hits * 1500) + (homeruns * 4000)
-            combo = (hits * 1500) + (homeruns * 4000) + (stolenbases * 3000)
+            if k in boosted_players:
+                multiplier = boosted_players[k]
+            else:
+                multiplier = 1
+            seed_dog = ((hits * 1500) + (homeruns * 4000)) * multiplier
+            combo = ((hits * 1500) + (homeruns * 4000) + (stolenbases * 3000)) * multiplier
+            all_players[k]["multiplier"] = multiplier
+
             total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hits"],
                                     "homeRuns": sorted_homeruns[k]["homeRuns"],
                                     "stolenBases": sorted_stolenbases[k]["stolenBases"],
-                                    "seed_dog": seed_dog, "combo": combo}
+                                    "seed_dog": seed_dog, "combo": combo, "multiplier": multiplier}
         sorted_seed_dog_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
                                                            key=lambda item: item[1]['seed_dog'], reverse=True)}
         sorted_combo_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
