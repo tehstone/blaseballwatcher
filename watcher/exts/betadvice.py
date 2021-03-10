@@ -125,8 +125,12 @@ class BetAdvice(commands.Cog):
         embed_fields = []
 
         team_short_map = await self.get_short_map()
-        with open(os.path.join('data', 'pendant_data', 'statsheets', f'd{day}_leaders.json'), 'r') as file:
-            daily_leaders = json.load(file)
+        try:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', f'd{day+1}_leaders.json'), 'r') as file:
+                daily_leaders = json.load(file)
+        except FileNotFoundError:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', f'd{day}_leaders.json'), 'r') as file:
+                daily_leaders = json.load(file)
 
         hitter_list = []
         for player in daily_leaders["seed_dog"][:4]:
