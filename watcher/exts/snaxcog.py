@@ -17,7 +17,7 @@ snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake
                "seed": "seeds", "sunflower": "seeds", "sunflower seeds": "seeds", "seeds": "seeds",
                "pickle": "pickles", "pickles": "pickles",
                "hot dog": "hot_dog", "hot dogs": "hot_dog", "hot_dog": "hot_dog", "hot_dogs": "hot_dog",
-               "dog": "hot_dog", "dogs": "hot_dog",
+               "dog": "hot_dog", "dogs": "hot_dog", "hotdog": "hot_dog", "hotdogs": "hot_dog",
                "slushie": "slushies", "slushies": "slushies", "slush": "slushies",
                "wetzle": "wet_pretzel", "wetzel": "wet_pretzel",
                "wetzles": "wet_pretzel", "wetzels": "wet_pretzel",
@@ -61,7 +61,7 @@ class SnaxCog(commands.Cog):
             snax_channel_id = self.bot.config.get('snax_channel', 0)
             if ctx.channel.id != snax_channel_id:
                 return await ctx.message.delete()
-        info_parts = re.split(r',\s+', snax_info)
+        info_parts = re.split(r',', snax_info)
         errored_parts = []
         success_parts = []
         user_snacks = {}
@@ -124,7 +124,7 @@ class SnaxCog(commands.Cog):
             WatcherDB._db.execute_sql(query_str)
             return await ctx.send("Ignore list cleared!")
 
-        info_parts = re.split(r',\s+', ignore_info)
+        info_parts = re.split(r',', ignore_info)
         errored_parts = []
         success_parts = []
         for part in info_parts:
