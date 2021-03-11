@@ -138,12 +138,49 @@ from typing import Dict, List
 from blaseball_mike import reference
 
 from watcher.bets import Bets
+from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
+
+# Aliases for SIBR structures
+Game = Dict[str, Any]  # Chronicler game data object
+Player = Dict[str, Any]  # Reference player data object
+StatGroup = Dict[str, Any]  # Reference stats group (group/type/totalSplits/splits)
+StatSplit = Dict[str, Any]  # Reference stats split; e.g. StatGroup['splits'][0]
+PlayerStats = Dict[str, Any]  # Reference player stats object; e.g. StatSplit['stat']
+
+# Aliases for Blaseball structures
+ItemTier = Dict[str, int]  # contains 'price' and 'amount' values
+UpgradeData = Dict[str, List[ItemTier]]  # e.g. blackHoleTiers -> List[ItemTier]
+
+# Mapping of snacks to number owned.
+Snaxfolio = Dict[str, int]
+# Analysis of a Batter's payouts; ('hits', 'home_runs', 'stolen_bases', 'total')
+BatterPayout = Dict[str, int]
+# Full analysis of a payout.
+BatterAnalysis = Tuple[BatterPayout, StatSplit, Player]
+# Upgrade analysis dict (cost, dx, ratio, etc.)
+PurchaseAnalysis = Dict[str, Any]
 
 
 class Snaximum:
     def __init__(self) -> None:
-        self.player_map: Dict[str, Dict[str, object]] = {}
-        self.data = None
+        self.betting_threshold = 0.51
+        # 0.66: 16/24 bets per day, missing 8 for sleep
+        # 0.58: 14/24 bets per day, missing 10
+        # 0.50: 12/24 bets per day (You got half!)
+        # 0.25: 06/24 bets per day (Got most in the evenings.)
+        # 0.00: 00/24 bpd (All passive, all the time, baby!)
+        self.betting_consistency = 14 / 24
+
+        self.flooded_runners = 180
+        self.black_holes: int = 15
+
+        # Internal stuff:
+        self.bets: Bets
+        self.data: StatGroup
+
+        self.player_map: Dict[str, Player] = {}
+        self.upgrades: UpgradeData
+
         self.upgrade_map = {
             'hot_dog': 'idolHomersTiers',
             'seeds': 'idolHitsTiers',
@@ -156,23 +193,20 @@ class Snaximum:
             'chips': 'idolStrikeoutsTiers',
             'burgers': 'idolShutoutsTiers',
         }
-        self.black_holes = 14
-        self.flooded_runners = 137
-        self.refresh_players()
-        self.refresh_data()
-        print("Opening upgrades.json ...")
-        with open(os.path.join("data", "upgrades.json"), "r") as infile:
+        self._initialize()
+
+    def _initialize(self) -> None:
+        print("Opening upgrades.json ...", end='')
+        with open(os.path.join('data', "upgrades.json"), "r") as infile:
             self.upgrades = json.load(infile)
         print("OK")
-        print("Getting bet data ...")
+        self.refresh_players()
+        self.refresh_data()
+        print("Getting bet data ...", end='')
         self.bets = Bets()
-        self.betting_threshold = 0.51
-        # 0.66: 16/24 bets per day, missing 8 for sleep
-        # 0.58: 14/24 bets per day, missing 10
-        # 0.50: 12/24 bets per day (You got half!)
-        # 0.25: 06/24 bets per day (Got most in the evenings.)
-        # 0.00: 00/24 bpd (All passive, all the time, baby!)
-        self.betting_consistency = 14 / 24
+        print("OK")
+        print("Calculating optimal betting threshold ...", end='')
+        self.betting_threshold = self.bets.calculate_threshold()
 
     def set_blackhole_count(self, count):
         self.black_holes = count
@@ -185,7 +219,7 @@ class Snaximum:
         self.refresh_data()
 
     def refresh_players(self) -> None:
-        print("Getting player data ...")
+        print("Getting player data ...", end='')
         rsp = requests.get('https://api.blaseball-reference.com/v2/players?season=current')
         assert rsp.status_code == 200
         print("OK")
@@ -194,12 +228,14 @@ class Snaximum:
             self.player_map[player['player_id']] = player
 
     def refresh_data(self) -> None:
-        print("Getting batting statistics ...")
-        self.data = reference.get_stats(
+        print("Getting batting statistics ...", end='')
+        data = reference.get_stats(
             type_='season', group='hitting',
             fields=('hits', 'home_runs', 'stolen_bases'),
             season='current'
         )
+        assert len(data) == 1
+        self.data = data[0]
         print("OK")
 
     def _get_tiers(self, item_name: str) -> List[Dict[str, int]]:
@@ -219,7 +255,7 @@ class Snaximum:
         return len(tiers) - owned
 
     @classmethod
-    def payout_modifier(cls, player) -> int:
+    def payout_modifier(cls, player: Player) -> int:
         mods = player.get('modifications', [])
 
         if 'CREDIT_TO_THE_TEAM' in mods:
@@ -229,8 +265,8 @@ class Snaximum:
 
         return 1
 
-    def calculate_payouts(self, stats, player,
-                          seeds: int, dogs: int, pickles: int):
+    def calculate_payouts(self, stats: PlayerStats, player: Player, seeds: int,
+                          dogs: int, pickles: int) -> BatterPayout:
         hit_payout = self.get_payout('seeds', seeds)
         hr_payout = self.get_payout('hot_dog', dogs)
         sb_payout = self.get_payout('pickles', pickles)
@@ -244,24 +280,27 @@ class Snaximum:
         payout['total'] = sum(payout.values())
         return payout
 
-    def mksnax(self, snaxfolio, maximum=False):
+    def mksnax(self, snaxfolio: Optional[Snaxfolio] = None,
+               maximum: bool = False) -> Snaxfolio:
+        snax: Dict[str, int]
         if not snaxfolio:
-            snaxfolio = {}
+            snax = {}
         else:
-            snaxfolio = snaxfolio.copy()
+            snax = snaxfolio.copy()
         for item_name, tier_name in self.upgrade_map.items():
             tier_name = self.upgrade_map[item_name]
-            snaxfolio.setdefault(
+            snax.setdefault(
                 item_name, len(self.upgrades[tier_name]) if maximum else 0
             )
-        return snaxfolio
+        return snax
 
-    def get_lucrative_batters(self, snaxfolio=None):
+    def get_lucrative_batters(self, snaxfolio: Optional[Snaxfolio] = None
+                              ) -> List[BatterAnalysis]:
         snaxfolio = self.mksnax(snaxfolio, maximum=True)
 
         batters = []
-        for split in self.data[0]['splits']:
-            stats = split['stat']
+        for split in self.data['splits']:
+            stats = cast(PlayerStats, split['stat'])
             player = self.player_map.get(split['player']['id'], {})
             payout = self.calculate_payouts(
                 stats, player,
@@ -274,7 +313,7 @@ class Snaximum:
         batters = sorted(batters, key=lambda x: x[0]['total'], reverse=True)
         return batters
 
-    def lucrative_batters(self, snaxfolio=None):
+    def lucrative_batters(self, snaxfolio: Optional[Snaxfolio] = None) -> None:
         snaxfolio = self.mksnax(snaxfolio, maximum=True)
         batters = self.get_lucrative_batters(snaxfolio)
         for x in batters[0:10]:
@@ -286,7 +325,8 @@ class Snaximum:
                 x[1]['player']['fullName'],
             ))
 
-    def what_if(self, reference, snaxfolio, which: str):
+    def what_if(self, reference: BatterAnalysis, snaxfolio: Snaxfolio,
+                which: str) -> Optional[PurchaseAnalysis]:
         snaxfolio = self.mksnax(snaxfolio)
 
         if self.upgrades_left(which, snaxfolio[which]) <= 0:
@@ -340,7 +380,8 @@ class Snaximum:
             'idol': idol,
         }
 
-    def calc_upgrade_costs(self, snaxfolio, ignore_list=None):
+    def calc_upgrade_costs(self, snaxfolio: Optional[Snaxfolio], ignore_list: Optional[list]
+                           ) -> List[PurchaseAnalysis]:
         if ignore_list is None:
             ignore_list = []
         snaxfolio = self.mksnax(snaxfolio)
@@ -352,10 +393,12 @@ class Snaximum:
             if item not in ignore_list:
                 choices.append(self.what_if(best, snaxfolio, item))
 
-        choices = sorted(filter(None, choices),
-                         key=lambda x: x['ratio'],
-                         reverse=True)
-        return choices
+        return sorted(
+            # mypy can't infer that filter(None, ...) sheds Optional[T]
+            cast(Iterable[PurchaseAnalysis], filter(None, choices)),
+            key=lambda x: cast(float, x['ratio']),
+            reverse=True
+        )
 
     def propose_upgrade(self, snaxfolio):
         snaxfolio = self.mksnax(snaxfolio)

@@ -1,8 +1,28 @@
 from blaseball_mike import chronicler
+from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
 
+# Aliases for SIBR structures
+Game = Dict[str, Any]  # Chronicler game data object
+Player = Dict[str, Any]  # Reference player data object
+StatGroup = Dict[str, Any]  # Reference stats group (group/type/totalSplits/splits)
+StatSplit = Dict[str, Any]  # Reference stats split; e.g. StatGroup['splits'][0]
+PlayerStats = Dict[str, Any]  # Reference player stats object; e.g. StatSplit['stat']
+
+# Aliases for Blaseball structures
+ItemTier = Dict[str, int]  # contains 'price' and 'amount' values
+UpgradeData = Dict[str, List[ItemTier]]  # e.g. blackHoleTiers -> List[ItemTier]
+
+# Mapping of snacks to number owned.
+Snaxfolio = Dict[str, int]
+# Analysis of a Batter's payouts; ('hits', 'home_runs', 'stolen_bases', 'total')
+BatterPayout = Dict[str, int]
+# Full analysis of a payout.
+BatterAnalysis = Tuple[BatterPayout, StatSplit, Player]
+# Upgrade analysis dict (cost, dx, ratio, etc.)
+PurchaseAnalysis = Dict[str, Any]
 
 class Bets:
-    def __init__(self):
+    def __init__(self) -> None:
         self.games = chronicler.get_games(season=13, finished=True, order='asc')
 
     @classmethod
@@ -18,19 +38,19 @@ class Bets:
         return round(bet * cls.betting_coefficient(odds))
 
     @classmethod
-    def betting_odds(cls, game) -> float:
+    def betting_odds(cls, game: Game) -> float:
         """Return the best betting odds for a given game."""
-        return max(game['data']['homeOdds'], game['data']['awayOdds'])
+        return float(max(game['data']['homeOdds'], game['data']['awayOdds']))
 
     @classmethod
-    def favored_team_won(cls, game) -> bool:
+    def favored_team_won(cls, game: Game) -> bool:
         """Return true if the favored team won this game."""
         hometeam_favored = (game['data']['homeOdds'] >= game['data']['awayOdds'])
         hometeam_won = (game['data']['homeScore'] > game['data']['awayScore'])
-        return (hometeam_favored == hometeam_won)
+        return bool(hometeam_favored == hometeam_won)
 
     @classmethod
-    def betting_result(cls, game, bet: int, threshold: float = 0.50) -> int:
+    def betting_result(cls, game: Game, bet: int, threshold: float = 0.50) -> int:
         """Return money won or lost using the max-bet strategy on this game."""
         odds = cls.betting_odds(game)
 
@@ -43,7 +63,7 @@ class Bets:
             winnings = cls.betting_payout(odds, bet)
         return winnings - bet
 
-    def statistics(self, bet: int = 1000, threshold: float = 0.50):
+    def statistics(self, bet: int = 1000, threshold: float = 0.50) -> None:
         good_bet_games = list(filter(
             lambda g: self.betting_odds(g) >= threshold, self.games
         ))
@@ -63,7 +83,7 @@ class Bets:
         #
         print(f"profit per blaseball-day: {profit_per_day}")
 
-    def payout(self, bet: int = 1000, threshold: float = 0.50):
+    def payout(self, bet: int = 1000, threshold: float = 0.50) -> int:
         """
         Given a particular bet size, simulate a betting strategy where a
         user always bets their maximum if the favored team has odds
