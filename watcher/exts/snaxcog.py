@@ -316,7 +316,7 @@ class SnaxCog(commands.Cog):
         return await ctx.send(embed=embed)
 
     @staticmethod
-    async def _process_snack_parts(snack_str):
+    def _process_snack_parts(snack_str):
         info_parts = re.split(r',', snack_str)
         success_parts = []
         errored_parts = []
