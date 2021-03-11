@@ -10,12 +10,15 @@ from watcher import utils
 from watcher.exts.db.watcher_db import SnaxInstance
 from watcher.snaximum import Snaximum
 
+from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
+
 snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake_oil", "snoil": "snake_oil",
                "fresh": "fresh_popcorn", "popcorn": "fresh_popcorn",
                "fresh popcorn": "fresh_popcorn", "fresh_popcorn": "fresh_popcorn",
                "stale": "stale_popcorn", "stale popcorn": "stale_popcorn", "stale_popcorn": "stale_popcorn",
                "chips": "chips", "burger": "burger", "burgers": "burger",
                "seed": "seeds", "sunflower": "seeds", "sunflower seeds": "seeds", "seeds": "seeds",
+               "sunflower_seeds": "seeds",
                "pickle": "pickles", "pickles": "pickles",
                "hot dog": "hot_dog", "hot dogs": "hot_dog", "hot_dog": "hot_dog", "hot_dogs": "hot_dog",
                "dog": "hot_dog", "dogs": "hot_dog", "hotdog": "hot_dog", "hotdogs": "hot_dog",
@@ -32,8 +35,8 @@ class SnaxCog(commands.Cog):
         self.bot = bot
         self.snaximum_instance = Snaximum()
 
-    def update_counts(self, blackholes, floods, day):
-        self.snaximum_instance.set_blackhole_count(blackholes)
+    def update_counts(self, black_holes, floods, day):
+        self.snaximum_instance.set_blackhole_count(black_holes)
         self.snaximum_instance.set_flood_count(floods)
         self.snaximum_instance.set_current_day(day)
         self.snaximum_instance.refresh_all()
@@ -63,35 +66,10 @@ class SnaxCog(commands.Cog):
             snax_channel_id = self.bot.config.get('snax_channel', 0)
             if ctx.channel.id != snax_channel_id:
                 return await ctx.message.delete()
-        info_parts = re.split(r',', snax_info)
-        errored_parts = []
-        success_parts = []
-        user_snacks = {}
-        for part in info_parts:
-            part_bits = part.split('=')
-            if len(part_bits) < 2:
-                errored_parts.append(part)
-                continue
 
-            snack, quantity = part_bits[0].strip(), part_bits[1].strip()
-            user_snacks[snack] = quantity
+        success_parts, errored_parts, user_snacks = self._process_snack_parts(snax_info)
 
-        insert_values = []
-        for key, value in user_snacks.items():
-            key = key.lower()
-            if key not in snax_fields:
-                errored_parts.append(f"{key}={value}")
-                continue
-            try:
-                insert_value = int(value)
-            except:
-                errored_parts.append(f"{key}={value}")
-                continue
-
-            insert_values.append(f"{snax_fields[key]}={str(insert_value)}")
-            success_parts.append(f"{snax_fields[key]} - {str(insert_value)}")
-
-        insert_value_str = ",".join(insert_values)
+        insert_value_str = ",".join(success_parts)
         if len(insert_value_str) > 0:
             async with aiosqlite.connect(self.bot.db_path) as db:
                 await db.execute(f"insert or ignore into UserSnaxTable (user_id) values ({ctx.author.id})")
@@ -109,14 +87,14 @@ class SnaxCog(commands.Cog):
 
         if len(success_parts) > 0:
             title = "mmm these are tasty, I've added them to your snaxfolio:"
-            succcess_msg = ""
+            success_msg = ""
             for part in success_parts:
-                succcess_msg += f"{part}\n"
+                success_msg += f"{part.replace('=', ' - ')}\n"
             embed = discord.Embed(colour=discord.Colour.green(),
-                                  title=title, description=succcess_msg)
+                                  title=title, description=success_msg)
             await ctx.send(embed=embed)
 
-    @commands.command(name='set_ignore')
+    @commands.command(name='set_ignore', aliases=['setignore'])
     async def _set_ignore(self, ctx, *, ignore_info=None):
         """
         Usage: !set_ignore snack[,snack2...]
@@ -134,16 +112,8 @@ class SnaxCog(commands.Cog):
                 await db.commit()
             return await ctx.send("Ignore list cleared!")
 
-        info_parts = re.split(r',', ignore_info)
-        errored_parts = []
-        success_parts = []
-        for part in info_parts:
-            part = part.strip().lower()
-            if part in snax_fields:
-                normalized_part = snax_fields[part]
-                success_parts.append(normalized_part)
-            else:
-                errored_parts.append(part)
+        success_parts, errored_parts = self._process_ignore_parts(ignore_info)
+
         if len(success_parts) > 0:
             input_str = ','.join(success_parts)
             async with aiosqlite.connect(self.bot.db_path) as db:
@@ -161,6 +131,52 @@ class SnaxCog(commands.Cog):
                 error_msg += f"{part}\n"
             await ctx.send(error_msg)
 
+    @commands.command(name='add_ignore', aliases=['addignore'])
+    async def _add_ignore(self, ctx, *, ignore_info):
+        current_ignore_list = await self._get_user_ignore_list(ctx.author.id)
+        success_parts, errored_parts = self._process_ignore_parts(ignore_info)
+
+        for part in success_parts:
+            if part not in current_ignore_list:
+                current_ignore_list.append(part)
+
+        input_str = ','.join(current_ignore_list)
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            await db.execute(f"insert or ignore into UserSnaxIgnoreTable (user_id) values ({ctx.author.id})")
+            await db.execute(f"update UserSnaxIgnoreTable set ignore_list='{input_str}' where user_id={ctx.author.id}")
+            await db.commit()
+
+        if len(errored_parts) > 0:
+            error_msg = "Failed to update the following: \n"
+            for part in errored_parts:
+                error_msg += f"{part}\n"
+            await ctx.send(error_msg)
+
+        await ctx.send(f"Your current ignore list is: {', '.join(current_ignore_list)}")
+
+    @commands.command(name='remove_ignore', aliases=['removeignore', 'rem_ignore', 'remignore'])
+    async def _remove_ignore(self, ctx, *, ignore_info):
+        current_ignore_list = await self._get_user_ignore_list(ctx.author.id)
+        success_parts, errored_parts = self._process_ignore_parts(ignore_info)
+
+        for part in success_parts:
+            if part in current_ignore_list:
+                current_ignore_list.remove(part)
+
+        input_str = ','.join(current_ignore_list)
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            await db.execute(f"insert or ignore into UserSnaxIgnoreTable (user_id) values ({ctx.author.id})")
+            await db.execute(f"update UserSnaxIgnoreTable set ignore_list='{input_str}' where user_id={ctx.author.id}")
+            await db.commit()
+
+        if len(errored_parts) > 0:
+            error_msg = "Failed to update the following: \n"
+            for part in errored_parts:
+                error_msg += f"{part}\n"
+            await ctx.send(error_msg)
+
+        await ctx.send(f"Your current ignore list is: {', '.join(current_ignore_list)}")
+
     @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lb'])
     async def _lucrative_batters(self, ctx, count: int = 3):
         """
@@ -174,15 +190,12 @@ class SnaxCog(commands.Cog):
             if ctx.channel.id != snax_channel_id:
                 return await ctx.message.delete()
 
-        user_snax = await self._get_user_snax(ctx.author.id)
-        if not user_snax:
-            user_snax_dict = {}
-        else:
-            user_snax_dict = user_snax.get_as_dict()
-        if len(user_snax_dict) > 0:
+        snaxfolio = await self._get_user_snax(ctx.author.id)
+
+        if len(snaxfolio) > 0:
             snax_set = True
             title = f"Tastiest snacks in {ctx.author.display_name}'s snaxfolio:\n"
-            luc_list = self.snaximum_instance.get_lucrative_batters(user_snax_dict)
+            luc_list = self.snaximum_instance.get_lucrative_batters(snaxfolio)
         else:
             snax_set = False
             title = "Tastiest snacks in the League this season"
@@ -217,18 +230,8 @@ class SnaxCog(commands.Cog):
             if ctx.channel.id != snax_channel_id:
                 return await ctx.message.delete()
 
-        user_snax = await self._get_user_snax(ctx.author.id)
-        if not user_snax:
-            user_snax_dict = {}
-        else:
-            user_snax_dict = user_snax.get_as_dict()
-        ignore_list = []
-        async with aiosqlite.connect(self.bot.db_path) as db:
-            async with db.execute("select ignore_list from UserSnaxIgnoreTable where"
-                                  f" user_id={ctx.author.id}") as cursor:
-                async for row in cursor:
-                    ignore_list_str = row[0]
-                    ignore_list = ignore_list_str.split(',')
+        snaxfolio = await self._get_user_snax(ctx.author.id)
+        ignore_list = await self._get_user_ignore_list(ctx.author.id)
 
         coins = 50000
         order_by = 'ratio'
@@ -246,8 +249,8 @@ class SnaxCog(commands.Cog):
                     except ValueError:
                         continue
 
-        if len(user_snax_dict) > 0:
-            proposal_dict = self.snaximum_instance.propose_upgrades(coins, user_snax_dict, ignore_list, order_by)
+        if len(snaxfolio) > 0:
+            proposal_dict = self.snaximum_instance.propose_upgrades(coins, snaxfolio, ignore_list, order_by)
             title = f"Happy Hour Menu for {ctx.author.display_name}'s snaxfolio:\n"
             snax_set = True
         else:
@@ -293,11 +296,8 @@ class SnaxCog(commands.Cog):
             snax_channel_id = self.bot.config.get('snax_channel', 0)
             if ctx.channel.id != snax_channel_id:
                 return await ctx.message.delete()
-        user_snax = await self._get_user_snax(ctx.author.id)
-        if not user_snax:
-            snaxfolio = {}
-        else:
-            snaxfolio = user_snax.get_as_dict()
+        snaxfolio = await self._get_user_snax(ctx.author.id)
+
         if len(snaxfolio) < 0:
             embed = discord.Embed(colour=discord.Colour.red(),
                                   title="I couldn't find your snaxfolio.",
@@ -306,24 +306,76 @@ class SnaxCog(commands.Cog):
 
         snax_msg = ""
         for snack, quantity in snaxfolio.items():
-            name = snack.replace('_', ' ')
             if quantity > 0:
+                name = snack.replace('_', ' ')
                 snax_msg += f"{name.capitalize()}: {quantity}\n"
+
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=f"{ctx.author.display_name}'s current snaxfolio.",
                               description=snax_msg)
         return await ctx.send(embed=embed)
 
-    async def _get_user_snax(self, user_id):
-        user_snax = None
+    @staticmethod
+    async def _process_snack_parts(snack_str):
+        info_parts = re.split(r',', snack_str)
+        success_parts = []
+        errored_parts = []
+        user_snacks = {}
+        for part in info_parts:
+            part_bits = part.split('=')
+            if len(part_bits) < 2:
+                errored_parts.append(part)
+                continue
+
+            snack, quantity = part_bits[0].strip().lower(), part_bits[1].strip()
+            if snack not in snax_fields:
+                errored_parts.append(part)
+                continue
+            try:
+                insert_value = int(quantity)
+            except:
+                errored_parts.append(part)
+                continue
+            success_parts.append(f"{snax_fields[snack]}={str(insert_value)}")
+            user_snacks[snack] = quantity
+        return success_parts, errored_parts, user_snacks
+
+    @staticmethod
+    def _process_ignore_parts(ignore_str):
+        info_parts = re.split(r',', ignore_str)
+        errored_parts = []
+        success_parts = []
+        for part in info_parts:
+            part = part.strip().lower()
+            if part in snax_fields:
+                normalized_part = snax_fields[part]
+                success_parts.append(normalized_part)
+            else:
+                errored_parts.append(part)
+        return success_parts, errored_parts
+
+    async def _get_user_snax(self, user_id: int) -> Dict:
+        snaxfolio = {}
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select user_id, snake_oil, fresh_popcorn, stale_popcorn, chips, burger, " 
                                   "hot_dog, seeds, pickles, slushies, wet_pretzel from UserSnaxTable " 
                                   f"where user_id={user_id};") as cursor:
                 async for row in cursor:
                     user_snax = SnaxInstance(*row)
+                    snaxfolio = user_snax.get_as_dict()
 
-        return user_snax
+        return snaxfolio
+
+    async def _get_user_ignore_list(self, user_id: int) -> list:
+        ignore_list = []
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select user_id, ignore_list from UserSnaxIgnoreTable " 
+                                  f"where user_id={user_id};") as cursor:
+                async for row in cursor:
+                    ignore_list_str = row[1]
+                    ignore_list = ignore_list_str.split(',')
+
+        return ignore_list
 
 
 def setup(bot):

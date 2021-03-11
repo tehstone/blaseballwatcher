@@ -341,8 +341,6 @@ class Snaximum:
         data[which] += 1
 
         if which == 'wet_pretzel':
-            current_value = self.black_holes * self.get_payout('wet_pretzel', snaxfolio[which])
-            new_value = self.black_holes * self.get_payout('wet_pretzel', data[which])
             black_holes_per_day = self.black_holes / self.current_day
             remaining = (98 - self.current_day) * black_holes_per_day
             current_value = remaining * self.get_payout('wet_pretzel', snaxfolio[which])
@@ -350,8 +348,6 @@ class Snaximum:
             dx = new_value - current_value
             idol = None
         elif which == 'slushies':
-            current_value = self.flooded_runners * self.get_payout('slushies', snaxfolio[which])
-            new_value = self.flooded_runners * self.get_payout('slushies', data[which])
             floods_per_day = self.flooded_runners / self.current_day
             remaining = (98 - self.current_day) * floods_per_day
             current_value = remaining * self.get_payout('slushies', snaxfolio[which])
@@ -379,7 +375,6 @@ class Snaximum:
             best_remaining = (best[0]['total'] / self.current_day) * (98 - self.current_day)
             ref_remaining = (reference[0]['total'] / self.current_day) * (98 - self.current_day)
             dx = best_remaining - ref_remaining
-            #dx = best[0]['total'] - reference[0]['total']
             idol = best[1]['player']['fullName']
 
         # How much does it cost to upgrade this snack?
