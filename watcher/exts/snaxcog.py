@@ -216,13 +216,7 @@ class SnaxCog(commands.Cog):
         user_snax = await self._get_user_snax(ctx.author.id)
         user_snax_dict = user_snax.get_as_dict()
         ignore_list = []
-        # ignore_result = (UserSnaxIgnoreTable.select(
-        #     UserSnaxIgnoreTable.user_id,
-        #     UserSnaxIgnoreTable.ignore_list
-        # ).where(UserSnaxIgnoreTable.user_id == ctx.author.id))
-        # if len(ignore_result) > 0:
-        #     ignore_list_str = ignore_result[0].ignore_list
-        #     ignore_list = ignore_list_str.split(',')
+
 
         coins = min(coins, 500000)
         coins = max(coins, 100)
