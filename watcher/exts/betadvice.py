@@ -133,7 +133,7 @@ class BetAdvice(commands.Cog):
                 daily_leaders = json.load(file)
 
         hitter_list = []
-        for player in daily_leaders["seed_dog"][:4]:
+        for player in daily_leaders["seed_dog"][:3]:
             name = player["name"]
             shorthand = team_short_map[player["teamId"]]
             hits = player["hits"]
@@ -142,24 +142,24 @@ class BetAdvice(commands.Cog):
             if "multiplier" in player:
                 if int(player["multiplier"]) > 1:
                     mult_text = f' ({str(player["multiplier"])}x)'
-            entry = f"[{name}]({'https://blaseball-reference.com/players/' + player['playerId']}) "
+            entry = f"[{name}]({'https://www.blaseball.com/player/' + player['playerId']}) "
             entry += f"([{shorthand}]({'https://www.blaseball.com/team/' + player['teamId']}))"
-            entry += f"\n{hits} hits, {home_runs} HRs{mult_text}"
+            entry += f"\n[{hits} hits, {home_runs} HRs]({'https://blaseball-reference.com/players/' + player['playerId']}){mult_text}"
             hitter_list.append(entry)
 
         embed_fields.append({"name": "Best Idols - Hold the Pickles",
                              "value": '\n'.join(hitter_list)})
 
         hitter_list = []
-        for player in daily_leaders["combo"][:4]:
+        for player in daily_leaders["combo"][:3]:
             name = player["name"]
             shorthand = team_short_map[player["teamId"]]
             hits = player["hits"]
             home_runs = player["homeRuns"]
             steals = player["stolenBases"]
-            entry = f"[{name}]({'https://blaseball-reference.com/players/' + player['playerId']}) "
+            entry = f"[{name}]({'https://www.blaseball.com/player/' + player['playerId']}) "
             entry += f"([{shorthand}]({'https://www.blaseball.com/team/' + player['teamId']}))"
-            entry += f"\n{hits} hits, {home_runs} HRs, {steals} SBs"
+            entry += f"\n[{hits} hits, {home_runs} HRs, {steals} SBs]({'https://blaseball-reference.com/players/' + player['playerId']})"
             hitter_list.append(entry)
 
         embed_fields.append({"name": "Best Idols - With Pickles",
@@ -172,7 +172,7 @@ class BetAdvice(commands.Cog):
         sorted_so_preds = {k: v for k, v in sorted(pitcher_opp_strikeouts.items(),
                                                    key=lambda item: item[1],
                                                    reverse=True) if k in pitcher_ids}
-        top_list = list(sorted_so_preds.keys())[:5]
+        top_list = list(sorted_so_preds.keys())[:4]
         pitcher_list = []
         for key in top_list:
             pitcher = pitcher_dict[key]
@@ -181,9 +181,9 @@ class BetAdvice(commands.Cog):
 
             opp_k_per = results[pitcher["opponent"]]["strikeout_percentage"]
             pred = round(opp_k_per * 10) / 10
-            entry = f"[{name}]({'https://blaseball-reference.com/players/'+key}) "
+            entry = f"[{name}]({'https://www.blaseball.com/player/'+key}) "
             entry += f"([{shorthand}]({'https://www.blaseball.com/team/' + pitcher['team']}))"
-            entry += f"\n{pred}"
+            entry += f" - [{pred}]({'https://blaseball-reference.com/players/'+key}) "
             pitcher_list.append(entry)
 
         embed_fields.append({"name": "Strikeout Predictions",
