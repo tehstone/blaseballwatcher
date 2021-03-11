@@ -46,7 +46,7 @@ class SnaxCog(commands.Cog):
         self.bot.config['snax_channel'] = output_channel.id
         return await ctx.message.add_reaction(self.bot.success_react)
 
-    @commands.command(name='set_snax')
+    @commands.command(name='set_snax', aliases=['setsnax', 'set_snack', 'set_snacks'])
     async def _set_snax(self, ctx, *, snax_info):
         """
         Usage: !set_snax snackname=quantity [,snackname=quantity...]
@@ -160,7 +160,7 @@ class SnaxCog(commands.Cog):
                 error_msg += f"{part}\n"
             await ctx.send(error_msg)
 
-    @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lucrativeb', 'lucb'])
+    @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lb'])
     async def _lucrative_batters(self, ctx, count: int = 3):
         """
         Usage: !lucrative_batters [count] - count is optional.
@@ -174,7 +174,10 @@ class SnaxCog(commands.Cog):
                 return await ctx.message.delete()
 
         user_snax = await self._get_user_snax(ctx.author.id)
-        user_snax_dict = user_snax.get_as_dict()
+        if not user_snax:
+            user_snax_dict = {}
+        else:
+            user_snax_dict = user_snax.get_as_dict()
         if len(user_snax_dict) > 0:
             snax_set = True
             title = f"Tastiest snacks in {ctx.author.display_name}'s snaxfolio:\n"
@@ -201,7 +204,7 @@ class SnaxCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='propose_upgrades', aliases=['propose_upgrade', 'what_next', "what_to_buy", 'pu'])
-    async def _propose_upgrades(self, ctx, coins=50000):
+    async def _propose_upgrades(self, ctx, *, info=None):
         """
         Usage: !propose_upgrades [coins] - coins is optional.
         Will return the most optimal next purchases for you. Coins is optional but is useful to filter
@@ -214,7 +217,10 @@ class SnaxCog(commands.Cog):
                 return await ctx.message.delete()
 
         user_snax = await self._get_user_snax(ctx.author.id)
-        user_snax_dict = user_snax.get_as_dict()
+        if not user_snax:
+            user_snax_dict = {}
+        else:
+            user_snax_dict = user_snax.get_as_dict()
         ignore_list = []
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select ignore_list from UserSnaxIgnoreTable where"
@@ -223,15 +229,28 @@ class SnaxCog(commands.Cog):
                     ignore_list_str = row[0]
                     ignore_list = ignore_list_str.split(',')
 
-        coins = min(coins, 500000)
-        coins = max(coins, 100)
+        coins = 50000
+        order_by = 'ratio'
+
+        if info:
+            info_parts = info.split(',')
+            for part in info_parts:
+                if part.strip().lower() == "profit":
+                    order_by = 'dx'
+                else:
+                    try:
+                        new_coins = int(part)
+                        coins = min(new_coins, 500000)
+                        coins = max(coins, 100)
+                    except ValueError:
+                        continue
 
         if len(user_snax_dict) > 0:
-            proposal_dict = self.snaximum_instance.propose_upgrades(coins, user_snax_dict, ignore_list)
+            proposal_dict = self.snaximum_instance.propose_upgrades(coins, user_snax_dict, ignore_list, order_by)
             title = f"Happy Hour Menu for {ctx.author.display_name}'s snaxfolio:\n"
             snax_set = True
         else:
-            proposal_dict = self.snaximum_instance.propose_upgrades(coins, None, ignore_list)
+            proposal_dict = self.snaximum_instance.propose_upgrades(coins, None, ignore_list, order_by)
             title = "Generic Happy Hour Menu\n"
             snax_set = False
 
@@ -257,8 +276,8 @@ class SnaxCog(commands.Cog):
             message += f"Buy {name} for {item['cost']}\n"
             message += f"Expected marginal profit this season: {item['dx']} ({ratio})\n\n"
 
-        message += "Value in parentheses indicates expected profitability this season.\nAny value > 1 " \
-                   "will result in profit during the current season."
+        message += "Value in parentheses indicates expected profitability relative " \
+                   "to the purchase cost during the current season."
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=title, description=message)
 
@@ -274,7 +293,10 @@ class SnaxCog(commands.Cog):
             if ctx.channel.id != snax_channel_id:
                 return await ctx.message.delete()
         user_snax = await self._get_user_snax(ctx.author.id)
-        snaxfolio = user_snax.get_as_dict()
+        if not user_snax:
+            snaxfolio = {}
+        else:
+            snaxfolio = user_snax.get_as_dict()
         if len(snaxfolio) < 0:
             embed = discord.Embed(colour=discord.Colour.red(),
                                   title="I couldn't find your snaxfolio.",
@@ -292,6 +314,7 @@ class SnaxCog(commands.Cog):
         return await ctx.send(embed=embed)
 
     async def _get_user_snax(self, user_id):
+        user_snax = None
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select user_id, snake_oil, fresh_popcorn, stale_popcorn, chips, burger, " 
                                   "hot_dog, seeds, pickles, slushies, wet_pretzel from UserSnaxTable " 

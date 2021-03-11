@@ -380,7 +380,7 @@ class Snaximum:
             'idol': idol,
         }
 
-    def calc_upgrade_costs(self, snaxfolio: Optional[Snaxfolio], ignore_list: Optional[list]
+    def calc_upgrade_costs(self, snaxfolio: Optional[Snaxfolio], ignore_list: Optional[list], order_by: str
                            ) -> List[PurchaseAnalysis]:
         if ignore_list is None:
             ignore_list = []
@@ -396,7 +396,7 @@ class Snaximum:
         return sorted(
             # mypy can't infer that filter(None, ...) sheds Optional[T]
             cast(Iterable[PurchaseAnalysis], filter(None, choices)),
-            key=lambda x: cast(float, x['ratio']),
+            key=lambda x: cast(float, x[order_by]),
             reverse=True
         )
 
@@ -411,7 +411,7 @@ class Snaximum:
                 choice['ratio'],
             )
 
-    def propose_upgrades(self, cash: int = 10, snaxfolio=None, ignore_list=None) -> Dict:
+    def propose_upgrades(self, cash: int = 10, snaxfolio=None, ignore_list=None, order_by=None) -> Dict:
         snaxfolio = self.mksnax(snaxfolio)
 
         idol = None
@@ -421,7 +421,7 @@ class Snaximum:
         proposal_dict = {"change_idol": False, "buy_list": [], "none_available": False}
         while True:
             i += 1
-            proposals = self.calc_upgrade_costs(snaxfolio, ignore_list)
+            proposals = self.calc_upgrade_costs(snaxfolio, ignore_list, order_by)
             if not proposals:
                 proposal_dict["none_available"] = True
                 break
