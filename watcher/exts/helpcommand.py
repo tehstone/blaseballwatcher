@@ -12,19 +12,22 @@ class MyHelpCommand(commands.DefaultHelpCommand):
     # Woooo hardcoding help command output!
     async def send_bot_help(self, mapping):
         dest = self.get_destination()
-        help_embed = discord.Embed(title="Stat lookup commands")
-        text = "**!strikeout_leaderboard** `!k_lb [season]`\nOptionally include a 1-indexed season number, " \
-               "defaults to current season\nDisplays each team's shutout count for the season indicated.\n\n"
-        text += "**!shutout_leaderboard** `!sho_lb [season]`\nOptionally include a 1-indexed season number, " \
-                "defaults to current season\nDisplays each team's strikeout count for the season indicated.\n"
-        help_embed.add_field(name="Leaderboard commands", value=text)
-        text = "**!team_strikeouts** `!t_ks team nickname [season]`\nRequires the nickname of a team. Optionally " \
-               "include a 1-indexed season number, defaults to current season.\nDisplays the team's count of" \
-               "times struckout in the season indicated.\n\n"
-        text += "**!team_shutouts** `!t_sho team nickname [season]`\nRequires the nickname of a team. Optionally " \
-                "include a 1-indexed season number, defaults to current season.\nDisplays the team's count of" \
-                "times shutout in the season indicated.\n"
-        help_embed.add_field(name="Team stat commands", value=text)
+        help_embed = discord.Embed(title="Snaxfolio Commands")
+        text = "`!set_snax snackname=quantity [,snackname=quantity...]` Sets your snack quantities.\n\n"
+        text += "`!set_ignore snack [,snack2...]` Sets the list of snacks to be ignored for recommendations. " \
+                "Overwrites previously set list.\n\n"
+        text += "`!add_ignore snack [,snack2...]` Adds snack(s) to your list of ignored snacks\n\n"
+        text += "`!remove_ignore snack [,snack2...]` Removes snack(s) from your list of ignored snacks\n\n"
+        text += "`!snaxfolio` Displays your current snack quantities."
+        help_embed.add_field(name="Snaxfolio Management", value=text)
+        text = "`!lucrative_batters [count]` count is optional. Returns personalized best hitting idol choices based " \
+               "on current performance of all players and your snaxfolio.\n\n"
+        text += "`!propose_upgrades [coins], ['profit']` coins is optional. Returns optimal next snack upgrade path." \
+                "Include 'profit' to sort the list by total profit rather than profit:cost ratio."
+        help_embed.add_field(name="Snaxfolio Usage", value=text)
+        text = "Do `!help <command_name>` for any command to see more detailed help."
+        help_embed.add_field(name="Additional Help", value=text)
+        help_embed.set_footer(text="[ ] square brackets indicate optional parameters and should not be included in your messages")
         await dest.send(embed=help_embed)
 
 
