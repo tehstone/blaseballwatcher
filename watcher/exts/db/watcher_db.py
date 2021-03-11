@@ -17,8 +17,8 @@ def initialize(db):
                                                 page_text TEXT NOT NULL);""")
         c.execute("""CREATE TABLE IF NOT EXISTS usersnaxignoretable (
                                                 id INTEGER NOT NULL PRIMARY KEY, 
-                                                user_id INTEGER NOT NULL, 
-                                               ignore_list TEXT NOT NULL);""")
+                                                user_id INTEGER NOT NULL UNIQUE, 
+                                                ignore_list TEXT);""")
         c.execute("""CREATE TABLE IF NOT EXISTS usersnaxtable (
                                                 id    INTEGER NOT NULL,
                                                 user_id   INTEGER NOT NULL UNIQUE,
