@@ -665,9 +665,13 @@ class Pendants(commands.Cog):
             if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
                 continue
             values = sorted_total_hit_payouts[key]
+            if "hitsMinusHrs" in all_players[key]:
+                hits = all_players[key]["hitsMinusHrs"]
+            else:
+                hits = all_players[key]["hits"]
             team = team_short_map[values["teamId"]]
             name = f"({team}) {values['name']}"
-            rows.append([name, '', values["hits"], values["homeRuns"], values["stolenBases"]])
+            rows.append([name, '', hits, values["homeRuns"], values["stolenBases"]])
             count += 1
             if count == hit_max:
                 break
@@ -675,9 +679,13 @@ class Pendants(commands.Cog):
         for key in top_sb_keys:
             if key not in top_keys:
                 values = sorted_stolenbases[key]
+                if "hitsMinusHrs" in all_players[key]:
+                    hits = all_players[key]["hitsMinusHrs"]
+                else:
+                    hits = all_players[key]["hits"]
                 team = team_short_map[values["teamId"]]
                 name = f"({team}) {values['name']}"
-                rows.append([name, '', values["hits"], values["homeRuns"], values["stolenBases"]])
+                rows.append([name, '', hits, values["homeRuns"], values["stolenBases"]])
 
         p_worksheet.update("A9:E18", rows)
 
@@ -685,7 +693,7 @@ class Pendants(commands.Cog):
         ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
         ys_row = ["York Silk", '', 0, 0, 0]
         if ys_id in sorted_hits:
-            ys_row[2] = sorted_hits[ys_id].setdefault("hits", 0)
+            ys_row[2] = all_players[ys_id].setdefault("hitsMinusHrs", 0)
         if ys_id in sorted_homeruns:
             ys_row[3] = sorted_homeruns[ys_id].setdefault("homeRuns", 0)
         if ys_id in sorted_stolenbases:
@@ -694,7 +702,7 @@ class Pendants(commands.Cog):
         wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
         wg_row = ["Wyatt Glover", '', 0, 0, 0]
         if wg_id in sorted_hits:
-            wg_row[2] = sorted_hits[wg_id].setdefault("hits", 0)
+            wg_row[2] = all_players[wg_id].setdefault("hitsMinusHrs", 0)
         if wg_id in sorted_homeruns:
             wg_row[3] = sorted_homeruns[wg_id].setdefault("homeRuns", 0)
         if wg_id in sorted_stolenbases:
@@ -728,9 +736,9 @@ class Pendants(commands.Cog):
         boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2, "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5}
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
-            hits = v["hits"]
             homeruns = sorted_homeruns[k]["homeRuns"]
             stolenbases = sorted_stolenbases[k]["stolenBases"]
+            hits = v["hits"] - homeruns
 
             if k in boosted_players:
                 multiplier = boosted_players[k]
@@ -739,6 +747,7 @@ class Pendants(commands.Cog):
             seed_dog = ((hits * 1500) + (homeruns * 4000)) * multiplier
             combo = ((hits * 1500) + (homeruns * 4000) + (stolenbases * 3000)) * multiplier
             all_players[k]["multiplier"] = multiplier
+            all_players[k]["hitsMinusHrs"] = hits
 
             total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hits"],
                                     "homeRuns": sorted_homeruns[k]["homeRuns"],
