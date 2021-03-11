@@ -182,18 +182,17 @@ class RulesWatcher(commands.Cog):
     async def _get_last_text(self):
         try:
             async with aiosqlite.connect(self.bot.db_path) as db:
-                async with db.execute("select * from RulesBlogTable order by pull_date desc limit 1") as cursor:
+                async with db.execute("select page_text from RulesBlogTable order by pull_date desc limit 1") as cursor:
                     async for row in cursor:
-                        for id, pull_date, page_text in row:
-                            return page_text
+                        return row[0]
         except:
             return None
 
     async def _update_last_text(self, text):
         text = text.replace("'", "''")
         async with aiosqlite.connect(self.bot.db_path) as db:
-            await db.execute("INSERT INTO RulesBlogTable (pull_date, page_text) VALUES "
-                                 f"('{datetime.datetime.utcnow()}', '{text}')")
+            await db.execute("insert into RulesBlogTable (pull_date, page_text) values "
+                             f"('{datetime.datetime.utcnow()}', '{text}')")
             await db.commit()
 
     def _get_page_text(self):

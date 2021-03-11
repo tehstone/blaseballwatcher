@@ -147,7 +147,7 @@ class SnaxCog(commands.Cog):
             input_str = ','.join(success_parts)
             async with aiosqlite.connect(self.bot.db_path) as db:
                 await db.execute(f"insert or ignore into UserSnaxIgnoreTable (user_id) values ({ctx.author.id})")
-                await db.execute(f"update UserSnaxIgnoreTable ignore_list = '{input_str}' where user_id == {ctx.author.id}")
+                await db.execute(f"update UserSnaxIgnoreTable set ignore_list='{input_str}' where user_id={ctx.author.id}")
                 await db.commit()
             succcess_msg = "Successfully ignored:\n"
             for part in success_parts:
@@ -216,7 +216,12 @@ class SnaxCog(commands.Cog):
         user_snax = await self._get_user_snax(ctx.author.id)
         user_snax_dict = user_snax.get_as_dict()
         ignore_list = []
-
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select ignore_list from UserSnaxIgnoreTable where"
+                                  f" user_id={ctx.author.id}") as cursor:
+                async for row in cursor:
+                    ignore_list_str = row[0]
+                    ignore_list = ignore_list_str.split(',')
 
         coins = min(coins, 500000)
         coins = max(coins, 100)
@@ -288,10 +293,9 @@ class SnaxCog(commands.Cog):
 
     async def _get_user_snax(self, user_id):
         async with aiosqlite.connect(self.bot.db_path) as db:
-            async with db.execute(
-                """select user_id, snake_oil, fresh_popcorn, stale_popcorn, chips, burger,
-                       hot_dog, seeds, pickles, slushies, wet_pretzel
-                   where user_id == ?;""", user_id) as cursor:
+            async with db.execute("select user_id, snake_oil, fresh_popcorn, stale_popcorn, chips, burger, " 
+                                  "hot_dog, seeds, pickles, slushies, wet_pretzel from UserSnaxTable " 
+                                  f"where user_id={user_id};") as cursor:
                 async for row in cursor:
                     user_snax = SnaxInstance(*row)
 
