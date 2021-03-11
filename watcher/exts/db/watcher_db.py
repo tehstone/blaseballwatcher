@@ -1,60 +1,40 @@
-from playhouse.apsw_ext import *
-from playhouse.migrate import *
+import sqlite3
 
 
-class WatcherDB:
-    _db = Proxy()
-    _migrator = None
-    @classmethod
-    def start(cls, db_path):
-        handle = APSWDatabase(db_path, pragmas={
-            'journal_mode': 'wal',
-            'cache_size': -1 * 64000,
-            'foreign_keys': 1,
-            'ignore_check_constraints': 0
-        })
-        cls._db.initialize(handle)
-        # ensure db matches current schema
-        cls._db.create_tables([RulesBlogTable, UserSnaxIgnoreTable, UserSnaxTable])
-        cls.init()
-        cls._migrator = SqliteMigrator(cls._db)
-
-    @classmethod
-    def stop(cls):
-        return cls._db.close()
-
-    @classmethod
-    def init(cls):
-        pass
-
-
-class BaseModel(Model):
-    class Meta:
-        database = WatcherDB._db
-
-
-class RulesBlogTable(BaseModel):
-    pull_date = DateTimeField()
-    page_text = TextField(index=True)
-
-
-class UserSnaxTable(BaseModel):
-    user_id = BigIntegerField(index=True)
-    snake_oil = IntegerField(null=True, default=0)
-    fresh_popcorn = IntegerField(null=True, default=0)
-    stale_popcorn = IntegerField(null=True, default=0)
-    chips = IntegerField(null=True, default=0)
-    burger = IntegerField(null=True, default=0)
-    hot_dog = IntegerField(null=True, default=0)
-    seeds = IntegerField(null=True, default=0)
-    pickles = IntegerField(null=True, default=0)
-    slushies = IntegerField(null=True, default=0)
-    wet_pretzel = IntegerField(null=True, default=0)
-
-
-class UserSnaxIgnoreTable(BaseModel):
-    user_id = BigIntegerField(index=True)
-    ignore_list = TextField(default="")
+def initialize(db):
+    with sqlite3.connect(db) as conn:
+        c = conn.cursor()
+        c.execute("""CREATE TABLE IF NOT EXISTS hitterstatstable (
+                                                id INTEGER NOT NULL PRIMARY KEY, 
+                                                player_id INTEGER NOT NULL,
+                                                day INTEGER NOT NULL, 
+                                                hits INTEGER NOT NULL, 
+                                                home_runs INTEGER NOT NULL,
+                                                stolen_bases INTEGER NOT NULL);""")
+        c.execute("""CREATE TABLE IF NOT EXISTS rulesblogtable (
+                                                id INTEGER NOT NULL PRIMARY KEY,
+                                                pull_date DATETIME NOT NULL,
+                                                page_text TEXT NOT NULL);""")
+        c.execute("""CREATE TABLE IF NOT EXISTS usersnaxignoretable (
+                                                id INTEGER NOT NULL PRIMARY KEY, 
+                                                user_id INTEGER NOT NULL, 
+                                               ignore_list TEXT NOT NULL);""")
+        c.execute("""CREATE TABLE IF NOT EXISTS usersnaxtable (
+                                                id    INTEGER NOT NULL,
+                                                user_id   INTEGER NOT NULL UNIQUE,
+                                                snake_oil INTEGER DEFAULT 0,
+                                                fresh_popcorn INTEGER DEFAULT 0,
+                                                stale_popcorn INTEGER DEFAULT 0,
+                                                chips INTEGER DEFAULT 0,
+                                                burger    INTEGER DEFAULT 0,
+                                                hot_dog   INTEGER DEFAULT 0,
+                                                seeds INTEGER DEFAULT 0,
+                                                pickles   INTEGER DEFAULT 0,
+                                                slushies  INTEGER DEFAULT 0,
+                                                wet_pretzel   INTEGER DEFAULT 0,
+                                                PRIMARY KEY(id)
+                                            );""")
+        c.close()
 
 
 class SnaxInstance:

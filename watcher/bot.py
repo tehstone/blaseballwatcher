@@ -46,6 +46,7 @@ class WatcherBot(commands.AutoShardedBot):
         self.guild_dict = {'configure_dict': {}}
         self._load_data()
         self._load_config()
+        self.db_path = 'data/watcher.db'
         self.success_react = '✅'
         self.failed_react = '❌'
         self.thumbsup_react = '👍'

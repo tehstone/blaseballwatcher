@@ -6,6 +6,7 @@ import os
 import time
 
 import aiohttp
+import aiosqlite
 import discord
 import requests
 from bs4 import BeautifulSoup as bs
@@ -14,7 +15,6 @@ from urllib.parse import urljoin
 from discord.ext import commands
 
 from watcher import utils, parse_blaseball_book
-from watcher.exts.db.watcher_db import WatcherDB
 
 
 class RulesWatcher(commands.Cog):
@@ -146,7 +146,7 @@ class RulesWatcher(commands.Cog):
         if not new_page_text:
             #self.bot.logger.warning("Failed to obtain updated page text.")
             return messages, None
-        last_page_text = self._get_last_text()
+        last_page_text = await self._get_last_text()
         if not last_page_text:
             messages.append("Failed to obtain most recent page text.")
             return messages, None
@@ -161,7 +161,7 @@ class RulesWatcher(commands.Cog):
             with open(os.path.join('diffs', filename), 'w') as file:
                 for line in diff:
                     file.write(f"{line}\n")
-            self._update_last_text(new_page_text)
+            await self._update_last_text(new_page_text)
             messages.append("Rule book text changed!")
             return messages, filename
 
@@ -179,20 +179,22 @@ class RulesWatcher(commands.Cog):
                     with open(os.path.join('diffs', filename), 'rb') as logfile:
                         await ctx.send(file=discord.File(logfile, filename=filename))
 
-    @staticmethod
-    def _get_last_text():
+    async def _get_last_text(self):
         try:
-            cursor = WatcherDB._db.execute_sql("select * from RulesBlogTable order by pull_date desc limit 1")
-            for id, pull_date, page_text in cursor:
-                return page_text
+            async with aiosqlite.connect(self.bot.db_path) as db:
+                async with db.execute("select * from RulesBlogTable order by pull_date desc limit 1") as cursor:
+                    async for row in cursor:
+                        for id, pull_date, page_text in row:
+                            return page_text
         except:
             return None
 
-    @staticmethod
-    def _update_last_text(text):
+    async def _update_last_text(self, text):
         text = text.replace("'", "''")
-        WatcherDB._db.execute_sql("INSERT INTO RulesBlogTable (pull_date, page_text) VALUES "
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            await db.execute("INSERT INTO RulesBlogTable (pull_date, page_text) VALUES "
                                  f"('{datetime.datetime.utcnow()}', '{text}')")
+            await db.commit()
 
     def _get_page_text(self):
         session = requests.Session()

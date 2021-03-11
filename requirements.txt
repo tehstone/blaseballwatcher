@@ -1,6 +1,6 @@
 requests==2.20.0
 aiohttp==3.6.0
-peewee==3.9.2
+aiosqlite==0.17.0
 git+https://github.com/Rapptz/discord.py@master
 beautifulsoup4==4.7.1
 esprima==4.0.1

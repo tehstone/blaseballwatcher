@@ -6,10 +6,9 @@ import discord
 
 from watcher import utils
 from watcher.bot import WatcherBot
+from watcher.exts.db import watcher_db
 
-from watcher.exts.db.watcher_db import WatcherDB
-
-WatcherDB.start('data/watcher.db')
+watcher_db.initialize('data/watcher.db')
 
 Watcher = WatcherBot()
 logger = Watcher.logger
@@ -34,9 +33,9 @@ async def _print(owner, message):
 
 async def start_task_loops(bot):
     try:
-        rules_watcher = bot.get_cog("RulesWatcher")
-        bot.tasks.append(event_loop.create_task(rules_watcher.check_book_loop()))
-        bot.tasks.append(event_loop.create_task(rules_watcher.check_players_loop()))
+        # rules_watcher = bot.get_cog("RulesWatcher")
+        # bot.tasks.append(event_loop.create_task(rules_watcher.check_book_loop()))
+        # bot.tasks.append(event_loop.create_task(rules_watcher.check_players_loop()))
 
         json_watcher = bot.get_cog("JsonWatcher")
         bot.tasks.append(event_loop.create_task(json_watcher.check_loop()))
