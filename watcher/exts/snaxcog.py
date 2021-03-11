@@ -96,16 +96,22 @@ class SnaxCog(commands.Cog):
             WatcherDB._db.execute_sql(query_str)
 
         if len(errored_parts) > 0:
-            error_msg = "Failed to update the following: \n"
+            title = "These snacks have spoiled, I've not added them to your snaxfolio:"
+            error_msg = ""
             for part in errored_parts:
                 error_msg += f"{part}\n"
-            await ctx.send(error_msg)
+            embed = discord.Embed(colour=discord.Colour.red(),
+                                  title=title, description=error_msg)
+            await ctx.send(embed=embed)
 
         if len(success_parts) > 0:
-            succcess_msg = "Successfully set:\n"
+            title = "mmm these are tasty, I've added them to your snaxfolio:"
+            succcess_msg = ""
             for part in success_parts:
                 succcess_msg += f"{part}\n"
-            await ctx.send(succcess_msg)
+            embed = discord.Embed(colour=discord.Colour.green(),
+                                  title=title, description=succcess_msg)
+            await ctx.send(embed=embed)
 
     @commands.command(name='set_ignore')
     async def _set_ignore(self, ctx, *, ignore_info=None):
@@ -153,24 +159,25 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lucrativeb', 'lucb'])
     async def _lucrative_batters(self, ctx, count: int = 3):
-        if ctx.guild:
-            snax_channel_id = self.bot.config.get('snax_channel', 0)
-            if ctx.channel.id != snax_channel_id:
-                return await ctx.message.delete()
         """
         Usage: !lucrative_batters [count] - count is optional.
         Will return the best hitting idol choices for you based on the real performance of each player
         so far this season. Count is optional, has a default of 3 and has a hard limit of 10. This
         command is much more useful if you have set up your snaxfolio using the !set_snax command.
         """
+        if ctx.guild:
+            snax_channel_id = self.bot.config.get('snax_channel', 0)
+            if ctx.channel.id != snax_channel_id:
+                return await ctx.message.delete()
+
         user_snax = self._get_user_snax(ctx.author.id)
         if len(user_snax) > 0:
             snax_set = True
-            title = "The most lucrative batters this season based on your snaxfolio:\n"
+            title = f"Tastiest snacks in {ctx.author.display_name}'s snaxfolio:\n"
             luc_list = self.snaximum_instance.get_lucrative_batters(user_snax[0].get_as_dict())
         else:
             snax_set = False
-            title = "The most lucrative batters this season"
+            title = "Tastiest snacks in the League this season"
             luc_list = self.snaximum_instance.get_lucrative_batters()
 
         count = min(count, 10)
@@ -191,16 +198,17 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name='propose_upgrades', aliases=['propose_upgrade', 'what_next', "what_to_buy", 'pu'])
     async def _propose_upgrades(self, ctx, coins=50000):
-        if ctx.guild:
-            snax_channel_id = self.bot.config.get('snax_channel', 0)
-            if ctx.channel.id != snax_channel_id:
-                return await ctx.message.delete()
         """
         Usage: !propose_upgrades [coins] - coins is optional.
         Will return the most optimal next purchases for you. Coins is optional but is useful to filter
         the results to what you can actually afford right now. This command is not very useful unless
         you have set up your snaxfolio using the !set_snax command.
         """
+        if ctx.guild:
+            snax_channel_id = self.bot.config.get('snax_channel', 0)
+            if ctx.channel.id != snax_channel_id:
+                return await ctx.message.delete()
+
         user_snax = self._get_user_snax(ctx.author.id)
 
         ignore_list = []
@@ -218,11 +226,11 @@ class SnaxCog(commands.Cog):
         if len(user_snax) > 0:
             snaxfolio = user_snax[0].get_as_dict()
             proposal_dict = self.snaximum_instance.propose_upgrades(coins, snaxfolio, ignore_list)
-            title = "What you should buy next based on your snaxfolio:\n"
+            title = f"Happy Hour Menu for {ctx.author.display_name}'s snaxfolio:\n"
             snax_set = True
         else:
             proposal_dict = self.snaximum_instance.propose_upgrades(coins, None, ignore_list)
-            title = "What you should buy next\n"
+            title = "Generic Happy Hour Menu\n"
             snax_set = False
 
         if proposal_dict["none_available"] == True:
@@ -243,10 +251,11 @@ class SnaxCog(commands.Cog):
                 ratio = "infinite"
             else:
                 ratio = round(item['ratio']*1000)/1000
-            message += f"Buy {item['which']} for {item['cost']}\n"
+            name = item['which'].replace('_', ' ')
+            message += f"Buy {name} for {item['cost']}\n"
             message += f"Expected marginal profit this season: {item['dx']} ({ratio})\n\n"
 
-        message += "Value in parantheses indicates expected profitability this season.\nAny value > 1 " \
+        message += "Value in parentheses indicates expected profitability this season.\nAny value > 1 " \
                    "will result in profit during the current season."
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=title, description=message)
@@ -272,10 +281,11 @@ class SnaxCog(commands.Cog):
         snax_msg = ""
         snaxfolio = user_snax[0].get_as_dict()
         for snack, quantity in snaxfolio.items():
+            name = snack.replace('_', ' ')
             if quantity > 0:
-                snax_msg += f"{snack.capitalize()}: {quantity}\n"
+                snax_msg += f"{name.capitalize()}: {quantity}\n"
         embed = discord.Embed(colour=discord.Colour.green(),
-                              title="Your current snaxfolio.",
+                              title=f"{ctx.author.display_name}'s current snaxfolio.",
                               description=snax_msg)
         return await ctx.send(embed=embed)
 
