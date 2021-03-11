@@ -32,9 +32,10 @@ class SnaxCog(commands.Cog):
         self.bot = bot
         self.snaximum_instance = Snaximum()
 
-    def update_counts(self, blackholes, floods):
+    def update_counts(self, blackholes, floods, day):
         self.snaximum_instance.set_blackhole_count(blackholes)
         self.snaximum_instance.set_flood_count(floods)
+        self.snaximum_instance.set_current_day(day)
         self.snaximum_instance.refresh_all()
 
     @commands.command(hidden=True, name='set_snax_channel', aliases=['ssc'])

@@ -173,6 +173,7 @@ class Snaximum:
 
         self.flooded_runners = 180
         self.black_holes: int = 15
+        self.current_day = 60
 
         # Internal stuff:
         self.bets: Bets
@@ -213,6 +214,9 @@ class Snaximum:
 
     def set_flood_count(self, count):
         self.flooded_runners = count
+
+    def set_current_day(self, day):
+        self.current_day = day
 
     def refresh_all(self):
         self.refresh_players()
@@ -339,11 +343,19 @@ class Snaximum:
         if which == 'wet_pretzel':
             current_value = self.black_holes * self.get_payout('wet_pretzel', snaxfolio[which])
             new_value = self.black_holes * self.get_payout('wet_pretzel', data[which])
+            black_holes_per_day = self.black_holes / self.current_day
+            remaining = (98 - self.current_day) * black_holes_per_day
+            current_value = remaining * self.get_payout('wet_pretzel', snaxfolio[which])
+            new_value = remaining * self.get_payout('wet_pretzel', data[which])
             dx = new_value - current_value
             idol = None
         elif which == 'slushies':
             current_value = self.flooded_runners * self.get_payout('slushies', snaxfolio[which])
             new_value = self.flooded_runners * self.get_payout('slushies', data[which])
+            floods_per_day = self.flooded_runners / self.current_day
+            remaining = (98 - self.current_day) * floods_per_day
+            current_value = remaining * self.get_payout('slushies', snaxfolio[which])
+            new_value = remaining * self.get_payout('slushies', data[which])
             dx = new_value - current_value
             idol = None
         elif which == 'snake_oil':
@@ -355,6 +367,8 @@ class Snaximum:
                 bet=self.get_payout('snake_oil', data[which]),
                 threshold=self.betting_threshold
             )
+            current_value = (current_value / self.current_day) * (98 - self.current_day)
+            new_value = (new_value / self.current_day) * (98 - self.current_day)
             # Human tax!
             dx = round(self.betting_consistency * (new_value - current_value))
             idol = None
@@ -362,7 +376,10 @@ class Snaximum:
             # Which idol performs the best under this hypothetical new portfolio?
             best = self.get_lucrative_batters(data)[0]
             # What's the difference over the reference best payout?
-            dx = best[0]['total'] - reference[0]['total']
+            best_remaining = (best[0]['total'] / self.current_day) * (98 - self.current_day)
+            ref_remaining = (reference[0]['total'] / self.current_day) * (98 - self.current_day)
+            dx = best_remaining - ref_remaining
+            #dx = best[0]['total'] - reference[0]['total']
             idol = best[1]['player']['fullName']
 
         # How much does it cost to upgrade this snack?
@@ -373,7 +390,7 @@ class Snaximum:
 
         return {
             'which': which,
-            'dx': dx,
+            'dx': int(dx),
             'cost': cost,
             'ratio': ratio,
             'snaxfolio': data,

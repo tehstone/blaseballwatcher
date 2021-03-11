@@ -715,7 +715,7 @@ class Pendants(commands.Cog):
         flood_count, runner_count = await self._lookup_floods(season)
         p_worksheet.update("L2:M2", [[flood_count, runner_count]], raw=False)
         snax_cog = self.bot.cogs.get('SnaxCog')
-        snax_cog.update_counts(black_holes, flood_count)
+        snax_cog.update_counts(black_holes, flood_count, day)
 
     @staticmethod
     def save_daily_top_players(all_players, day):
