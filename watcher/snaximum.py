@@ -252,6 +252,12 @@ class Snaximum:
         self.current_season = season
 
     def refresh(self):
+        rsp = requests.get("https://www.blaseball.com/database/simulationData")
+        assert rsp.status_code == 200
+        simulationData = rsp.json()
+        self.current_day = simulationData["day"]
+        self.current_season = simulationData["season"] + 1
+
         self.refresh_batting_statistics()
         self.bets = Bets(self.bot, self.current_season, self.interactive)
         if not self.betting_threshold:
@@ -264,8 +270,22 @@ class Snaximum:
         rsp = requests.get('https://api.blaseball-reference.com/v2/players?season=current')
         assert rsp.status_code == 200
         players = rsp.json()
+
+        rsp = requests.get(f'https://www.blaseball.com/database/games?season='
+                           f'{self.current_season-1}&day={self.current_day}')
+        assert rsp.status_code == 200
+        games = rsp.json()
+        team_ids = []
+        for game in games:
+            team_ids.append(game['homeTeam'])
+            team_ids.append(game['awayTeam'])
+
         for player in players:
-            self.player_map[player['player_id']] = player
+            if len(games) > 0:
+                if player['team_id'] in team_ids:
+                    self.player_map[player['player_id']] = player
+            else:
+                self.player_map[player['player_id']] = player
 
     def refresh_batting_statistics(self) -> None:
         if self.interactive:
