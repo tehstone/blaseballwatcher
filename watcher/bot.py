@@ -55,7 +55,7 @@ class WatcherBot(commands.AutoShardedBot):
         self.empty_str = '\u200b'
         self.initial_start = True
         self.watch_servers = [738107179294523402, 671866672562307091]
-        self.off_topic_channels = [756667935728074754]
+        self.off_topic_channels = [756667935728074754, 815745893315772426]
         self.SPREADSHEET_IDS = {'season1': '1yvGP3DwIHC7NOsPIlSCMYKbrZp6Luvir2vRMvVfe4rg',
                                 'season2': '1LT2lE31Azx7iyT-KgHXrknUIXUVjr_WJ5iH7eYIWDmU',
                                 'season3': '1tGDP50yFYbYYrptcUB-735D75ZOTDxHHV-XC32wUFdc',
@@ -178,7 +178,7 @@ class WatcherBot(commands.AutoShardedBot):
                     await message.add_reaction("🚨")
                 if message.channel.id in self.off_topic_channels \
                         and self._has_string(r"\bblaseball\b", message.clean_content.lower()):
-                    await message.add_reaction("❌")
+                    await message.add_reaction("<:ballclark:766457844811431997>")
                 if message.clean_content == "sip":
                     await message.channel.send("https://imgur.com/zAUU6FD")
                 if message.clean_content == "spinny":
