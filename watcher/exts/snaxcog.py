@@ -6,7 +6,7 @@ import aiosqlite
 import discord
 from discord.ext import commands
 
-from watcher import utils
+from watcher import utils, checks
 from watcher.exts.db.watcher_db import SnaxInstance
 from watcher.snaximum import Snaximum
 
@@ -44,16 +44,30 @@ class SnaxCog(commands.Cog):
         self.snaximum_instance.bets.set_current_day(day)
         self.snaximum_instance.refresh()
 
-    @commands.command(hidden=True, name='set_snax_channel', aliases=['ssc'])
+    @commands.command(hidden=True, name='add_snax_channel', aliases=['asc'])
     @commands.has_permissions(manage_roles=True)
-    async def _set_snax_channel(self, ctx, channel_id):
+    async def _add_snax_channel(self, ctx, channel_id):
         output_channel = await utils.get_channel_by_name_or_id(ctx, channel_id)
         if output_channel is None:
             return await ctx.message.add_reaction(self.bot.failed_react)
-        self.bot.config['snax_channel'] = output_channel.id
+        snax_channels = self.bot.config.setdefault('snax_channels', [])
+        if output_channel.id not in snax_channels:
+            snax_channels.append(output_channel.id)
+        return await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(hidden=True, name='rem_snax_channel', aliases=['rsc'])
+    @commands.has_permissions(manage_roles=True)
+    async def _rem_snax_channel(self, ctx, channel_id):
+        output_channel = await utils.get_channel_by_name_or_id(ctx, channel_id)
+        if output_channel is None:
+            return await ctx.message.add_reaction(self.bot.failed_react)
+        snax_channels = self.bot.config.setdefault('snax_channels', [])
+        if output_channel.id in snax_channels:
+            snax_channels.remove(output_channel.id)
         return await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(name='set_snax', aliases=['setsnax', 'set_snack', 'set_snacks'])
+    @checks.allow_snax_commands()
     async def _set_snax(self, ctx, *, snax_info):
         """
         Usage: !set_snax snackname=quantity [,snackname=quantity...]
@@ -65,11 +79,6 @@ class SnaxCog(commands.Cog):
         !set_snax seeds=50, hot dogs = 100
         !set_snax wetzels = 10, snoil=50
         """
-        if ctx.guild:
-            snax_channel_id = self.bot.config.get('snax_channel', 0)
-            if ctx.channel.id != snax_channel_id:
-                return await ctx.message.delete()
-
         success_parts, errored_parts, user_snacks = self._process_snack_parts(snax_info)
 
         insert_value_str = ",".join(success_parts)
@@ -97,17 +106,55 @@ class SnaxCog(commands.Cog):
                                   title=title, description=success_msg)
             await ctx.send(embed=embed)
 
+    @commands.command(name='increment_snax', aliases=['incrementsnax', 'incsnax', 'snax++'])
+    @checks.allow_snax_commands()
+    async def _increment_snax(self, ctx, *, snax_info):
+        success_parts, errored_parts, user_snacks = self._process_snack_parts(snax_info)
+
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            await db.execute(f"insert or ignore into UserSnaxTable (user_id) values ({ctx.author.id})")
+            await db.commit()
+        snaxfolio = await self._get_user_snax(ctx.author.id)
+        for part in success_parts:
+            snack, quantity = part.split('=')
+            snaxfolio[snack] += int(quantity)
+
+        insert_values = []
+        for snack, quantity in snaxfolio.items():
+            insert_values.append(f"{snack}={quantity}")
+        insert_value_str = ','.join(insert_values)
+        if len(insert_value_str) > 0:
+            async with aiosqlite.connect(self.bot.db_path) as db:
+                await db.execute(f"insert or ignore into UserSnaxTable (user_id) values ({ctx.author.id})")
+                await db.execute(f"update UserSnaxTable set {insert_value_str} where user_id == {ctx.author.id}")
+                await db.commit()
+
+        if len(errored_parts) > 0:
+            title = "These snacks have spoiled, I've not added them to your snaxfolio:"
+            error_msg = ""
+            for part in errored_parts:
+                error_msg += f"{part}\n"
+            embed = discord.Embed(colour=discord.Colour.red(),
+                                  title=title, description=error_msg)
+            await ctx.send(embed=embed)
+
+        if len(success_parts) > 0:
+            title = "These look tasty, I've added a few more to your snaxfolio:"
+            success_msg = ""
+            for part in success_parts:
+                success_msg += f"{part.replace('=', ' - ')}\n"
+            embed = discord.Embed(colour=discord.Colour.green(),
+                                  title=title, description=success_msg)
+            await ctx.send(embed=embed)
+
     @commands.command(name='set_ignore', aliases=['setignore'])
+    @checks.allow_snax_commands()
     async def _set_ignore(self, ctx, *, ignore_info=None):
         """
         Usage: !set_ignore snack[,snack2...]
         Will accept any number of snacks separated by commas. Each time you use this command your previously
         saved ignore list will be overwritten.
         """
-        if ctx.guild:
-            snax_channel_id = self.bot.config.get('snax_channel', 0)
-            if ctx.channel.id != snax_channel_id:
-                return await ctx.message.delete()
         if not ignore_info:
             async with aiosqlite.connect(self.bot.db_path) as db:
                 await db.execute(f"insert or ignore into UserSnaxIgnoreTable (user_id) values ({ctx.author.id})")
@@ -135,6 +182,7 @@ class SnaxCog(commands.Cog):
             await ctx.send(error_msg)
 
     @commands.command(name='add_ignore', aliases=['addignore'])
+    @checks.allow_snax_commands()
     async def _add_ignore(self, ctx, *, ignore_info):
         current_ignore_list = await self._get_user_ignore_list(ctx.author.id)
         success_parts, errored_parts = self._process_ignore_parts(ignore_info)
@@ -158,6 +206,7 @@ class SnaxCog(commands.Cog):
         await ctx.send(f"Your current ignore list is: {', '.join(current_ignore_list)}")
 
     @commands.command(name='remove_ignore', aliases=['removeignore', 'rem_ignore', 'remignore'])
+    @checks.allow_snax_commands()
     async def _remove_ignore(self, ctx, *, ignore_info):
         current_ignore_list = await self._get_user_ignore_list(ctx.author.id)
         success_parts, errored_parts = self._process_ignore_parts(ignore_info)
@@ -181,6 +230,7 @@ class SnaxCog(commands.Cog):
         await ctx.send(f"Your current ignore list is: {', '.join(current_ignore_list)}")
 
     @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lb'])
+    @checks.allow_snax_commands()
     async def _lucrative_batters(self, ctx, count: int = 3):
         """
         Usage: !lucrative_batters [count] - count is optional.
@@ -188,11 +238,6 @@ class SnaxCog(commands.Cog):
         so far this season. Count is optional, has a default of 3 and has a hard limit of 10. This
         command is much more useful if you have set up your snaxfolio using the !set_snax command.
         """
-        if ctx.guild:
-            snax_channel_id = self.bot.config.get('snax_channel', 0)
-            if ctx.channel.id != snax_channel_id:
-                return await ctx.message.delete()
-
         snaxfolio = await self._get_user_snax(ctx.author.id)
 
         if len(snaxfolio) > 0:
@@ -221,6 +266,7 @@ class SnaxCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='propose_upgrades', aliases=['propose_upgrade', 'what_next', "what_to_buy", 'pu'])
+    @checks.allow_snax_commands()
     async def _propose_upgrades(self, ctx, *, info=None):
         """
         Usage: !propose_upgrades [coins] - coins is optional.
@@ -228,11 +274,6 @@ class SnaxCog(commands.Cog):
         the results to what you can actually afford right now. This command is not very useful unless
         you have set up your snaxfolio using the !set_snax command.
         """
-        if ctx.guild:
-            snax_channel_id = self.bot.config.get('snax_channel', 0)
-            if ctx.channel.id != snax_channel_id:
-                return await ctx.message.delete()
-
         snaxfolio = await self._get_user_snax(ctx.author.id)
         ignore_list = await self._get_user_ignore_list(ctx.author.id)
 
@@ -290,11 +331,8 @@ class SnaxCog(commands.Cog):
         return await ctx.send(embed=embed)
 
     @commands.command(name="snaxfolio", aliases=['snax_folio', 'snax_portfolio', 'my_snax', 'mysnax'])
+    @checks.allow_snax_commands()
     async def _snaxfolio(self, ctx):
-        if ctx.guild:
-            snax_channel_id = self.bot.config.get('snax_channel', 0)
-            if ctx.channel.id != snax_channel_id:
-                return await ctx.message.delete()
         snaxfolio = await self._get_user_snax(ctx.author.id)
 
         if len(snaxfolio) < 0:

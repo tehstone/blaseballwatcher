@@ -1,6 +1,8 @@
 from discord.ext import commands
 import discord.utils
 
+from watcher import errors
+
 
 def is_user_owner_check(config, userid):
     owner = config['master']
@@ -96,3 +98,20 @@ def is_dev_or_owner_or_perms(**perms):
             return check_permissions(ctx, perms)
 
     return commands.check(predicate)
+
+
+def allow_snax_commands():
+    def predicate(ctx):
+        if check_snax_channel(ctx):
+            return True
+        else:
+            raise errors.SnaxChannelCheckFail()
+
+    return commands.check(predicate)
+
+
+def check_snax_channel(ctx):
+    if ctx.guild is None:
+        return True
+    snax_channels = ctx.bot.config.get('snax_channels', [])
+    return ctx.channel.id in snax_channels
