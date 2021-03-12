@@ -281,13 +281,13 @@ class SnaxCog(commands.Cog):
         for player in luc_list[:count]:
             name = player[1]["player"]["fullName"]
             player_id = player[1]["player"]["id"]
-            team_id = player[1]["team"]["team_id"]
             shorthand = player[1]["team"]["team_abbreviation"]
             entry = f"[{name}]({'https://www.blaseball.com/player/' + player_id}) "
             stats = player[0]
             message += f"Coins earned this season from {entry} ({shorthand}):\n"
             total = stats['hits'] + stats['home_runs'] + stats['stolen_bases']
-            message += f"Total: {total} - Hits: {stats['hits']}, HRs: {stats['home_runs']}, SBs: {stats['stolen_bases']}\n\n"
+            message += f"Total: {total:,} - Hits: {stats['hits']:,} " \
+                       f"HRs: {stats['home_runs']:,} SBs: {stats['stolen_bases']:,}\n\n"
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=title, description=message)
         if not snax_set:
@@ -347,7 +347,7 @@ class SnaxCog(commands.Cog):
             else:
                 ratio = round(ratio*1000)/1000
             name = item['which'].replace('_', ' ')
-            message += f"Buy {name} for {item['cost']}\n"
+            message += f"Buy {name} for {item['cost']:,}\n"
             message += f"Expected revenue increase this season: {round(item['sgi'])} ({ratio})\n\n"
 
         message += "(ratio) is the ratio of revenue increase to cost during this season."
