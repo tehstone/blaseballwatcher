@@ -71,6 +71,7 @@ class SnaxCog(commands.Cog):
     async def _set_snax(self, ctx, *, snax_info):
         """
         Usage: !set_snax snackname=quantity [,snackname=quantity...]
+        Aliases: !setsnax !set_snack !set_snacks
         Can accept any number of snack name/quantity pairs. Each pair should be separated by a comma
         and have an '=' between name and quantity. Snack name is somewhat forgiving so you won't need
         to remember the exact name the bot expects but if you receive an error you will need to check
@@ -109,6 +110,18 @@ class SnaxCog(commands.Cog):
     @commands.command(name='increment_snax', aliases=['incrementsnax', 'incsnax', 'snax++'])
     @checks.allow_snax_commands()
     async def _increment_snax(self, ctx, *, snax_info):
+        """
+        Usage: !increment_snax snackname=quantity [,snackname=quantity...]
+        Aliases !incrementsnax !incsnax !snax++
+        Adds the number provided to the already stored number of snacks for that item.
+        Can accept any number of snack name/quantity pairs. Each pair should be separated by a comma
+        and have an '=' between name and quantity. Snack name is somewhat forgiving so you won't need
+        to remember the exact name the bot expects but if you receive an error you will need to check
+        your spelling and try again.
+        Examples:
+        !increment_snax seeds=50, hot dogs = 100
+        !increment_snax wetzels = 10, snoil=50
+        """
         success_parts, errored_parts, user_snacks = self._process_snack_parts(snax_info)
 
         async with aiosqlite.connect(self.bot.db_path) as db:
@@ -184,6 +197,11 @@ class SnaxCog(commands.Cog):
     @commands.command(name='add_ignore', aliases=['addignore'])
     @checks.allow_snax_commands()
     async def _add_ignore(self, ctx, *, ignore_info):
+        """
+        Usage: !add_ignore snack[,snack2...]
+        Adds the provided snacks to the list that will be ignored when proposing upgrades.
+        Will accept any number of snacks separated by commas.
+        """
         current_ignore_list = await self._get_user_ignore_list(ctx.author.id)
         success_parts, errored_parts = self._process_ignore_parts(ignore_info)
 
@@ -208,6 +226,11 @@ class SnaxCog(commands.Cog):
     @commands.command(name='remove_ignore', aliases=['removeignore', 'rem_ignore', 'remignore'])
     @checks.allow_snax_commands()
     async def _remove_ignore(self, ctx, *, ignore_info):
+        """
+        Usage: !remove_ignore snack[,snack2...]
+        Removes the provided snacks from the list that will be ignored when proposing upgrades.
+        Will accept any number of snacks separated by commas.
+        """
         current_ignore_list = await self._get_user_ignore_list(ctx.author.id)
         success_parts, errored_parts = self._process_ignore_parts(ignore_info)
 
@@ -333,6 +356,9 @@ class SnaxCog(commands.Cog):
     @commands.command(name="snaxfolio", aliases=['snax_folio', 'snax_portfolio', 'my_snax', 'mysnax'])
     @checks.allow_snax_commands()
     async def _snaxfolio(self, ctx):
+        """
+        Displays a list of your current snax.
+        """
         snaxfolio = await self._get_user_snax(ctx.author.id)
 
         if len(snaxfolio) < 0:
