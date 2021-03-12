@@ -760,7 +760,8 @@ class GameData(commands.Cog):
                         rounded_odds.append(round(o * 1000)/10)
 
                     rounded_odds.sort()
-                    rounded_odds += [''] * (10 - len(rounded_odds))
+                    # need to track total expected number of games better in case it changes again
+                    rounded_odds += [''] * (12 - len(rounded_odds))
                     row = [day+1, odds[season][day]["results"]["favored"], odds[season][day]["results"]["underdog"]]
                     row += rounded_odds
                     row += payouts
