@@ -13,17 +13,18 @@ class MyHelpCommand(commands.DefaultHelpCommand):
     async def send_bot_help(self, mapping):
         dest = self.get_destination()
         help_embed = discord.Embed(title="Snaxfolio Commands")
-        text = "`!set_snax snackname=quantity [,snackname=quantity...]` Sets your snack quantities.\n\n"
-        text += "`!set_ignore snack [,snack2...]` Sets the list of snacks to be ignored for recommendations. " \
-                "Overwrites previously set list.\n\n"
-        text += "`!add_ignore snack [,snack2...]` Adds snack(s) to your list of ignored snacks\n\n"
-        text += "`!remove_ignore snack [,snack2...]` Removes snack(s) from your list of ignored snacks\n\n"
-        text += "`!snaxfolio` Displays your current snack quantities."
+        text = "!set_snax\n"
+        text += "!increment_snax\n"
+        text += "!snaxfolio"
         help_embed.add_field(name="Snaxfolio Management", value=text)
-        text = "`!lucrative_batters [count]` count is optional. Returns personalized best hitting idol choices based " \
-               "on current performance of all players and your snaxfolio.\n\n"
-        text += "`!propose_upgrades [coins], ['profit']` coins is optional. Returns optimal next snack upgrade path." \
-                "Include 'profit' to sort the list by total profit rather than profit:cost ratio."
+
+        text = "!set_ignore\n"
+        text += "!add_ignore\n"
+        text += "!remove_ignore"
+        help_embed.add_field(name="Ignoring Snax", value=text)
+
+        text = "!lucrative_batters \n"
+        text += "!propose_upgrades "
         help_embed.add_field(name="Snaxfolio Usage", value=text)
         text = "Do `!help <command_name>` for any command to see more detailed help."
         help_embed.add_field(name="Additional Help", value=text)
