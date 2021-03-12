@@ -38,7 +38,6 @@ class SnaxCog(commands.Cog):
         self.bot = bot
         season = self.bot.config['current_season']
         self.snaximum_instance = Snaximum(bot, season)
-        self.team_short_map = None
 
     def update_counts(self, black_holes, floods, day):
         self.snaximum_instance.set_blackhole_count(black_holes)
@@ -46,17 +45,6 @@ class SnaxCog(commands.Cog):
         self.snaximum_instance.set_current_day(day)
         self.snaximum_instance.bets.set_current_day(day)
         self.snaximum_instance.refresh()
-
-    async def get_short_map(self):
-        if self.team_short_map:
-            return self.team_short_map
-        with open(os.path.join('data', 'allTeams.json'), 'r', encoding='utf-8') as file:
-            all_teams = json.load(file)
-        team_short_map = {}
-        for team in all_teams:
-            team_short_map[team["id"]] = team["shorthand"]
-        self.team_short_map = team_short_map
-        return team_short_map
 
     @commands.command(hidden=True, name='add_snax_channel', aliases=['asc'])
     @commands.has_permissions(manage_roles=True)
@@ -289,13 +277,12 @@ class SnaxCog(commands.Cog):
         count = min(count, 10)
         count = max(count, 1)
 
-        team_short_map = await self.get_short_map()
         message = ""
         for player in luc_list[:count]:
             name = player[1]["player"]["fullName"]
             player_id = player[1]["player"]["id"]
             team_id = player[1]["team"]["team_id"]
-            shorthand = team_short_map[team_id]
+            shorthand = player[1]["team"]["team_abbreviation"]
             entry = f"[{name}]({'https://www.blaseball.com/player/' + player_id}) "
             stats = player[0]
             message += f"Coins earned this season from {entry} ({shorthand}):\n"

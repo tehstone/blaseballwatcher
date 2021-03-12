@@ -13,13 +13,17 @@ from watcher.exts import gamedata
 class BetAdvice(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.team_short_map = None
 
     async def get_short_map(self):
+        if self.team_short_map:
+            return self.team_short_map
         with open(os.path.join('data', 'allTeams.json'), 'r', encoding='utf-8') as file:
             all_teams = json.load(file)
         team_short_map = {}
         for team in all_teams:
             team_short_map[team["id"]] = team["shorthand"]
+        self.team_short_map = team_short_map
         return team_short_map
 
     async def get_player_stlats(self):
