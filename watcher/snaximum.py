@@ -279,6 +279,7 @@ class Snaximum:
         for game in games:
             team_ids.append(game['homeTeam'])
             team_ids.append(game['awayTeam'])
+        team_ids = ["57ec08cc-0411-4643-b304-0e80dbc15ac7","c73b705c-40ad-4633-a6ed-d357ee2e2bcf","36569151-a2fb-43c1-9df7-2df512424c82","adc5b394-8f76-416d-9ce9-813706877b84"]
 
         for player in players:
             if len(games) > 0:
@@ -392,14 +393,15 @@ class Snaximum:
         batters = []
         for split in self.data['splits']:
             stats = cast(PlayerStats, split['stat'])
-            player = self.player_map.get(split['player']['id'], {})
-            payout = self.calculate_payouts(
-                stats, player,
-                snaxfolio['seeds'],
-                snaxfolio['hot_dog'],
-                snaxfolio['pickles']
-            )
-            batters.append((payout, split, player))
+            player = self.player_map.get(split['player']['id'], None)
+            if player:
+                payout = self.calculate_payouts(
+                    stats, player,
+                    snaxfolio['seeds'],
+                    snaxfolio['hot_dog'],
+                    snaxfolio['pickles']
+                )
+                batters.append((payout, split, player))
 
         batters = sorted(batters, key=lambda x: x[0]['total'], reverse=True)
         self.batter_analysis_cache[key] = batters
