@@ -171,7 +171,8 @@ class Pendants(commands.Cog):
                 if "shutout" not in p_values:
                     p_values["shutout"] = 0
                 if p_values["playerId"] in pitcher_p_values:
-                    p_values["pitchesThrown"] += pitcher_p_values[p_values["playerId"]]["pitchesThrown"]
+                    if "pitchesThrown" in pitcher_p_values[p_values["playerId"]]:
+                        p_values["pitchesThrown"] += pitcher_p_values[p_values["playerId"]]["pitchesThrown"]
                 else:
                     pitcher_p_values[p_values["playerId"]] = {"statsheetId": p_values["id"]}
             else:
@@ -574,15 +575,15 @@ class Pendants(commands.Cog):
 
     async def update_leaders_sheet(self, season, day):
         season -= 1
-        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
+        agc = await self.bot.authorize_agcm()
         if self.bot.config['live_version'] == True:
-            sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season + 1}"])
+            sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season + 1}"])
         else:
-            sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
+            sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
         if season >= 12:
-            p_worksheet = sheet.worksheet("Snack Income")
+            p_worksheet = await sheet.worksheet("Snack Income")
         else:
-            p_worksheet = sheet.worksheet("Pendants")
+            p_worksheet = await sheet.worksheet("Pendants")
         all_players = await self.compile_stats()
 
         sorted_hits, sorted_homeruns, \
@@ -607,7 +608,10 @@ class Pendants(commands.Cog):
                     name = f"({team}) {values['name']}"
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
                     rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
-        p_worksheet.update("A23:F37", rows)
+        await p_worksheet.batch_update([{
+            'range': "A23:F37",
+            'values': rows
+        }])
 
         rows = []
         sorted_strikeouts = {k: v
@@ -624,7 +628,10 @@ class Pendants(commands.Cog):
             name = f"({team}) {values['name']}"
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, '', values["strikeouts"], k_9_value])
-        p_worksheet.update("L23:P29", rows)
+        await p_worksheet.batch_update([{
+            'range': "L23:P29",
+            'values': rows
+        }])
 
         rows = []
         for i in range(1, 6):
@@ -637,7 +644,10 @@ class Pendants(commands.Cog):
                 team = team_short_map[values["teamId"]]
                 name = f"({team}) {values['name']}"
                 rows.append([name, '', values["shutout"]])
-        p_worksheet.update("H23:J37", rows)
+        await p_worksheet.batch_update([{
+            'range': "H23:J37",
+            'values': rows
+        }])
 
         rows = []
         sorted_shutouts = {k: v for k, v in sorted(pitcher_dict.items(), key=lambda item: item[1]['shutout'],
@@ -648,7 +658,10 @@ class Pendants(commands.Cog):
             team = team_short_map[values["teamId"]]
             name = f"({team}) {values['name']}"
             rows.append([values["rotation"], name, '', values["shutout"]])
-        p_worksheet.update("L33:O37", rows)
+        await p_worksheet.batch_update([{
+            'range': "L33:O37",
+            'values': rows
+        }])
 
         rows = []
 
@@ -687,7 +700,10 @@ class Pendants(commands.Cog):
                 name = f"({team}) {values['name']}"
                 rows.append([name, '', hits, values["homeRuns"], values["stolenBases"]])
 
-        p_worksheet.update("A9:E18", rows)
+        await p_worksheet.batch_update([{
+            'range': "A9:E18",
+            'values': rows
+        }])
 
         # York Silk
         ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
@@ -707,7 +723,10 @@ class Pendants(commands.Cog):
             wg_row[3] = sorted_homeruns[wg_id].setdefault("homeRuns", 0)
         if wg_id in sorted_stolenbases:
             wg_row[4] = sorted_stolenbases[wg_id].setdefault("stolenBases", 0)
-        p_worksheet.update("A6:E7", [ys_row, wg_row], raw=False)
+        await p_worksheet.batch_update([{
+            'range': "A6:E7",
+            'values': [ys_row, wg_row]
+        }])
 
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
             json.dump(all_players, file)
@@ -718,10 +737,16 @@ class Pendants(commands.Cog):
         for __, weather_map in day_weather.items():
             if "Black Hole" in weather_map:
                 black_holes += weather_map["Black Hole"]
-        p_worksheet.update("B2:B2", [[black_holes]], raw=False)
+        await p_worksheet.batch_update([{
+            'range': "B2:B2",
+            'values': [[black_holes]]
+        }])
 
         flood_count, runner_count = await self._lookup_floods(season)
-        p_worksheet.update("L2:M2", [[flood_count, runner_count]], raw=False)
+        await p_worksheet.batch_update([{
+            'range': "L2:M2",
+            'values': [[flood_count, runner_count]]
+        }])
         snax_cog = self.bot.cogs.get('SnaxCog')
         snax_cog.update_counts(black_holes, flood_count, day)
 

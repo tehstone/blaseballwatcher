@@ -4,7 +4,7 @@ aiosqlite==0.17.0
 git+https://github.com/Rapptz/discord.py@master
 beautifulsoup4==4.7.1
 esprima==4.0.1
-gspread==3.6.0
+gspread_asyncio==1.4.0
 gspread-formatting==0.3.7
 beautifulsoup4==4.7.1
 matplotlib==3.3.1

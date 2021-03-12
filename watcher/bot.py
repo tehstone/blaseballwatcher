@@ -1,3 +1,4 @@
+import gspread_asyncio
 import json
 import os
 import pickle
@@ -5,6 +6,7 @@ import re
 import sys
 
 import requests
+from google.oauth2.service_account import Credentials
 
 from watcher import utils
 from watcher.logs import init_loggers
@@ -102,6 +104,8 @@ class WatcherBot(commands.AutoShardedBot):
         self.check_for_games_complete = self.config.setdefault('check_for_games_complete', False)
         self.current_day = 0
         self.tasks = []
+        self.agcm = gspread_asyncio.AsyncioGspreadClientManager(self.get_creds)
+
 
         for ext in default_exts:
             try:
@@ -111,6 +115,19 @@ class WatcherBot(commands.AutoShardedBot):
             else:
                 if 'debug' in sys.argv[1:]:
                     print(f'Loaded {ext} extension.')
+
+    @staticmethod
+    def get_creds():
+        creds = Credentials.from_service_account_file(os.path.join("gspread", "service_account.json"))
+        scoped = creds.with_scopes([
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ])
+        return scoped
+
+    async def authorize_agcm(self):
+        return await self.agcm.authorize()
 
     class RenameUnpickler(pickle.Unpickler):
         def find_class(self, module, name):

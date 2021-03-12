@@ -5,7 +5,6 @@ import asyncio
 import json
 import re
 
-import gspread
 from gspread_formatting import *
 
 from discord.ext import commands
@@ -342,25 +341,25 @@ class GameData(commands.Cog):
             return "Returned from Elsewhere"
 
     async def update_spreadsheets(self, seasons, fill=False):
-        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
+        agc = await self.bot.authorize_agcm()
         schedule, teams, odds, weathers, flood_count = self.base_season_parser(seasons, fill)
         league_records = {"Wild": {}, "Mild": {}}
 
         for season in schedule:
             season_outcomes = {}
             if self.bot.config['live_version'] == True:
-                sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season+1}"])
+                sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season+1}"])
             else:
-                sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
+                sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
             print("Updating Team Schedules")
             day = 0
             for team in schedule[season]:
                 if season < 12:
-                    s_worksheet = sheet.worksheet(spreadsheet_names_old[team]["schedule"])
-                    m_worksheet = sheet.worksheet(spreadsheet_names_old[team]["matchups"])
+                    s_worksheet = await sheet.worksheet(spreadsheet_names_old[team]["schedule"])
+                    m_worksheet = await sheet.worksheet(spreadsheet_names_old[team]["matchups"])
                 else:
-                    s_worksheet = sheet.worksheet(spreadsheet_names[team]["schedule"])
-                    m_worksheet = sheet.worksheet(spreadsheet_names[team]["matchups"])
+                    s_worksheet = await sheet.worksheet(spreadsheet_names[team]["schedule"])
+                    m_worksheet = await sheet.worksheet(spreadsheet_names[team]["matchups"])
                 srows = [["Day", "Opponent", "Team Score", "Opp Score", "Winner",
                           "Winning Pitcher", "Losing Pitcher", "Streak", "Record",
                           "Game Type", "Win", "Home",
@@ -535,7 +534,10 @@ class GameData(commands.Cog):
                 indices_to_add = len(srows[0]) - len(summary_row)
                 summary_row += [''] * indices_to_add
                 srows.insert(0, summary_row)
-                s_worksheet.update(f"A{2}:Q{i+1}", srows)
+                await s_worksheet.batch_update([{
+                    'range': f"A{2}:Q{i+1}",
+                    'values': srows
+                }])
 
                 if fill:
                     for opp in team_series:
@@ -544,23 +546,30 @@ class GameData(commands.Cog):
                                team_series[opp]['home'], team_series[opp]['away']]
                         mrows.append(row)
                         j += 1
-                    m_worksheet.update(f"A{3}:G{j}", mrows)
+                    await m_worksheet.batch_update([{
+                        'range': f"A{3}:G{j}",
+                        'values': mrows
+                    }])
 
                     k = 16
                     if j >= 16:
                         k = j + 1
-                    m_worksheet.update(f"B{k}:B{k+2}",
-                                       [[f'=SUM(FILTER(D3:D{j},E3:E{j}="Division"))'],
-                                        [f'=SUM(FILTER(D3:D{j},E3:E{j}="League"))'],
-                                        [f'=SUM(FILTER(D3:D{j},E3:E{j}="InterLeague"))']
-                                        ], raw=False)
-                    m_worksheet.update(f"F{k}:F{k+1}", [[f'=sum(F3:F{j})'], [f'=sum(G3:G{j})']], raw=False)
+                    await m_worksheet.batch_update([{
+                        'range': f"B{k}:B{k+2}",
+                        'values': [[f'=SUM(FILTER(D3:D{j},E3:E{j}="Division"))'],
+                                   [f'=SUM(FILTER(D3:D{j},E3:E{j}="League"))'],
+                                   [f'=SUM(FILTER(D3:D{j},E3:E{j}="InterLeague"))']]
+                    }], raw=False)
+                    # await m_worksheet.update(f"F{k}:F{k+1}", [[f'=sum(F3:F{j})'], [f'=sum(G3:G{j})']], raw=False)
                 else:
                     for opp in team_series:
                         row = [team_series[opp]['wins'], team_series[opp]['losses']]
                         mrows.append(row)
                         j += 1
-                    m_worksheet.update(f"B{3}:C{j}", mrows)
+                    await m_worksheet.batch_update([{
+                        'range': f"B{3}:C{j}",
+                        'values': mrows
+                    }])
                 league_records[teams[team]['league']][teams[team]["name"]] = record
                 if fill:
                     await asyncio.sleep(10)
@@ -587,11 +596,16 @@ class GameData(commands.Cog):
                             day_weather[str(day)][outcome_type] += 1
                         orows.append([day+1, outcome.strip()])
                         otypes.append([outcome_type])
-            o_worksheet = sheet.worksheet("Blaseball")
+            o_worksheet = await sheet.worksheet("Blaseball")
 
-            o_worksheet.merge_cells(f"B{9}:H{9 + len(orows)}", merge_type="MERGE_ROWS")
-            o_worksheet.update(f"A{9}:B{9 + len(orows)}", orows)
-            o_worksheet.update(f"I{9}:I{9 + len(otypes)}", otypes)
+            await o_worksheet.batch_update([{
+                'range': f"A{9}:B{9 + len(orows)}",
+                'values': orows
+            }])
+            await o_worksheet.batch_update([{
+                'range': f"I{9}:I{9 + len(otypes)}",
+                'values': otypes
+            }])
 
             with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_day_weather.json'), 'w') as file:
                 json.dump(day_weather, file)
@@ -602,7 +616,10 @@ class GameData(commands.Cog):
                     weather_name = weather_types[w]
                     w_row = [weather_name, count, f"{round((count/990)*1000)/10}%"]
                     weather_rows.append(w_row)
-                o_worksheet.update(f"K{9}:M{9 + len(weather_rows)}", weather_rows)
+                await o_worksheet.batch_update([{
+                    'range': f"K{9}:M{9 + len(weather_rows)}",
+                    'values': weather_rows
+                }])
             else:
                 try:
                     with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
@@ -648,7 +665,7 @@ class GameData(commands.Cog):
                     team_list.append(d_record)
                 team_list += team_columns
 
-            def update_league(league, start_i):
+            async def update_league(league, start_i):
                 sorted_league = {k: v for k, v in
                                  sorted(league.items(),
                                         key=lambda item: item[1]["total"]["win"] + item[1]["win_modifier"],
@@ -692,23 +709,31 @@ class GameData(commands.Cog):
                     teams[i] += [f"{record['single_run']['win']}-{record['single_run']['loss']}"]
                     teams[i] += record["scored"], record["given"]
 
-                s_worksheet.update(f"A{start_i-1}:AN{start_i -1}",
-                                   [["Team", "Wins", "Record", "Pct.", "GB", "Magic #",
-                                    "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
-                                     "Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands", "Georgias",
-                                     "Spies", "Flowers", "Sunbeams", "Dale", "Tacos", "Worms",
-                                     "Lovers", "Pies", "Garages", "Steaks", "Millennials", "Mechanics",
-                                     "Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic", "Crabs",
-                                     "1-Run", "R Scored", "R Allowed"]])
+                await s_worksheet.batch_update([{
+                    'range': f"A{start_i-1}:AN{start_i -1}",
+                    'values': [["Team", "Wins", "Record", "Pct.", "GB", "Magic #",
+                                "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
+                                "Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands", "Georgias",
+                                "Spies", "Flowers", "Sunbeams", "Dale", "Tacos", "Worms",
+                                "Lovers", "Pies", "Garages", "Steaks", "Millennials", "Mechanics",
+                                "Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic", "Crabs",
+                                "1-Run", "R Scored", "R Allowed"]]
+                }])
 
-                s_worksheet.update(f"A{start_i}:AN{start_i + len(teams)}", teams)
-                s_worksheet.update(f"C28", [[99-day]])
+                await s_worksheet.batch_update([{
+                    'range': f"A{start_i}:AN{start_i + len(teams)}",
+                    'values': teams
+                }])
+                await s_worksheet.batch_update([{
+                    'range': "C28",
+                    'values': [[99-day]]
+                }])
 
-            s_worksheet = sheet.worksheet("Standings")
+            s_worksheet = await sheet.worksheet("Standings")
             if day <= 98:
                 print("Updating Standings")
-                update_league(league_records["Wild"], 4)
-                update_league(league_records["Mild"], 19)
+                await update_league(league_records["Wild"], 4)
+                await update_league(league_records["Mild"], 19)
 
             print("Updating Odds")
             if season in odds:
@@ -742,9 +767,15 @@ class GameData(commands.Cog):
                     odds_rows.append(row)
                     for c in range(len(bet_counts)):
                         total_betcounts[c] += bet_counts[c]
-                od_worksheet = sheet.worksheet("Daily Results")
-                od_worksheet.update(f"A{4}:AD{4 + len(odds_rows)}", odds_rows)
-                od_worksheet.update(f"P{2}:AD{2}", [total_betcounts])
+                od_worksheet = await sheet.worksheet("Daily Results")
+                await od_worksheet.batch_update([{
+                    'range': f"A{4}:AD{4 + len(odds_rows)}",
+                    'values': odds_rows
+                }])
+                await od_worksheet.batch_update([{
+                    'range': f"P{2}:AD{2}",
+                    'values': [total_betcounts]
+                }])
 
             print("Updates Complete")
             await asyncio.sleep(5)
@@ -842,10 +873,13 @@ class GameData(commands.Cog):
 
     @commands.command(aliases=['tsh'])
     async def _test_spreadsheet(self, ctx):
-        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
-        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS["season11"])
-        s_worksheet = sheet.worksheet("Blaseball")
-        s_worksheet.update(f"J1:J1", "test")
+        agc = await self.bot.authorize_agcm()
+        sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS["season11"])
+        s_worksheet = await sheet.worksheet("Blaseball")
+        await s_worksheet.batch_update([{
+            'range': f"J1:J1",
+            'values': "test"
+        }])
 
     @commands.command(aliases=['utb'])
     async def _update_tie_breakers(self, ctx):
@@ -875,9 +909,9 @@ class GameData(commands.Cog):
 
     @commands.command(name="apply_conditional_rules", aliases=['acr'])
     async def _apply_conditional_rules(self, ctx):
-        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
-        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
-        od_worksheet = sheet.worksheet("Daily Results")
+        agc = await self.bot.authorize_agcm()
+        sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
+        od_worksheet = await sheet.worksheet("Daily Results")
         rules = get_conditional_format_rules(od_worksheet)
         for i in range(5, 106):
             rule = ConditionalFormatRule(
