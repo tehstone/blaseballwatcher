@@ -279,7 +279,17 @@ class Snaximum:
         for game in games:
             team_ids.append(game['homeTeam'])
             team_ids.append(game['awayTeam'])
-        team_ids = ["57ec08cc-0411-4643-b304-0e80dbc15ac7","c73b705c-40ad-4633-a6ed-d357ee2e2bcf","36569151-a2fb-43c1-9df7-2df512424c82","adc5b394-8f76-416d-9ce9-813706877b84"]
+        team_ids = [
+            "979aee4a-6d80-4863-bf1c-ee1a78e06024",  # fridays
+            "878c1bf6-0d21-4659-bfee-916c8314d69c",  # tacos
+            "ca3f1c8c-c025-4d8e-8eef-5be6accbeb16",  # firefighters
+            "9debc64f-74b7-4ae1-a4d6-fce0144b6ea5",  # spies
+            "8d87c468-699a-47a8-b40d-cfb73a5660ad",  # crabs
+            "eb67ae5e-c4bf-46ca-bbbc-425cd34182ff",  # moist talkers
+            "36569151-a2fb-43c1-9df7-2df512424c82",  # millennials
+            "adc5b394-8f76-416d-9ce9-813706877b84"   # breath mints
+        ]
+        team_ids = ["36569151-a2fb-43c1-9df7-2df512424c82", "adc5b394-8f76-416d-9ce9-813706877b84"]
 
         for player in players:
             if len(games) > 0:
