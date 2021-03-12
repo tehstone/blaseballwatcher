@@ -14,8 +14,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
 
 snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake_oil", "snoil": "snake_oil",
                "fresh": "fresh_popcorn", "popcorn": "fresh_popcorn",
-               "fresh popcorn": "fresh_popcorn", "fresh_popcorn": "fresh_popcorn",
+               "fresh popcorn": "fresh_popcorn", "fresh_popcorn": "fresh_popcorn", "freshpopcorn": "fresh_popcorn",
                "stale": "stale_popcorn", "stale popcorn": "stale_popcorn", "stale_popcorn": "stale_popcorn",
+               "stalepopcorn": "stale_popcorn",
                "chips": "chips", "burger": "burger", "burgers": "burger",
                "seed": "seeds", "sunflower": "seeds", "sunflower seeds": "seeds", "seeds": "seeds",
                "sunflower_seeds": "seeds",
@@ -33,13 +34,15 @@ snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake
 class SnaxCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.snaximum_instance = Snaximum()
+        season = self.bot.config['current_season']
+        self.snaximum_instance = Snaximum(bot, season)
 
     def update_counts(self, black_holes, floods, day):
         self.snaximum_instance.set_blackhole_count(black_holes)
         self.snaximum_instance.set_flood_count(floods)
         self.snaximum_instance.set_current_day(day)
-        self.snaximum_instance.refresh_all()
+        self.snaximum_instance.bets.set_current_day(day)
+        self.snaximum_instance.refresh()
 
     @commands.command(hidden=True, name='set_snax_channel', aliases=['ssc'])
     @commands.has_permissions(manage_roles=True)
@@ -234,27 +237,23 @@ class SnaxCog(commands.Cog):
         ignore_list = await self._get_user_ignore_list(ctx.author.id)
 
         coins = 50000
-        order_by = 'ratio'
 
         if info:
             info_parts = info.split(',')
             for part in info_parts:
-                if part.strip().lower() == "profit":
-                    order_by = 'dx'
-                else:
-                    try:
-                        new_coins = int(part)
-                        coins = min(new_coins, 500000)
-                        coins = max(coins, 100)
-                    except ValueError:
-                        continue
+                try:
+                    new_coins = int(part)
+                    coins = min(new_coins, 500000)
+                    coins = max(coins, 100)
+                except ValueError:
+                    continue
 
         if len(snaxfolio) > 0:
-            proposal_dict = self.snaximum_instance.propose_upgrades(coins, snaxfolio, ignore_list, order_by)
+            proposal_dict = self.snaximum_instance.do_propose_upgrades(coins, snaxfolio, ignore_list)
             title = f"Happy Hour Menu for {ctx.author.display_name}'s snaxfolio:\n"
             snax_set = True
         else:
-            proposal_dict = self.snaximum_instance.propose_upgrades(coins, None, ignore_list, order_by)
+            proposal_dict = self.snaximum_instance.do_propose_upgrades(coins, None, ignore_list)
             title = "Generic Happy Hour Menu\n"
             snax_set = False
 
@@ -272,16 +271,16 @@ class SnaxCog(commands.Cog):
             if len(message) > 1800:
                 message += "Reached maximum recommendation length."
                 break
+            ratio = (item['sgi'] / item['cost']) if item['cost'] else math.inf
             if math.isinf(item['ratio']):
                 ratio = "infinite"
             else:
-                ratio = round(item['ratio']*1000)/1000
+                ratio = round(ratio*1000)/1000
             name = item['which'].replace('_', ' ')
             message += f"Buy {name} for {item['cost']}\n"
-            message += f"Expected marginal profit this season: {item['dx']} ({ratio})\n\n"
+            message += f"Expected revenue increase this season: {round(item['sgi'])} ({ratio})\n\n"
 
-        message += "Value in parentheses indicates expected profitability relative " \
-                   "to the purchase cost during the current season."
+        message += "(ratio) is the ratio of revenue increase to cost during this season."
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=title, description=message)
 

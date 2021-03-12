@@ -1,29 +1,31 @@
+from typing import Any, Dict, List, Tuple
+
 from blaseball_mike import chronicler
-from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
 
-# Aliases for SIBR structures
 Game = Dict[str, Any]  # Chronicler game data object
-Player = Dict[str, Any]  # Reference player data object
-StatGroup = Dict[str, Any]  # Reference stats group (group/type/totalSplits/splits)
-StatSplit = Dict[str, Any]  # Reference stats split; e.g. StatGroup['splits'][0]
-PlayerStats = Dict[str, Any]  # Reference player stats object; e.g. StatSplit['stat']
 
-# Aliases for Blaseball structures
-ItemTier = Dict[str, int]  # contains 'price' and 'amount' values
-UpgradeData = Dict[str, List[ItemTier]]  # e.g. blackHoleTiers -> List[ItemTier]
-
-# Mapping of snacks to number owned.
-Snaxfolio = Dict[str, int]
-# Analysis of a Batter's payouts; ('hits', 'home_runs', 'stolen_bases', 'total')
-BatterPayout = Dict[str, int]
-# Full analysis of a payout.
-BatterAnalysis = Tuple[BatterPayout, StatSplit, Player]
-# Upgrade analysis dict (cost, dx, ratio, etc.)
-PurchaseAnalysis = Dict[str, Any]
 
 class Bets:
-    def __init__(self) -> None:
-        self.games = chronicler.get_games(season=13, finished=True, order='asc')
+    def __init__(self, bot, season: int, interactive: bool = True):
+        self.bot = bot
+        self.season = season
+        self.current_day = 0
+        self.interactive = interactive
+        self.games: List[Game] = []
+        self.payout_cache: Dict[Tuple[int, float, float], int] = {}
+        self.refresh()
+
+    def refresh(self) -> None:
+        if self.interactive:
+            self.bot.logger.info("Getting bet data ...")
+        self.games = chronicler.get_games(
+            season=self.season, finished=True, order='asc')
+        self.payout_cache = {}
+        if self.interactive:
+            self.bot.logger.info(" OK ({:0.2f} days retrieved.)".format(self.current_day))
+
+    def set_current_day(self, day):
+        self.current_day = day
 
     @classmethod
     def betting_coefficient(cls, odds: float) -> float:
@@ -75,24 +77,29 @@ class Bets:
         print(f"games where the favored team above threshold won: {len(won_bet_games)}")
         print("bettable games: {:0.3f}%".format(len(good_bet_games) / len(self.games)))
         print("won games: {:0.3f}%".format(len(won_bet_games) / len(self.games)))
-        print("won games (as % of bettable games): {:0.3f}%".format(len(won_bet_games) / len(good_bet_games)))
-        print(f"net profit: {net_profit}")
-        #
-        game_days = len(self.games) / 12
-        profit_per_day = net_profit / game_days
-        #
+        print("won games (as % of bettable games): {:0.3f}%".format(
+            len(won_bet_games) / len(good_bet_games)))
+
+        profit_per_day = net_profit / self.current_day
         print(f"profit per blaseball-day: {profit_per_day}")
 
-    def payout(self, bet: int = 1000, threshold: float = 0.50) -> int:
+    def payout(self, bet: int = 1000,
+               threshold: float = 0.50,
+               efficiency: float = 1.00) -> int:
         """
-        Given a particular bet size, simulate a betting strategy where a
-        user always bets their maximum if the favored team has odds
-        above a specified threshold.
+        Scale the resulting answer against the reported betting effiency!
+        e.g. an efficiency of 14/24 (14 days per reality-day) is 0.58%.
+        Efficiency is clamped to [0.00, 1.00] and rounded to two figures.
         """
-        return sum(
-            self.betting_result(game, bet, threshold=threshold)
-            for game in self.games
-        )
+        efficiency = round(max(0.0, min(efficiency, 1.0)), 2)
+        key = (bet, threshold, efficiency)
+        if key not in self.payout_cache:
+            value = sum(
+                self.betting_result(game, bet, threshold=threshold)
+                for game in self.games
+            )
+            self.payout_cache[key] = round(efficiency * value)
+        return self.payout_cache[key]
 
     def calculate_threshold(self) -> float:
         scores = []

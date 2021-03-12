@@ -230,6 +230,8 @@ class AdminCommands(commands.Cog):
     @checks.is_owner()
     async def _set_current_season(self, ctx, current_season: int):
         self.bot.config['current_season'] = current_season
+        snax_cog = self.bot.cogs.get('SnaxCog')
+        snax_cog.set_current_season(current_season)
         await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(name='toggle_rec_message_publish', aliases=['trmp'])
