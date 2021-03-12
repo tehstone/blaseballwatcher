@@ -193,17 +193,20 @@ class WatcherBot(commands.AutoShardedBot):
             current_season = self.config['current_season']
             pendant_cog = self.cogs.get('Pendants')
             latest_day = await pendant_cog.get_latest_pendant_data(current_season)
-            if debug_channel:
-                await debug_channel.send("Pendant data updated.")
+            await debug_channel.send("Pendant data updated.")
             try:
                 await pendant_cog.update_leaders_sheet(current_season, latest_day)
+                await debug_channel.send("Leaders Sheet updated.")
             except Exception as e:
                 self.logger.warning(f"Failed to update pendant leaders: {e}")
 
+            await debug_channel.send("Accumulating statsheets.")
             await utils.update_cumulative_statsheets(self.config['current_season'])
+            await debug_channel.send("Statsheet accumulation complete.")
 
             betadvice_cog = self.cogs.get('BetAdvice')
             try:
+                await debug_channel.send("Starting daily sim.")
                 message, embed_fields = await betadvice_cog.daily_message()
                 m_embed = discord.Embed(description=message)
                 for field in embed_fields:
@@ -214,14 +217,14 @@ class WatcherBot(commands.AutoShardedBot):
                     publish = self.config.setdefault('publish_rec_message', False)
                     if publish:
                         await bet_msg.publish()
+                await debug_channel.send("Daily sim complete.")
             except Exception as e:
                 self.logger.warning(f"Failed to send pendant picks: {e}")
 
             gamedata_cog = self.cogs.get('GameData')
             await gamedata_cog.save_json_range(current_season-1)
             await gamedata_cog.update_spreadsheets([current_season-1])
-            if debug_channel:
-                await debug_channel.send("Spreadsheets updated.")
+            await debug_channel.send("Spreadsheets updated.")
 
         elif not message.author.bot:
             await self.process_commands(message)
