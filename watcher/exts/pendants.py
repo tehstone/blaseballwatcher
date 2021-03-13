@@ -63,7 +63,7 @@ class Pendants(commands.Cog):
             team_stats = {}
         games = await self.retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
         for game in games.json():
-            if not game["gameComplete"] and game["day"] != 101:
+            if not game["gameComplete"]:
                 return None
         game_team_map = {}
         for game in games.json():
