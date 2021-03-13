@@ -751,13 +751,20 @@ class Pendants(commands.Cog):
         snax_cog.update_counts(black_holes, flood_count, day)
 
     @staticmethod
-    def save_daily_top_players(all_players, day):
+    def load_remaining_teams():
+        with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
+            team_list = json.load(file)
+        return team_list
+
+    def save_daily_top_players(self, all_players, day):
+        team_list = self.load_remaining_teams()
+
         sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
-                                               reverse=True)}
+                                               reverse=True) if v['teamId'] in team_list}
         sorted_homeruns = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['homeRuns'],
-                                                   reverse=True)}
+                                                   reverse=True) if v['teamId'] in team_list}
         sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
-                                                      reverse=True)}
+                                                      reverse=True) if v['teamId'] in team_list}
         boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2, "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5}
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
