@@ -42,6 +42,9 @@ async def start_task_loops(bot):
 
         if bot.check_for_games_complete:
             bot.tasks.append(event_loop.create_task(utils.game_check_loop(bot)))
+        if bot.check_for_new_schedules:
+            gamedata_cog = bot.get_cog('GameData')
+            bot.tasks.append(event_loop.create_task(gamedata_cog.check_new_schedule_loop()))
         logger.info('Loops initiated')
     except KeyboardInterrupt:
         [task.cancel() for task in bot.tasks]

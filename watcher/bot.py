@@ -103,6 +103,7 @@ class WatcherBot(commands.AutoShardedBot):
                         }
         self.daily_watch_message = self.config.setdefault('daily_watch_message', 'Go Bet!')
         self.check_for_games_complete = self.config.setdefault('check_for_games_complete', False)
+        self.check_for_new_schedules = self.config.setdefault('check_for_new_schedules', False)
         self.current_day = 0
         self.tasks = []
         self.agcm = gspread_asyncio.AsyncioGspreadClientManager(self.get_creds)

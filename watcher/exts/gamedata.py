@@ -955,6 +955,44 @@ class GameData(commands.Cog):
             print(f"total runners so far: {total_runners}")
         print(f"total floods: {floods}")
 
+    @commands.command(name='check_for_new_schedules', aliases=['cfns'])
+    async def _check_for_new_schedules(self, ctx, check: bool):
+        if check == self.bot.config['check_for_new_schedules']:
+            return await ctx.message.add_reaction(self.bot.success_react)
+        self.bot.config['check_for_new_schedules'] = check
+        tasks = self.bot.tasks
+        if check:
+            event_loop = asyncio.get_event_loop()
+            self.bot.tasks.append(event_loop.create_task(self.check_new_schedule_loop()))
+        else:
+            for t in range(len(tasks)):
+                task = tasks[t]
+                if task._coro.cr_code.co_name == "check_new_schedule_loop":
+                    tasks.pop(t)
+                    task.cancel()
+                    break
+        return await ctx.message.add_reaction(self.bot.success_react)
+
+    async def check_new_schedule_loop(self):
+        while not self.bot.is_closed():
+            self.bot.logger.info("Checking for new schedules")
+
+            season = self.bot.config['current_season'] - 1
+            games = await utils.retry_request(f"https://www.blaseball.com/database/games?day=0&season={season}")
+            if games:
+                games_list = games.json()
+                if len(games_list) > 0:
+                    for t in range(len(self.bot.tasks)):
+                        task = self.bot.tasks[t]
+                        if task._coro.cr_code.co_name == "game_new_schedule_loop":
+                            self.bot.tasks.pop(t)
+                            task.cancel()
+                    await self.save_json_range(season, True)
+                    await self.update_spreadsheets(season, True)
+                    break
+
+            await asyncio.sleep(120)
+
 
 def setup(bot):
     bot.add_cog(GameData(bot))
