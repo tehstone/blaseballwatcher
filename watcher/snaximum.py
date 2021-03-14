@@ -202,9 +202,9 @@ class Snaximum:
         self.betting_consistency = 14 / 24
         self.interactive = True
 
-        self.flooded_runners = 180
-        self.black_holes: int = 15
-        self.current_day = 60
+        self.flooded_runners: int = 0
+        self.black_holes: int = 0
+        self.simulation_data = None
 
         # Internal stuff:
         self.data: StatGroup
@@ -229,65 +229,67 @@ class Snaximum:
                                          List[BatterAnalysis]] = {}
         self._initialize()
 
-    @property
-    def days_remaining(self) -> float:
-        return 99 - self.current_day
-
     def _initialize(self) -> None:
         self.bot.logger.info("Opening upgrades.json ...")
         with open(os.path.join('data', "upgrades.json"), "r") as infile:
             self.upgrades = json.load(infile)
         self.refresh()
 
-    def set_blackhole_count(self, count):
-        self.black_holes = count
-
-    def set_flood_count(self, count):
-        self.flooded_runners = count
-
-    def set_current_day(self, day):
-        self.current_day = day
-
     def set_current_season(self, season):
         self.current_season = season
 
-    def refresh(self):
+    def refresh_sim_data(self):
         rsp = requests.get("https://www.blaseball.com/database/simulationData")
         assert rsp.status_code == 200
-        simulationData = rsp.json()
-        self.current_day = simulationData["day"]
-        self.current_season = simulationData["season"] + 1
+        self.simulation_data = rsp.json()
+
+    def refresh_weather_counts(self):
+        with open(os.path.join('season_data', 'weather_occurrences.json'), 'r') as file:
+            weather_occurrences = json.load(file)
+        self.black_holes = weather_occurrences[str(self.simulation_data["season"])].get('black_holes', 0)
+        self.flooded_runners = weather_occurrences[str(self.simulation_data["season"])].get('flooded_runners', 0)
+
+    def refresh(self):
+        self.refresh_sim_data()
+        self.refresh_weather_counts()
+
+        self.current_season = self.simulation_data["season"] + 1
 
         self.refresh_batting_statistics()
         self.bets = Bets(self.bot, self.current_season, self.interactive)
+        self.bets.set_current_day(self.simulation_data["day"])
+
         if not self.betting_threshold:
             self.refresh_betting_threshold()
         self.refresh_players()
-        self.refresh_data()
 
     def refresh_players(self) -> None:
+        team_ids = []
+
         self.bot.logger.info("Getting player data ...")
         rsp = requests.get('https://api.blaseball-reference.com/v2/players?season=current')
         assert rsp.status_code == 200
         players = rsp.json()
 
-        rsp = requests.get(f'https://www.blaseball.com/database/games?season='
-                           f'{self.current_season-1}&day={self.current_day}')
-        assert rsp.status_code == 200
-        games = rsp.json()
-        team_ids = []
-        for game in games:
-            team_ids.append(game['homeTeam'])
-            team_ids.append(game['awayTeam'])
-        with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
-            team_ids = json.load(file)
+        if 12 > self.simulation_data["phase"] > 1:
+            rsp = requests.get(f'https://www.blaseball.com/database/games?season='
+                               f'{self.simulation_data["season"]}&day={self.simulation_data["day"]}')
+            assert rsp.status_code == 200
+            games = rsp.json()
+            if games and len(games) > 0:
+                for game in games:
+                    team_ids.append(game['homeTeam'])
+                    team_ids.append(game['awayTeam'])
+            else:
+                with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
+                    team_ids = json.load(file)
 
         for player in players:
-            if len(games) > 0:
+            if self.simulation_data["day"] > 98:
+                self.player_map[player['player_id']] = player
+            else:
                 if player['team_id'] in team_ids:
                     self.player_map[player['player_id']] = player
-            else:
-                self.player_map[player['player_id']] = player
 
     def refresh_batting_statistics(self) -> None:
         if self.interactive:
@@ -314,17 +316,6 @@ class Snaximum:
         if self.interactive:
             print(" {:0.2f}".format(self.betting_threshold))
             print("  (Override via `betting_threshold` property if desired.)")
-
-    def refresh_data(self) -> None:
-        print("Getting batting statistics ...", end='')
-        data = reference.get_stats(
-            type_='season', group='hitting',
-            fields=('hits', 'home_runs', 'stolen_bases'),
-            season='current'
-        )
-        assert len(data) == 1
-        self.data = data[0]
-        print("OK")
 
     def _get_tiers(self, item_name: str) -> List[Dict[str, int]]:
         return self.upgrades[self.upgrade_map[item_name]]
@@ -445,15 +436,18 @@ class Snaximum:
 
         # Idol-related items will set this as needed.
         idol = None
+        days_seen = max(1, self.simulation_data["day"])
+        post_season = False
+        if days_seen > 98:
+            post_season = True
+            days_seen = 99
 
         if which == 'wet_pretzel':
             current_gross = self.black_holes * self.get_payout('wet_pretzel', snaxfolio[which])
             new_gross = self.black_holes * self.get_payout('wet_pretzel', snaxfolio[which] + 1)
-            days_seen = self.current_day
         elif which == 'slushies':
             current_gross = self.flooded_runners * self.get_payout('slushies', snaxfolio[which])
             new_gross = self.flooded_runners * self.get_payout('slushies', snaxfolio[which] + 1)
-            days_seen = self.current_day
         elif which == 'snake_oil':
             current_gross = self.bets.payout(
                 bet=self.get_payout('snake_oil', snaxfolio[which]),
@@ -465,7 +459,6 @@ class Snaximum:
                 threshold=self.betting_threshold,
                 efficiency=self.betting_consistency
             )
-            days_seen = self.current_day
         else:  # Battersnax analysis (Not to be confused with Battered Snacks.)
             # Current analysis
             reference = self.get_lucrative_batters(snaxfolio)[0]
@@ -478,19 +471,25 @@ class Snaximum:
             days_seen = self._reference_days
             idol = best[1]['player']
 
+        # How much does it cost to upgrade this snack?
+        cost = self.get_cost(which, snaxfolio[which])
+
         # Theoretical increase in gross income from day0 until now:
         delta_gross = new_gross - current_gross
 
         # Delta Income-Per-Day: change in estimated income per game-day.
         dipd = delta_gross / days_seen
 
-        # How much does it cost to upgrade this snack?
-        cost = self.get_cost(which, snaxfolio[which])
-
         # Increase in income-per-day, per-coin spent. This is a long-term strategy.
         ratio = (dipd / cost) if cost else math.inf
-        # The seasonal gross income is the delta income-per-day * days_left
-        seasonal_gross_income = (99 - days_seen) * dipd
+
+        if post_season:
+            # The seasonal gross income is the delta income-per-day * days_left
+            seasonal_gross_income = 99 * dipd
+        else:
+            # The seasonal gross income is the delta income-per-day * days_left
+            seasonal_gross_income = (99 - days_seen) * dipd
+
         # Seasonal profit is simply the seasonal_gross_income - cost.
         seasonal_profit = seasonal_gross_income - cost
         # Seasonal ROI is (seasonal_profit / cost).
@@ -509,6 +508,7 @@ class Snaximum:
             'sgi': seasonal_gross_income,
             'sprofit': seasonal_profit,
             'sroi': seasonal_roi,
+            'post_season': post_season
         }
 
     def calc_upgrade_costs(self, snaxfolio: Optional[Snaxfolio],

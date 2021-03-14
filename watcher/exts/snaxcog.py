@@ -18,7 +18,7 @@ snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake
                "fresh": "fresh_popcorn", "popcorn": "fresh_popcorn",
                "fresh popcorn": "fresh_popcorn", "fresh_popcorn": "fresh_popcorn", "freshpopcorn": "fresh_popcorn",
                "stale": "stale_popcorn", "stale popcorn": "stale_popcorn", "stale_popcorn": "stale_popcorn",
-               "stalepopcorn": "stale_popcorn",
+               "stalepopcorn": "stale_popcorn", "stopcorn": "stale_popcorn",
                "chips": "chips", "burger": "burger", "burgers": "burger",
                "seed": "seeds", "sunflower": "seeds", "sunflower seeds": "seeds", "seeds": "seeds",
                "sunflower_seeds": "seeds",
@@ -29,7 +29,8 @@ snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake
                "wetzle": "wet_pretzel", "wetzel": "wet_pretzel",
                "wetzles": "wet_pretzel", "wetzels": "wet_pretzel",
                "pretzel": "wet_pretzel", "pretzels": "wet_pretzel",
-               "wet pretzel": "wet_pretzel", "wet_pretzel": "wet_pretzel"
+               "wet pretzel": "wet_pretzel", "wet_pretzel": "wet_pretzel",
+               "wet pretzels": "wet_pretzel", "wet_pretzels": "wet_pretzel"
                }
 
 
@@ -38,13 +39,6 @@ class SnaxCog(commands.Cog):
         self.bot = bot
         season = self.bot.config['current_season']
         self.snaximum_instance = Snaximum(bot, season)
-
-    def update_counts(self, black_holes, floods, day):
-        self.snaximum_instance.set_blackhole_count(black_holes)
-        self.snaximum_instance.set_flood_count(floods)
-        self.snaximum_instance.set_current_day(day)
-        self.snaximum_instance.bets.set_current_day(day)
-        self.snaximum_instance.refresh()
 
     @commands.command(hidden=True, name='add_snax_channel', aliases=['asc'])
     @commands.has_permissions(manage_roles=True)
@@ -337,7 +331,9 @@ class SnaxCog(commands.Cog):
         if len(proposal_dict["buy_list"]) < 3:
             message += "Your buy list is pretty small, consider providing a higher coin count" \
                        "with this command. The default is 50,000.\n"
+        post_season = False
         for item in proposal_dict["buy_list"][:limit]:
+            post_season = item['post_season']
             if len(message) > 1800:
                 message += "Reached maximum recommendation length."
                 break
@@ -350,7 +346,12 @@ class SnaxCog(commands.Cog):
             message += f"Buy {name} for {item['cost']:,}\n"
             message += f"Expected revenue increase this season: {round(item['sgi'])} ({ratio})\n\n"
 
-        message += "(ratio) is the ratio of revenue increase to cost during this season."
+        if post_season:
+            message += "Revenue increase and ratio above assume a full season upcoming with identical " \
+                       "weather and idol performance numbers to the past season. These should be considered " \
+                       "rough estimates."
+        else:
+            message += "(ratio) is the ratio of revenue increase to cost during this season."
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=title, description=message)
 

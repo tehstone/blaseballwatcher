@@ -107,7 +107,6 @@ class WatcherBot(commands.AutoShardedBot):
         self.tasks = []
         self.agcm = gspread_asyncio.AsyncioGspreadClientManager(self.get_creds)
 
-
         for ext in default_exts:
             try:
                 self.load_extension(f"watcher.exts.{ext}")

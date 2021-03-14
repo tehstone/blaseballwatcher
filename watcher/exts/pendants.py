@@ -747,8 +747,15 @@ class Pendants(commands.Cog):
             'range': "L2:M2",
             'values': [[flood_count, runner_count]]
         }])
-        snax_cog = self.bot.cogs.get('SnaxCog')
-        snax_cog.update_counts(black_holes, flood_count, day)
+
+        with open(os.path.join('season_data', 'weather_occurrences.json'), 'r') as file:
+            weather_occurrences = json.load(file)
+        if season not in weather_occurrences:
+            weather_occurrences[season] = {"black_holes": 0, "flooded_runners": 0}
+        weather_occurrences[season]["black_holes"] += black_holes
+        weather_occurrences[season]["flooded_runners"] += flood_count
+        with open(os.path.join('season_data', 'weather_occurrences.json'), 'w') as file:
+            json.dump(weather_occurrences, file)
 
     @staticmethod
     def load_remaining_teams():
@@ -757,14 +764,21 @@ class Pendants(commands.Cog):
         return team_list
 
     def save_daily_top_players(self, all_players, day):
+        # need to put in logic for playoffs here
         team_list = self.load_remaining_teams()
 
+        # sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
+        #                                        reverse=True) if v['teamId'] in team_list}
+        # sorted_homeruns = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['homeRuns'],
+        #                                            reverse=True) if v['teamId'] in team_list}
+        # sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
+        #                                               reverse=True) if v['teamId'] in team_list}
         sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
-                                               reverse=True) if v['teamId'] in team_list}
+                                               reverse=True)}
         sorted_homeruns = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['homeRuns'],
-                                                   reverse=True) if v['teamId'] in team_list}
+                                                   reverse=True)}
         sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
-                                                      reverse=True) if v['teamId'] in team_list}
+                                                      reverse=True)}
         boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2, "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5}
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
