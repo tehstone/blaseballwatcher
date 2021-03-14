@@ -235,9 +235,6 @@ class Snaximum:
             self.upgrades = json.load(infile)
         self.refresh()
 
-    def set_current_season(self, season):
-        self.current_season = season
-
     def refresh_sim_data(self):
         rsp = requests.get("https://www.blaseball.com/database/simulationData")
         assert rsp.status_code == 200
@@ -332,6 +329,17 @@ class Snaximum:
     def upgrades_left(self, item_name: str, owned: int) -> int:
         tiers = self._get_tiers(item_name)
         return len(tiers) - owned
+
+    def get_cumulative_cost(self, snack, quantity=99):
+        item_tiers = self._get_tiers(snack)
+        tiers = 0
+        cumulative_cost = 0
+        for tier in item_tiers:
+            cumulative_cost += tier["price"]
+            tiers += 1
+            if tiers == quantity:
+                break
+        return cumulative_cost
 
     @classmethod
     def payout_modifier(cls, player: Player) -> int:

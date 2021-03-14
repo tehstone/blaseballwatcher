@@ -12,9 +12,10 @@ from watcher import utils, checks
 from watcher.exts.db.watcher_db import SnaxInstance
 from watcher.snaximum import Snaximum
 
-from typing import Any, Dict, Iterable, List, Optional, Tuple, cast
+from typing import Dict
 
 snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake_oil", "snoil": "snake_oil",
+               "snakeoil": "snake_oil",
                "fresh": "fresh_popcorn", "popcorn": "fresh_popcorn",
                "fresh popcorn": "fresh_popcorn", "fresh_popcorn": "fresh_popcorn", "freshpopcorn": "fresh_popcorn",
                "stale": "stale_popcorn", "stale popcorn": "stale_popcorn", "stale_popcorn": "stale_popcorn",
@@ -30,7 +31,8 @@ snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake
                "wetzles": "wet_pretzel", "wetzels": "wet_pretzel",
                "pretzel": "wet_pretzel", "pretzels": "wet_pretzel",
                "wet pretzel": "wet_pretzel", "wet_pretzel": "wet_pretzel",
-               "wet pretzels": "wet_pretzel", "wet_pretzels": "wet_pretzel"
+               "wet pretzels": "wet_pretzel", "wet_pretzels": "wet_pretzel",
+               "wetpretzel": "wet_pretzel", "wetpretzels": "wet_pretzel"
                }
 
 
@@ -384,6 +386,26 @@ class SnaxCog(commands.Cog):
                               title=f"{ctx.author.display_name}'s current snaxfolio.",
                               description=snax_msg)
         return await ctx.send(embed=embed)
+
+    @commands.command(name="cumulative_cost", aliases=['total_cost', 'cc'])
+    @checks.allow_snax_commands()
+    async def _cumulative_cost(self, ctx, snack, quantity=99):
+        if snack in snax_fields:
+            normalized_snack = snax_fields[snack]
+        else:
+            return await ctx.send(f"Unknown snack: {snack}")
+        cost = self.snaximum_instance.get_cumulative_cost(normalized_snack, quantity)
+        return await ctx.send(f"The cumulative cost for {quantity} {snack} is {cost:,} coins.")
+
+    @commands.command(name="payout")
+    @checks.allow_snax_commands()
+    async def _get_payout(self, ctx, snack, quantity=99):
+        if snack in snax_fields:
+            normalized_snack = snax_fields[snack]
+        else:
+            return await ctx.send(f"Unknown snack: {snack}")
+        cost = self.snaximum_instance.get_payout(normalized_snack, quantity)
+        return await ctx.send(f"The payout for {quantity} {snack} is {cost:,} coins.")
 
     @staticmethod
     def _process_snack_parts(snack_str):
