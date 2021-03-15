@@ -291,12 +291,14 @@ class Snaximum:
                 with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
                     team_ids = json.load(file)
 
+        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         for player in players:
-            if self.simulation_data["day"] > 98:
-                self.player_map[player['player_id']] = player
-            else:
-                if player['team_id'] in team_ids:
+            if player['player_id'] not in skip_players:
+                if self.simulation_data["day"] > 98:
                     self.player_map[player['player_id']] = player
+                else:
+                    if player['team_id'] in team_ids:
+                        self.player_map[player['player_id']] = player
 
     def refresh_batting_statistics(self) -> None:
         if self.interactive:

@@ -746,7 +746,7 @@ class Pendants(commands.Cog):
             'values': [[black_holes]]
         }])
 
-        flood_count, runner_count, new_runner_count = await self._lookup_floods(season)
+        flood_count, runner_count = await self._lookup_floods(season)
         await p_worksheet.batch_update([{
             'range': "L2:M2",
             'values': [[flood_count, runner_count]]
@@ -758,7 +758,7 @@ class Pendants(commands.Cog):
         if season_str not in weather_occurrences:
             weather_occurrences[season_str] = {"black_holes": 0, "flooded_runners": 0, "sunsets": 0, "incinerations": 0}
         weather_occurrences[season_str]["black_holes"] += black_holes
-        weather_occurrences[season_str]["flooded_runners"] += new_runner_count
+        weather_occurrences[season_str]["flooded_runners"] = runner_count
         weather_occurrences[season_str]["sunsets"] += sunset
         weather_occurrences[season_str]["incinerations"] += incineration
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'w') as file:
@@ -787,8 +787,11 @@ class Pendants(commands.Cog):
         sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
                                                       reverse=True)}
         boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2, "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5}
+        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
+            if k in skip_players:
+                continue
             homeruns = sorted_homeruns[k]["homeRuns"]
             stolenbases = sorted_stolenbases[k]["stolenBases"]
             hits = v["hits"] - homeruns
@@ -829,7 +832,7 @@ class Pendants(commands.Cog):
         return sorted_hits, sorted_homeruns, sorted_seed_dog_payouts, sorted_stolenbases
 
     async def _lookup_floods(self, season):
-        season_flood_count, season_runner_count, new_runner_count = 0, 0, 0
+        season_flood_count, season_runner_count = 0, 0
         try:
             with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
                       'r') as file:
@@ -867,7 +870,6 @@ class Pendants(commands.Cog):
 
                     season_flood_count += day_flood_count
                     season_runner_count += day_runner_count
-                    new_runner_count += day_runner_count
             else:
                 if "flood_count" in day_info:
                     season_flood_count += day_info['flood_count']
@@ -877,7 +879,7 @@ class Pendants(commands.Cog):
         with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
                   'w') as file:
             json.dump(flood_lookups, file)
-        return season_flood_count, season_runner_count, new_runner_count
+        return season_flood_count, season_runner_count
 
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):

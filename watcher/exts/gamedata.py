@@ -701,21 +701,21 @@ class GameData(commands.Cog):
                     teams[i] += home_record, away_record, record["scored"] - record["given"]
                     generate_per_team_records(teams[i], record)
                     teams[i] += [f"{record['single_run']['win']}-{record['single_run']['loss']}"]
-                    teams[i] += record["scored"], record["given"]
+                    teams[i] += record["scored"], record["given"], record["shames"], record["times_shamed"]
 
                 await s_worksheet.batch_update([{
-                    'range': f"A{start_i-1}:AN{start_i -1}",
+                    'range': f"A{start_i-1}:AP{start_i -1}",
                     'values': [["Team", "Wins", "Record", "Pct.", "GB", "Magic #",
                                 "Home", "Away", "Run Diff", "WH", "WL", "MH", "ML",
                                 "Tigers", "Lift", "Wild Wings", "Firefighters", "Jazz Hands", "Georgias",
                                 "Spies", "Flowers", "Sunbeams", "Dale", "Tacos", "Worms",
                                 "Lovers", "Pies", "Garages", "Steaks", "Millennials", "Mechanics",
                                 "Fridays", "Moist Talkers", "Breath Mints", "Shoe Thieves", "Magic", "Crabs",
-                                "1-Run", "R Scored", "R Allowed"]]
+                                "1-Run", "R Scored", "R Allowed", "Shames", "Shamed"]]
                 }])
 
                 await s_worksheet.batch_update([{
-                    'range': f"A{start_i}:AN{start_i + len(teams)}",
+                    'range': f"A{start_i}:AP{start_i + len(teams)}",
                     'values': teams
                 }])
                 await s_worksheet.batch_update([{
