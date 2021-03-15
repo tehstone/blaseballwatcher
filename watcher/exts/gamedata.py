@@ -807,36 +807,6 @@ class GameData(commands.Cog):
             bet_counts[i] = count
         return payouts, bet_counts
 
-    @commands.command(name='update_divine_favor', aliases=['favor', 'divine', 'udf'])
-    async def _update_divine_favor(self, ctx):
-        url = 'https://www.blaseball.com/database/simulationdata'
-        html_response = await utils.retry_request(url)
-        if not html_response:
-            return await ctx.send("Failed to acquire simulation data, cannot find league id.")
-        league_id = html_response.json()['league']
-        url = f"https://www.blaseball.com/database/league?id={league_id}"
-        html_response = await utils.retry_request(url)
-        if not html_response:
-            return await ctx.send("Failed to acquire league data, cannot find tiebreaker id.")
-        tiebreaker_id = html_response.json()['tiebreakers']
-        url = f'https://www.blaseball.com/database/tiebreakers?id={tiebreaker_id}'
-        html_response = await utils.retry_request(url)
-        if not html_response:
-            return await ctx.send("Failed to acquire tiebreaker data.")
-        favor_data = html_response.json()
-        html_response = await utils.retry_request('https://www.blaseball.com/database/allteams')
-        if not html_response:
-            return await ctx.send("Failed to acquire team data.")
-        team_data = html_response.json()
-        favor_rankings = {}
-        count = 0
-        for rank in favor_data[0]['order']:
-            for team in team_data:
-                if team['id'] == rank:
-                    favor_rankings[team['nickname']] = count
-                    count += 1
-        self.bot.config['favor_rankings'] = self.bot.favor_rankings = favor_rankings
-
     @commands.command(name='update_spreadsheets', aliases=['us'])
     async def _update_spreadsheets(self, ctx, current_season: int, fill: bool = False):
         await ctx.message.add_reaction("⏲️")
@@ -882,8 +852,14 @@ class GameData(commands.Cog):
             'values': "test"
         }])
 
-    @commands.command(aliases=['utb'])
-    async def _update_tie_breakers(self, ctx):
+    @commands.command(name='update_divine_favor', aliases=['update_tie_breakers', 'utb', 'favor', 'divine', 'udf'])
+    async def _update_divine_favor(self, ctx):
+        updated = await self._update_tiebreakers()
+        if updated:
+            return await ctx.message.add_reaction(self.bot.success_react)
+        return await ctx.message.add_reaction(self.bot.failed_react)
+
+    async def _update_tiebreakers(self):
         try:
             html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
             if not html_response:
@@ -903,10 +879,23 @@ class GameData(commands.Cog):
             new_ties_json = html_response.json()
             json_watcher = self.bot.get_cog("JsonWatcher")
             await json_watcher.update_bot_tiebreakers(new_ties_json)
+            html_response = await utils.retry_request('https://www.blaseball.com/database/allteams')
+            if not html_response:
+                self.bot.logger.warning('Failed to acquire team data')
+                return
+            team_data = html_response.json()
+            favor_rankings = {}
+            count = 0
+            for rank in new_ties_json[0]['order']:
+                for team in team_data:
+                    if team['id'] == rank:
+                        favor_rankings[team['nickname']] = count
+                        count += 1
+            self.bot.config['favor_rankings'] = self.bot.favor_rankings = favor_rankings
         except Exception as e:
             self.bot.logger.warning(f"Failed to update tiebreakers: {e}")
-            return await ctx.message.add_reaction(self.bot.failed_react)
-        await ctx.message.add_reaction(self.bot.success_react)
+            return False
+        return True
 
     @commands.command(name="apply_conditional_rules", aliases=['acr'])
     async def _apply_conditional_rules(self, ctx):
@@ -987,8 +976,10 @@ class GameData(commands.Cog):
                         if task._coro.cr_code.co_name == "game_new_schedule_loop":
                             self.bot.tasks.pop(t)
                             task.cancel()
+                    self.bot.config['check_for_new_schedules'] = False
                     await self.save_json_range(season, True)
                     await self.update_spreadsheets(season, True)
+                    await self._update_tiebreakers()
                     break
 
             await asyncio.sleep(120)
