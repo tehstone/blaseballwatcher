@@ -220,21 +220,30 @@ class BetAdvice(commands.Cog):
             embed_fields.append({"name": "Teams most likely to score 10+",
                                  "value": big_message})
 
-        black_hole_games = 0
-        flood_games = 0
+        black_hole_games, flood_games, sun_two_games, eclipse_games = 0, 0, 0, 0
         for game in results.values():
             if game["weather"] == 14:
                 black_hole_games += 1
             if game["weather"] == 18:
                 flood_games += 1
+            if game["weather"] == 1:
+                sun_two_games += 1
+            if game["weather"] == 7:
+                eclipse_games += 1
         black_hole_games = int(black_hole_games/2)
         flood_games = int(flood_games/2)
+        sun_two_games = int(sun_two_games / 2)
+        eclipse_games = int(eclipse_games / 2)
 
         weather_msg = ""
         if black_hole_games > 0:
             weather_msg += f"{black_hole_games} games in Black Hole Weather\n"
+        if sun_two_games > 0:
+            weather_msg += f"{sun_two_games} games in Sun 2 Weather\n"
         if flood_games > 0:
             weather_msg += f"{flood_games} games in Flooding Weather\n"
+        if eclipse_games > 0:
+            weather_msg += f"{eclipse_games} games in Eclipse Weather\n"
         if len(weather_msg) > 0:
             embed_fields.append({"name": "Weather Forecast",
                                  "value": weather_msg})
