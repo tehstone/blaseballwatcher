@@ -279,7 +279,14 @@ class SnaxCog(commands.Cog):
         count = min(count, 10)
         count = max(count, 1)
 
-        message = ""
+        earlseason = self.snaximum_instance.simulation_data['day'] < 5
+
+        if earlseason:
+            message = "Currently using last season's performance stats as an estimate for best idol " \
+                      "choice this season! Keep in mind that things can and do change significantly " \
+                      "between seasons!\n\n"
+        else:
+            message = ""
         for player in luc_list[:count]:
             name = player[1]["player"]["fullName"]
             player_id = player[1]["player"]["id"]
