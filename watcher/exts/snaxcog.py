@@ -375,7 +375,7 @@ class SnaxCog(commands.Cog):
 
         return await ctx.send(embed=embed)
 
-    @commands.command(name="snaxfolio", aliases=['snax_folio', 'snax_portfolio', 'my_snax', 'mysnax'])
+    @commands.command(name="snaxfolio", aliases=['snax_folio', 'snax_portfolio', 'my_snax', 'mysnax', 'snackfolio'])
     @checks.allow_snax_commands()
     async def _snaxfolio(self, ctx):
         """
