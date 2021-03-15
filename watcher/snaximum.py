@@ -301,16 +301,22 @@ class Snaximum:
     def refresh_batting_statistics(self) -> None:
         if self.interactive:
             print("Getting batting statistics ...", end='')
+        season = 'current'
+        if self.simulation_data['day'] < 5:
+            season = 13
         data = reference.get_stats(
             type_='season', group='hitting',
             fields=('hits', 'home_runs', 'stolen_bases', 'appearances'),
-            season='current'
+            season=season
         )
         assert len(data) == 1
         self.data = data[0]
         self.batter_analysis_cache = {}
-        self._reference_days = max(split['stat']['appearances']
-                                   for split in self.data['splits'])
+        try:
+            self._reference_days = max(split['stat']['appearances']
+                                       for split in self.data['splits'])
+        except ValueError:
+            self._reference_days = []
         if self.interactive:
             print(f" OK ({len(self.data['splits'])} batters,"
                   f" {self._reference_days} games)")
