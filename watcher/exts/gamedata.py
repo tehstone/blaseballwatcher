@@ -546,21 +546,15 @@ class GameData(commands.Cog):
                                team_series[opp]['home'], team_series[opp]['away']]
                         mrows.append(row)
                         j += 1
+
+                    k = 13 - len(mrows)
+                    for m in range(k):
+                        mrows.append(['', '', '', '', '', '', ''])
                     await m_worksheet.batch_update([{
-                        'range': f"A{3}:G{j}",
+                        'range': f"A{3}:G{15}",
                         'values': mrows
                     }])
 
-                    k = 16
-                    if j >= 16:
-                        k = j + 1
-                    # await m_worksheet.batch_update([{
-                    #     'range': f"B{k}:B{k+2}",
-                    #     'values': [[f'=SUM(FILTER(D3:D{j},E3:E{j}="Division"))'],
-                    #                [f'=SUM(FILTER(D3:D{j},E3:E{j}="League"))'],
-                    #                [f'=SUM(FILTER(D3:D{j},E3:E{j}="InterLeague"))']]
-                    # }], raw=False)
-                    # await m_worksheet.update(f"F{k}:F{k+1}", [[f'=sum(F3:F{j})'], [f'=sum(G3:G{j})']], raw=False)
                 else:
                     for opp in team_series:
                         row = [team_series[opp]['wins'], team_series[opp]['losses']]
