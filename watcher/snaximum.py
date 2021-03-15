@@ -221,7 +221,7 @@ class Snaximum:
             'wet_pretzel': 'blackHoleTiers',
             'slushies': 'floodClearTiers',
             'popcorn': 'teamWinCoinTiers',
-            'stalecorn': 'teamLossCoinTiers',
+            'stale_popcorn': 'teamLossCoinTiers',
             'snake_oil': 'maxBetTiers',
             'chips': 'idolStrikeoutsTiers',
             'burgers': 'idolShutoutsTiers',
