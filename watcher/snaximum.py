@@ -303,7 +303,7 @@ class Snaximum:
             print("Getting batting statistics ...", end='')
         season = 'current'
         if self.simulation_data['day'] < 5:
-            season = 13
+            season = self.simulation_data['season']
         data = reference.get_stats(
             type_='season', group='hitting',
             fields=('hits', 'home_runs', 'stolen_bases', 'appearances'),
