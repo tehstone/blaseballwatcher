@@ -223,6 +223,12 @@ class Snaximum:
             'snake_oil': 'maxBetTiers',
             'chips': 'idolStrikeoutsTiers',
             'burgers': 'idolShutoutsTiers',
+            'doughnut': 'sunTwoTiers',
+            'sundae': 'incinerationTiers',
+            'breakfast': 'timeOffTiers',
+            'lemonade': 'teamShamedTiers',
+            'taffy': 'teamShamingTiers',
+            'meatball': 'idolHomerAllowedTiers',
         }
         #  i.e. (seeds, dogs, pickles) => List[BatterAnalysis]
         self.batter_analysis_cache: Dict[Tuple[int, int, int],

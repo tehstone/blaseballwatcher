@@ -734,9 +734,12 @@ class Pendants(commands.Cog):
         with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_day_weather.json'), 'r') as file:
             day_weather = json.load(file)
         black_holes = 0
+        sunset = 0
         for __, weather_map in day_weather.items():
             if "Black Hole" in weather_map:
                 black_holes += weather_map["Black Hole"]
+            if "Sunset" in weather_map:
+                sunset += weather_map["Sunset"]
         await p_worksheet.batch_update([{
             'range': "B2:B2",
             'values': [[black_holes]]
@@ -751,9 +754,10 @@ class Pendants(commands.Cog):
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'r') as file:
             weather_occurrences = json.load(file)
         if season not in weather_occurrences:
-            weather_occurrences[season] = {"black_holes": 0, "flooded_runners": 0}
+            weather_occurrences[season] = {"black_holes": 0, "flooded_runners": 0, "sunset": 0}
         weather_occurrences[season]["black_holes"] += black_holes
         weather_occurrences[season]["flooded_runners"] += flood_count
+        weather_occurrences[season]["sunset"] += sunset
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'w') as file:
             json.dump(weather_occurrences, file)
 

@@ -32,7 +32,9 @@ snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake
                "pretzel": "wet_pretzel", "pretzels": "wet_pretzel",
                "wet pretzel": "wet_pretzel", "wet_pretzel": "wet_pretzel",
                "wet pretzels": "wet_pretzel", "wet_pretzels": "wet_pretzel",
-               "wetpretzel": "wet_pretzel", "wetpretzels": "wet_pretzel"
+               "wetpretzel": "wet_pretzel", "wetpretzels": "wet_pretzel",
+               'doughnut': 'doughnut', 'sundae': 'sundae', 'breakfast': 'breakfast',
+               'lemonade': 'lemonade', 'taffy': 'taffy', 'meatball': 'meatball',
                }
 
 
