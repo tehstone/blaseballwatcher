@@ -754,12 +754,13 @@ class Pendants(commands.Cog):
 
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'r') as file:
             weather_occurrences = json.load(file)
-        if season not in weather_occurrences:
-            weather_occurrences[season] = {"black_holes": 0, "flooded_runners": 0, "sunset": 0}
-        weather_occurrences[season]["black_holes"] += black_holes
-        weather_occurrences[season]["flooded_runners"] += flood_count
-        weather_occurrences[season]["sunsets"] += sunset
-        weather_occurrences[season]["incinerations"] += incineration
+        season_str = str(season)
+        if season_str not in weather_occurrences:
+            weather_occurrences[season_str] = {"black_holes": 0, "flooded_runners": 0, "sunsets": 0, "incinerations": 0}
+        weather_occurrences[season_str]["black_holes"] += black_holes
+        weather_occurrences[season_str]["flooded_runners"] += flood_count
+        weather_occurrences[season_str]["sunsets"] += sunset
+        weather_occurrences[season_str]["incinerations"] += incineration
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'w') as file:
             json.dump(weather_occurrences, file)
 
@@ -771,7 +772,7 @@ class Pendants(commands.Cog):
 
     def save_daily_top_players(self, all_players, day):
         # need to put in logic for playoffs here
-        team_list = self.load_remaining_teams()
+        #team_list = self.load_remaining_teams()
 
         # sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
         #                                        reverse=True) if v['teamId'] in team_list}

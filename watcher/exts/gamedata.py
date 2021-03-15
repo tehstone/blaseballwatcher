@@ -811,7 +811,7 @@ class GameData(commands.Cog):
     async def _update_spreadsheets(self, ctx, current_season: int, fill: bool = False):
         await ctx.message.add_reaction("⏲️")
         current_season -= 1
-        #await self.save_json_range(current_season, fill)
+        await self.save_json_range(current_season, fill)
         await self._update_tiebreakers()
         await self.update_spreadsheets([current_season], fill)
         await ctx.message.add_reaction(self.bot.success_react)
