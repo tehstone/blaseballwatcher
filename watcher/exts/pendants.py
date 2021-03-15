@@ -731,39 +731,6 @@ class Pendants(commands.Cog):
         with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
             json.dump(all_players, file)
 
-        with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_day_weather.json'), 'r') as file:
-            day_weather = json.load(file)
-        black_holes, sunset, incineration = 0, 0, 0
-        for __, weather_map in day_weather.items():
-            if "Black Hole" in weather_map:
-                black_holes += weather_map["Black Hole"]
-            if "Sunset" in weather_map:
-                sunset += weather_map["Sunset"]
-            if "Incinerations" in weather_map:
-                sunset += weather_map["Incinerations"]
-        await p_worksheet.batch_update([{
-            'range': "B2:B2",
-            'values': [[black_holes]]
-        }])
-
-        flood_count, runner_count = await self._lookup_floods(season)
-        await p_worksheet.batch_update([{
-            'range': "L2:M2",
-            'values': [[flood_count, runner_count]]
-        }])
-
-        with open(os.path.join('season_data', 'weather_occurrences.json'), 'r') as file:
-            weather_occurrences = json.load(file)
-        season_str = str(season)
-        if season_str not in weather_occurrences:
-            weather_occurrences[season_str] = {"black_holes": 0, "flooded_runners": 0, "sunsets": 0, "incinerations": 0}
-        weather_occurrences[season_str]["black_holes"] += black_holes
-        weather_occurrences[season_str]["flooded_runners"] = runner_count
-        weather_occurrences[season_str]["sunsets"] += sunset
-        weather_occurrences[season_str]["incinerations"] += incineration
-        with open(os.path.join('season_data', 'weather_occurrences.json'), 'w') as file:
-            json.dump(weather_occurrences, file)
-
     @staticmethod
     def load_remaining_teams():
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
@@ -830,56 +797,6 @@ class Pendants(commands.Cog):
             json.dump(daily_leaders, file)
 
         return sorted_hits, sorted_homeruns, sorted_seed_dog_payouts, sorted_stolenbases
-
-    async def _lookup_floods(self, season):
-        season_flood_count, season_runner_count = 0, 0
-        try:
-            with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
-                      'r') as file:
-                flood_lookups = json.load(file)
-        except FileNotFoundError:
-            flood_lookups = {}
-            self.bot.logger.warning("No flood lookup data found.")
-        for day, day_info in flood_lookups.items():
-            if day_info['lookedup'] == False:
-                day_flood_count = 0
-                day_runner_count = 0
-                failed_count = 0
-                for game_id in day_info["floods"]:
-                    game_feed = await utils.retry_request(
-                        f"https://api.blaseball-reference.com/v1/events?gameId={game_id}&baseRunners=true")
-                    if game_feed:
-                        feed_json = game_feed.json()
-                        if len(feed_json['results']) > 0:
-                            last_event = None
-                            for food in feed_json['results']:
-                                for text in food['event_text']:
-                                    if "Immateria" in text:
-                                        day_flood_count += 1
-                                        day_runner_count += len(last_event['base_runners'])
-                                last_event = food
-                        else:
-                            failed_count += 1
-                    else:
-                        failed_count += 1
-
-                if failed_count == 0:
-                    day_info['lookedup'] = True
-                    day_info['flood_count'] = day_flood_count
-                    day_info['runner_count'] = day_runner_count
-
-                    season_flood_count += day_flood_count
-                    season_runner_count += day_runner_count
-            else:
-                if "flood_count" in day_info:
-                    season_flood_count += day_info['flood_count']
-                if "runner_count" in day_info:
-                    season_runner_count += day_info['runner_count']
-            flood_lookups[day] = day_info
-        with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
-                  'w') as file:
-            json.dump(flood_lookups, file)
-        return season_flood_count, season_runner_count
 
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):

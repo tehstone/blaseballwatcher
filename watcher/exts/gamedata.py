@@ -569,25 +569,15 @@ class GameData(commands.Cog):
                     await asyncio.sleep(10)
 
             print("Updating Weather Events")
-            try:
-                with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_day_weather.json'), 'r') as file:
-                    day_weather = json.load(file)
-            except FileNotFoundError:
-                day_weather = {}
 
             orows, otypes = [], []
+            weather_occurrences = {"Black Hole": 0, "Sunset": 0, "Incineration": 0}
             for day in sorted(season_outcomes.keys()):
-                new_day = False
-                if str(day) not in day_weather.keys():
-                    day_weather[str(day)] = {}
-                    new_day = True
                 for game in season_outcomes[day]:
                     for outcome in season_outcomes[day][game]:
                         outcome_type = self.get_outcome_type(outcome)
-                        if new_day:
-                            if outcome_type not in day_weather[str(day)].keys():
-                                day_weather[str(day)][outcome_type] = 0
-                            day_weather[str(day)][outcome_type] += 1
+                        if outcome_type in weather_occurrences:
+                            weather_occurrences[outcome_type] += 1
                         orows.append([day+1, outcome.strip()])
                         otypes.append([outcome_type])
             o_worksheet = await sheet.worksheet("Blaseball")
@@ -600,9 +590,6 @@ class GameData(commands.Cog):
                 'range': f"I{9}:I{9 + len(otypes)}",
                 'values': otypes
             }])
-
-            with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_day_weather.json'), 'w') as file:
-                json.dump(day_weather, file)
 
             if fill:
                 weather_rows = []
@@ -622,7 +609,8 @@ class GameData(commands.Cog):
                 except FileNotFoundError:
                     flood_lookups = {}
                 for day, floods in flood_count.items():
-                    flood_lookups[str(day)] = {"lookedup": False, "floods": floods}
+                    if str(day) not in flood_lookups:
+                        flood_lookups[str(day)] = {"lookedup": False, "floods": floods}
                 with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
                           'w') as file:
                     json.dump(flood_lookups, file)
@@ -772,8 +760,76 @@ class GameData(commands.Cog):
                     'values': [total_betcounts]
                 }])
 
+            await self._save_weather_counts(sheet, season, weather_occurrences)
+
             print("Updates Complete")
             await asyncio.sleep(5)
+
+    async def _save_weather_counts(self, sheet, season, weather_occurrences):
+        p_worksheet = await sheet.worksheet("Snack Income")
+        flood_count, runner_count = await self._lookup_floods(season)
+        await p_worksheet.batch_update([{
+            'range': "B2:B2",
+            'values': [[weather_occurrences["Black Hole"]]]
+        }])
+        await p_worksheet.batch_update([{
+            'range': "L2:M2",
+            'values': [[flood_count, runner_count]]
+        }])
+
+        weather_occurrences["flooded_runners"] = runner_count
+        with open(os.path.join('season_data', 'weather_occurrences.json'), 'w') as file:
+            json.dump(weather_occurrences, file)
+
+    async def _lookup_floods(self, season):
+        season_flood_count, season_runner_count = 0, 0
+        try:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
+                      'r') as file:
+                flood_lookups = json.load(file)
+        except FileNotFoundError:
+            flood_lookups = {}
+            self.bot.logger.warning("No flood lookup data found.")
+        for day, day_info in flood_lookups.items():
+            if day_info['lookedup'] == False:
+                day_flood_count = 0
+                day_runner_count = 0
+                failed_count = 0
+                for game_id in day_info["floods"]:
+                    game_feed = await utils.retry_request(
+                        f"https://api.blaseball-reference.com/v1/events?gameId={game_id}&baseRunners=true")
+                    if game_feed:
+                        feed_json = game_feed.json()
+                        if len(feed_json['results']) > 0:
+                            last_event = None
+                            for food in feed_json['results']:
+                                for text in food['event_text']:
+                                    if "Immateria" in text:
+                                        day_flood_count += 1
+                                        day_runner_count += len(last_event['base_runners'])
+                                last_event = food
+                        else:
+                            failed_count += 1
+                    else:
+                        failed_count += 1
+
+                if failed_count == 0:
+                    day_info['lookedup'] = True
+                    day_info['flood_count'] = day_flood_count
+                    day_info['runner_count'] = day_runner_count
+
+                    season_flood_count += day_flood_count
+                    season_runner_count += day_runner_count
+            else:
+                if "flood_count" in day_info:
+                    season_flood_count += day_info['flood_count']
+                if "runner_count" in day_info:
+                    season_runner_count += day_info['runner_count']
+            flood_lookups[day] = day_info
+        with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_flood_lookups.json'),
+                  'w') as file:
+            json.dump(flood_lookups, file)
+        return season_flood_count, season_runner_count
 
     @staticmethod
     def _calculate_payout(odds_dict, bet_tiers, season):
