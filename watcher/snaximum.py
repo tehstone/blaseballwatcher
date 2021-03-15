@@ -204,6 +204,8 @@ class Snaximum:
 
         self.flooded_runners: int = 0
         self.black_holes: int = 0
+        self.sunsets: int = 0
+        self.incinerations: int = 0
         self.simulation_data = None
 
         # Internal stuff:
@@ -250,7 +252,9 @@ class Snaximum:
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'r') as file:
             weather_occurrences = json.load(file)
         self.black_holes = weather_occurrences[str(self.simulation_data["season"])].get('black_holes', 0)
+        self.sunsets = weather_occurrences[str(self.simulation_data["season"])].get('sunsets', 0)
         self.flooded_runners = weather_occurrences[str(self.simulation_data["season"])].get('flooded_runners', 0)
+        self.incinerations = weather_occurrences[str(self.simulation_data["season"])].get('incinerations', 0)
 
     def refresh(self):
         self.refresh_sim_data()
@@ -459,6 +463,12 @@ class Snaximum:
         if which == 'wet_pretzel':
             current_gross = self.black_holes * self.get_payout('wet_pretzel', snaxfolio[which])
             new_gross = self.black_holes * self.get_payout('wet_pretzel', snaxfolio[which] + 1)
+        elif which == 'doughnut':
+            current_gross = self.sunsets * self.get_payout('doughnut', snaxfolio[which])
+            new_gross = self.sunsets * self.get_payout('doughnut', snaxfolio[which] + 1)
+        elif which == 'sundae':
+            current_gross = self.incinerations * self.get_payout('sundae', snaxfolio[which])
+            new_gross = self.incinerations * self.get_payout('sundae', snaxfolio[which] + 1)
         elif which == 'slushies':
             current_gross = self.flooded_runners * self.get_payout('slushies', snaxfolio[which])
             new_gross = self.flooded_runners * self.get_payout('slushies', snaxfolio[which] + 1)
@@ -533,7 +543,8 @@ class Snaximum:
             ignore_list = []
         snaxfolio = self.mksnax(snaxfolio)
 
-        choice_list = ['pickles', 'seeds', 'hot_dog', 'wet_pretzel', 'slushies', 'snake_oil']
+        choice_list = ['pickles', 'seeds', 'hot_dog', 'wet_pretzel', 'slushies', 'snake_oil',
+                       'doughnut', 'sundae']
         choices = [self.what_if(snaxfolio, item) for item in choice_list if item not in ignore_list]
 
         if strategy == Strategy.LONG_TERM:

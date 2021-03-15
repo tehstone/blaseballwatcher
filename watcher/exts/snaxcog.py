@@ -33,8 +33,12 @@ snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake
                "wet pretzel": "wet_pretzel", "wet_pretzel": "wet_pretzel",
                "wet pretzels": "wet_pretzel", "wet_pretzels": "wet_pretzel",
                "wetpretzel": "wet_pretzel", "wetpretzels": "wet_pretzel",
-               'doughnut': 'doughnut', 'sundae': 'sundae', 'breakfast': 'breakfast',
-               'lemonade': 'lemonade', 'taffy': 'taffy', 'meatball': 'meatball',
+               'doughnut': 'doughnut', 'donut': 'doughnut', 'doughnuts': 'doughnut', 'donuts': 'doughnut',
+               'sundae': 'sundae', 'sundaes': 'sundae', 'sunday': 'sundae', 'sundays': 'sundae',
+               'breakfast': 'breakfast', 'breakfasts': 'breakfast',
+               'lemonade': 'lemonade', 'lemonades': 'lemonade',
+               'taffy': 'taffy', 'taffys': 'taffy', 'taffies': 'taffy',
+               'meatball': 'meatball', 'meatballs': 'meatball'
                }
 
 
@@ -378,15 +382,17 @@ class SnaxCog(commands.Cog):
                                   description="Use the `!set_snax` command to set it up.")
             return await ctx.send(embed=embed)
 
-        snax_msg = ""
-        for snack, quantity in snaxfolio.items():
+        snax_msg_parts = []
+        for snax, quantity in snaxfolio.items():
             if quantity > 0:
-                name = snack.replace('_', ' ')
-                snax_msg += f"{name.capitalize()}: {quantity}\n"
+                name = snax.replace('_', ' ')
+                snax_msg_parts.append(f"{name.capitalize()}: {quantity}\n")
 
         embed = discord.Embed(colour=discord.Colour.green(),
-                              title=f"{ctx.author.display_name}'s current snaxfolio.",
-                              description=snax_msg)
+                              title=f"{ctx.author.display_name}'s current snaxfolio.")
+        split_idx = len(snax_msg_parts) // 2
+        embed.add_field(name=self.bot.empty_str, value=''.join(snax_msg_parts[:split_idx]))
+        embed.add_field(name=self.bot.empty_str, value=''.join(snax_msg_parts[split_idx:]))
         return await ctx.send(embed=embed)
 
     @commands.command(name="cumulative_cost", aliases=['total_cost', 'cc'])
@@ -452,7 +458,8 @@ class SnaxCog(commands.Cog):
         snaxfolio = {}
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select user_id, snake_oil, fresh_popcorn, stale_popcorn, chips, burger, " 
-                                  "hot_dog, seeds, pickles, slushies, wet_pretzel from UserSnaxTable " 
+                                  "hot_dog, seeds, pickles, slushies, wet_pretzel, doughnut, sundae, "
+                                  "breakfast, lemonade, taffy, meatball from UserSnaxTable " 
                                   f"where user_id={user_id};") as cursor:
                 async for row in cursor:
                     user_snax = SnaxInstance(*row)

@@ -32,14 +32,30 @@ def initialize(db):
                                                 pickles   INTEGER DEFAULT 0,
                                                 slushies  INTEGER DEFAULT 0,
                                                 wet_pretzel   INTEGER DEFAULT 0,
+                                                doughnut	INTEGER DEFAULT 0,
+                                                sundae	INTEGER DEFAULT 0,
+                                                breakfast	INTEGER DEFAULT 0,
+                                                lemonade	INTEGER DEFAULT 0,
+                                                taffy	INTEGER DEFAULT 0,
+                                                meatball	INTEGER DEFAULT 0,
                                                 PRIMARY KEY(id)
                                             );""")
+        try:
+            c.execute("ALTER TABLE usersnaxtable ADD COLUMN doughnut	INTEGER DEFAULT 0;")
+            c.execute("ALTER TABLE usersnaxtable ADD COLUMN sundae	INTEGER DEFAULT 0;")
+            c.execute("ALTER TABLE usersnaxtable ADD COLUMN breakfast	INTEGER DEFAULT 0;")
+            c.execute("ALTER TABLE usersnaxtable ADD COLUMN lemonade	INTEGER DEFAULT 0;")
+            c.execute("ALTER TABLE usersnaxtable ADD COLUMN taffy	INTEGER DEFAULT 0;")
+            c.execute("ALTER TABLE usersnaxtable ADD COLUMN meatball	INTEGER DEFAULT 0;")
+        except Exception as e:
+            pass
         c.close()
 
 
 class SnaxInstance:
     def __init__(self, user_id, snake_oil, fresh_popcorn, stale_popcorn,
-                 chips, burger, hot_dog, seeds, pickles, slushies, wet_pretzel):
+                 chips, burger, hot_dog, seeds, pickles, slushies, wet_pretzel,
+                 doughnut, sundae, breakfast, lemonade, taffy, meatball):
         self.user_id = user_id
         self.snake_oil = snake_oil
         self.fresh_popcorn = fresh_popcorn
@@ -51,10 +67,18 @@ class SnaxInstance:
         self.pickles = pickles
         self.slushies = slushies
         self.wet_pretzel = wet_pretzel
+        self.doughnut = doughnut
+        self.sundae = sundae
+        self.breakfast = breakfast
+        self.lemonade = lemonade
+        self.taffy = taffy
+        self.meatball = meatball
 
     def get_as_dict(self):
         return {'hot_dog': self.hot_dog, 'seeds': self.seeds, 'pickles': self.pickles,
                 'slushies': self.slushies, 'wet_pretzel': self.wet_pretzel, 'snake_oil': self.snake_oil,
                 'fresh_popcorn': self.fresh_popcorn, "stale_popcorn": self.stale_popcorn,
-                "burger": self.burger, "chips": self.chips}
+                "burger": self.burger, "chips": self.chips, 'doughnut': self.doughnut,
+                'sundae': self.sundae, 'breakfast': self.breakfast, 'lemonade': self.lemonade,
+                'taffy': self.taffy, 'meatball': self.meatball}
 
