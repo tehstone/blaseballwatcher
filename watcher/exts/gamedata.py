@@ -554,12 +554,12 @@ class GameData(commands.Cog):
                     k = 16
                     if j >= 16:
                         k = j + 1
-                    await m_worksheet.batch_update([{
-                        'range': f"B{k}:B{k+2}",
-                        'values': [[f'=SUM(FILTER(D3:D{j},E3:E{j}="Division"))'],
-                                   [f'=SUM(FILTER(D3:D{j},E3:E{j}="League"))'],
-                                   [f'=SUM(FILTER(D3:D{j},E3:E{j}="InterLeague"))']]
-                    }], raw=False)
+                    # await m_worksheet.batch_update([{
+                    #     'range': f"B{k}:B{k+2}",
+                    #     'values': [[f'=SUM(FILTER(D3:D{j},E3:E{j}="Division"))'],
+                    #                [f'=SUM(FILTER(D3:D{j},E3:E{j}="League"))'],
+                    #                [f'=SUM(FILTER(D3:D{j},E3:E{j}="InterLeague"))']]
+                    # }], raw=False)
                     # await m_worksheet.update(f"F{k}:F{k+1}", [[f'=sum(F3:F{j})'], [f'=sum(G3:G{j})']], raw=False)
                 else:
                     for opp in team_series:
@@ -811,7 +811,8 @@ class GameData(commands.Cog):
     async def _update_spreadsheets(self, ctx, current_season: int, fill: bool = False):
         await ctx.message.add_reaction("⏲️")
         current_season -= 1
-        await self.save_json_range(current_season, fill)
+        #await self.save_json_range(current_season, fill)
+        await self._update_tiebreakers()
         await self.update_spreadsheets([current_season], fill)
         await ctx.message.add_reaction(self.bot.success_react)
         await ctx.send("Spreadsheets updated.")
