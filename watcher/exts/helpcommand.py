@@ -1,8 +1,6 @@
 import discord
 from discord.ext import commands
 
-from watcher import checks
-
 
 class MyHelpCommand(commands.DefaultHelpCommand):
 
@@ -24,7 +22,8 @@ class MyHelpCommand(commands.DefaultHelpCommand):
         help_embed.add_field(name="Ignoring Snax", value=text)
 
         text = "!lucrative_batters \n"
-        text += "!propose_upgrades "
+        text += "!propose_upgrades \n"
+        text += "!personal_revenue \n"
         help_embed.add_field(name="Snaxfolio Usage", value=text)
         text = "Do `!help <command_name>` for any command to see more detailed help."
         help_embed.add_field(name="Additional Help", value=text)
