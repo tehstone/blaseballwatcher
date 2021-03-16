@@ -773,7 +773,15 @@ class GameData(commands.Cog):
             'values': [[weather_occurrences["Black Hole"]]]
         }])
         await p_worksheet.batch_update([{
-            'range': "L2:M2",
+            'range': "T2:T2",
+            'values': [[weather_occurrences["Sunset"]]]
+        }])
+        await p_worksheet.batch_update([{
+            'range': "AE2:AE2",
+            'values': [[weather_occurrences["Incineration"]]]
+        }])
+        await p_worksheet.batch_update([{
+            'range': "K2:L2",
             'values': [[flood_count, runner_count]]
         }])
 
