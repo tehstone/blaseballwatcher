@@ -201,10 +201,6 @@ class WatcherBot(commands.AutoShardedBot):
             except Exception as e:
                 self.logger.warning(f"Failed to update pendant leaders: {e}")
 
-            await debug_channel.send(f"Accumulating statsheets.  {time.time()}")
-            await utils.update_cumulative_statsheets(self.config['current_season'])
-            await debug_channel.send(f"Statsheet accumulation complete.  {time.time()}")
-
             betadvice_cog = self.cogs.get('BetAdvice')
             try:
                 await debug_channel.send(f"Starting daily sim.  {time.time()}")
