@@ -251,10 +251,10 @@ class Snaximum:
     def refresh_weather_counts(self):
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'r') as file:
             weather_occurrences = json.load(file)
-        self.black_holes = weather_occurrences[str(self.simulation_data["season"])].get('black_holes', 0)
-        self.sunsets = weather_occurrences[str(self.simulation_data["season"])].get('sunsets', 0)
-        self.flooded_runners = weather_occurrences[str(self.simulation_data["season"])].get('flooded_runners', 0)
-        self.incinerations = weather_occurrences[str(self.simulation_data["season"])].get('incinerations', 0)
+        self.black_holes = weather_occurrences.get('black_holes', 0)
+        self.sunsets = weather_occurrences.get('sunsets', 0)
+        self.flooded_runners = weather_occurrences.get('flooded_runners', 0)
+        self.incinerations = weather_occurrences.get('incinerations', 0)
 
     def refresh(self):
         self.refresh_sim_data()
