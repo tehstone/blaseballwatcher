@@ -472,25 +472,21 @@ class Pendants(commands.Cog):
                     debug_channel = self.bot.get_channel(debug_chan_id)
                     if debug_channel:
                         if len(sh_description) > 0:
-                            # await utils.send_message_in_chunks(daily_message, debug_channel)
-                            # await debug_channel.send(daily_message_two, embed=sh_embed)
-                            pass
+                            await utils.send_message_in_chunks(daily_message, debug_channel)
+                            await debug_channel.send(daily_message_two, embed=sh_embed)
                         else:
-                            # await utils.send_message_in_chunks(daily_message, debug_channel)
-                            # await debug_channel.send(daily_message_two)
-                            pass
+                            await utils.send_message_in_chunks(daily_message, debug_channel)
+                            await debug_channel.send(daily_message_two)
                 daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
                 if daily_stats_channel_id:
                     daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
                     if daily_stats_channel:
                         if len(sh_description) > 0:
-                            # await utils.send_message_in_chunks(daily_message, daily_stats_channel)
-                            # await daily_stats_channel.send(daily_message_two, embed=sh_embed)
-                            pass
+                            await utils.send_message_in_chunks(daily_message, daily_stats_channel)
+                            await daily_stats_channel.send(daily_message_two, embed=sh_embed)
                         else:
-                            # await utils.send_message_in_chunks(daily_message, daily_stats_channel)
-                            # await daily_stats_channel.send(daily_message_two)
-                            pass
+                            await utils.send_message_in_chunks(daily_message, daily_stats_channel)
+                            await daily_stats_channel.send(daily_message_two)
             else:
                 self.bot.logger.info(f"No daily message sent for {day['day']}")
             last_day += 1
