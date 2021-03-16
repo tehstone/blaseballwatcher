@@ -1,5 +1,7 @@
 import json
 import os
+
+import aiosqlite
 from joblib import load
 
 import discord
@@ -56,7 +58,7 @@ class BetAdvice(commands.Cog):
                 team_stlats[team_id]["lineup"][batter["id"]] = batter
         return pitcher_stlats, team_stlats
 
-    async def strikeout_odds(self, hp_stlats, opp_stlats, clf, team_stats, day, cumulative_stats):
+    async def strikeout_odds(self, hp_stlats, opp_stlats, clf, team_stats, day, at_bat_counts):
         stlats_arr = []
         unthwack = float(hp_stlats["unthwackability"])
         ruth = float(hp_stlats["ruthlessness"])
@@ -79,11 +81,10 @@ class BetAdvice(commands.Cog):
         for i in range(len(odds_list)):
             odds = odds_list[i][1]
             pid = lineup[i]
-            if pid in cumulative_stats["hitters"]:
-                plate_appearances = cumulative_stats["hitters"][pid]["plateAppearances"]
+            if pid in at_bat_counts:
+                plate_appearances = at_bat_counts[pid]
             else:
                 plate_appearances = team_stats["plate_appearances"] / lineup_size
-            #print(plate_appearances / day)
             odds *= plate_appearances / day
             odds_sum += odds
         return odds_sum
@@ -140,7 +141,7 @@ class BetAdvice(commands.Cog):
         for player in daily_leaders["seed_dog"][:3]:
             name = player["name"]
             shorthand = team_short_map[player["teamId"]]
-            hits = player["hits"]
+            hits = player["hitsMinusHrs"]
             home_runs = player["homeRuns"]
             mult_text = ""
             if "multiplier" in player:
@@ -158,7 +159,7 @@ class BetAdvice(commands.Cog):
         for player in daily_leaders["combo"][:3]:
             name = player["name"]
             shorthand = team_short_map[player["teamId"]]
-            hits = player["hits"]
+            hits = player["hitsMinusHrs"]
             home_runs = player["homeRuns"]
             steals = player["stolenBases"]
             entry = f"[{name}]({'https://www.blaseball.com/player/' + player['playerId']}) "
@@ -260,13 +261,8 @@ class BetAdvice(commands.Cog):
         day = sim_data['day'] + 1
         clf = load(os.path.join("data", "pendant_data", "so.joblib"))
 
-        with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'r') as file:
-            all_players = json.load(file)
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'team_stats.json'), 'r') as file:
             team_stats = json.load(file)
-        with open(os.path.join('data', 'pendant_data', 'statsheets', f's{season}_current_player_stats.json'),
-                  'r') as file:
-            cumulative_stats = json.load(file)
         pitcher_stlats, team_stlats = await self.get_player_stlats()
         filename = os.path.join('data', 'pendant_data', 'stlats', f's{season}_d{day}_pitcher_stlats.json')
         with open(filename, 'w') as file:
@@ -275,20 +271,30 @@ class BetAdvice(commands.Cog):
         with open(filename, 'w') as file:
             json.dump(team_stlats, file)
 
+        at_bat_counts = {}
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select playerId, sum(atBats) from DailyStatSheets "
+                                  f"where season={int(season)};") as cursor:
+                async for row in cursor:
+                    at_bat_counts[row[0]] = row[1]
+
         games = await utils.retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
         games_json = games.json()
         pitcher_ids = []
         pitcher_ids += [game["homePitcher"] for game in games_json]
         pitcher_ids += [game["awayPitcher"] for game in games_json]
-        pitcher_dict = {k: v for k, v in all_players.items() if k in pitcher_ids}
+        pitcher_dict = {}
+        for k in pitcher_ids:
+            pitcher_dict[k] = {"shutout": 0, "strikeouts": 0, "outsRecorded": 0,
+                               "name": "", "team": "", "opponent": "", "odds": 0}
         results = {}
-
         for game in games_json:
             if game["homePitcher"] not in pitcher_dict:
                 pitcher_dict[game["homePitcher"]] = {"shutout": 0, "strikeouts": 0, "outsRecorded": 0,
                                                      "name": game["homePitcherName"], "team": game["homeTeamNickname"],
                                                      "opponent": game["awayTeamNickname"], "odds": game["homeOdds"]}
             pitcher_dict[game["homePitcher"]]["team"] = game["homeTeam"]
+            pitcher_dict[game["homePitcher"]]["name"] = game["homePitcherName"]
             pitcher_dict[game["homePitcher"]]["opponent"] = game["awayTeam"]
             pitcher_dict[game["homePitcher"]]["odds"] = game["homeOdds"]
             struckouts = team_stats[game["awayTeam"]]["struckouts"]
@@ -300,7 +306,7 @@ class BetAdvice(commands.Cog):
             hp_stlats = pitcher_stlats[game["homePitcher"]]
             opp_stlats = team_stlats[game["awayTeam"]]
             strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf,
-                                                       team_stats[game["awayTeam"]], day, cumulative_stats)
+                                                       team_stats[game["awayTeam"]], day, at_bat_counts)
             results[strikeout_odds] = game["homePitcherName"]
             pitcher_dict[game["homePitcher"]]["k_prediction"] = strikeout_odds
 
@@ -309,6 +315,7 @@ class BetAdvice(commands.Cog):
                                                      "name": game["awayPitcherName"], "team": game["awayTeamNickname"],
                                                      "opponent": game["homeTeamNickname"], "odds": game["awayOdds"]}
             pitcher_dict[game["awayPitcher"]]["team"] = game["awayTeam"]
+            pitcher_dict[game["awayPitcher"]]["name"] = game["awayPitcherName"]
             pitcher_dict[game["awayPitcher"]]["opponent"] = game["homeTeam"]
             pitcher_dict[game["awayPitcher"]]["odds"] = game["awayOdds"]
             struckouts = team_stats[game["homeTeam"]]["struckouts"]
@@ -320,7 +327,7 @@ class BetAdvice(commands.Cog):
             hp_stlats = pitcher_stlats[game["awayPitcher"]]
             opp_stlats = team_stlats[game["homeTeam"]]
             strikeout_odds = await self.strikeout_odds(hp_stlats, opp_stlats, clf,
-                                                       team_stats[game["homeTeam"]], day, cumulative_stats)
+                                                       team_stats[game["homeTeam"]], day, at_bat_counts)
             results[strikeout_odds] = game["awayPitcherName"]
             pitcher_dict[game["awayPitcher"]]["k_prediction"] = strikeout_odds
 

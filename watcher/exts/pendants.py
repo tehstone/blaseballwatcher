@@ -646,6 +646,7 @@ class Pendants(commands.Cog):
                     if row and row[0]:
                         hitters[row[0]] = {
                             "name": row[1],
+                            "playerId": row[0],
                             "teamId": row[2],
                             "hitsMinusHrs": row[3],
                             "homeRuns": row[4],
@@ -660,6 +661,7 @@ class Pendants(commands.Cog):
                     if row and row[0]:
                         pitchers[row[0]] = {
                             "name": row[1],
+                            "playerId": row[0],
                             "teamId": row[2],
                             "outsRecorded": row[3],
                             "strikeouts": row[4],
