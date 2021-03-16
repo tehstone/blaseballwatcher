@@ -40,15 +40,46 @@ def initialize(db):
                                                 meatball	INTEGER DEFAULT 0,
                                                 PRIMARY KEY(id)
                                             );""")
-        try:
-            c.execute("ALTER TABLE usersnaxtable ADD COLUMN doughnut	INTEGER DEFAULT 0;")
-            c.execute("ALTER TABLE usersnaxtable ADD COLUMN sundae	INTEGER DEFAULT 0;")
-            c.execute("ALTER TABLE usersnaxtable ADD COLUMN breakfast	INTEGER DEFAULT 0;")
-            c.execute("ALTER TABLE usersnaxtable ADD COLUMN lemonade	INTEGER DEFAULT 0;")
-            c.execute("ALTER TABLE usersnaxtable ADD COLUMN taffy	INTEGER DEFAULT 0;")
-            c.execute("ALTER TABLE usersnaxtable ADD COLUMN meatball	INTEGER DEFAULT 0;")
-        except Exception as e:
-            pass
+        c.execute("""CREATE TABLE IF NOT EXISTS DailyStatSheets (
+                                id	TEXT NOT NULL UNIQUE,
+                                season	INT NOT NULL,
+                                day	INT NOT NULL,
+                                playerId	TEXT NOT NULL,
+                                teamId	TEXT NOT NULL,
+                                gameId	TEXT NOT NULL,
+                                team	TEXT NOT NULL,
+                                name	TEXT NOT NULL,
+                                atBats	int,
+                                caughtStealing	int,
+                                doubles	int,
+                                earnedRuns	int,
+                                groundIntoDp	int,
+                                hits	int,
+                                hitsAllowed	int,
+                                homeRuns	int,
+                                losses	int,
+                                outsRecorded	int,
+                                rbis	int,
+                                runs	int,
+                                stolenBases	int,
+                                strikeouts	int,
+                                struckouts	int,
+                                triples	int,
+                                walks	int,
+                                walksIssued	int,
+                                wins	int,
+                                hitByPitch	int,
+                                hitBatters	int,
+                                quadruples	int,
+                                pitchesThrown	int,
+                                rotation_changed	boolean,
+                                position	text,
+                                rotation	int,
+                                shutout	boolean,
+                                noHitter	boolean,
+                                perfectGame	boolean,
+                                PRIMARY KEY(id)
+                            );""")
         c.close()
 
 
@@ -82,3 +113,74 @@ class SnaxInstance:
                 'sundae': self.sundae, 'breakfast': self.breakfast, 'lemonade': self.lemonade,
                 'taffy': self.taffy, 'meatball': self.meatball}
 
+
+class PlayerStatSheetsInstance:
+    def __init__(self, id, season, day, playerId, teamId, gameId, team, name, atBats, caughtStealing, doubles,
+                 earnedRuns, groundIntoDp, hits, hitsAllowed, homeRuns, losses, outsRecorded, rbis, runs,
+                 stolenBases, strikeouts, struckouts, triples, walks, walksIssued, wins, hitByPitch, hitBatters,
+                 quadruples, pitchesThrown, rotation_changed, position, rotation, shutout, noHitter, perfectGame):
+        self.id = id
+        self.season = season
+        self.day = day
+        self.playerId = playerId
+        self.teamId = teamId
+        self.gameId = gameId
+        self.team = team
+        self.name = name
+        self.atBats = atBats
+        self.caughtStealing = caughtStealing
+        self.doubles = doubles
+        self.earnedRuns = earnedRuns
+        self.groundIntoDp = groundIntoDp
+        self.hits = hits
+        self.hitsAllowed = hitsAllowed
+        self.homeRuns = homeRuns
+        self.losses = losses
+        self.outsRecorded = outsRecorded
+        self.rbis = rbis
+        self.runs = runs
+        self.stolenBases = stolenBases
+        self.strikeouts = strikeouts
+        self.struckouts = struckouts
+        self.triples = triples
+        self.walks = walks
+        self.walksIssued = walksIssued
+        self.wins = wins
+        self.hitByPitch = hitByPitch
+        self.hitBatters = hitBatters
+        self.quadruples = quadruples
+        self.pitchesThrown = pitchesThrown
+        self.rotation_changed = rotation_changed
+        self.position = position
+        self.rotation = rotation
+        self.shutout = shutout
+        self.noHitter = noHitter
+        self.perfectGame = perfectGame
+
+    def get_as_dict(self):
+        return {{"id": self.id, "season": self.season, "day": self.day, "playerId": self.playerId,
+                 "teamId": self.teamId, "gameId": self.gameId, "team": self.team, "name": self.name,
+                 "atBats": self.atBats, "caughtStealing": self.caughtStealing, "doubles": self.doubles,
+                 "earnedRuns": self.earnedRuns, "groundIntoDp": self.groundIntoDp, "hits": self.hits,
+                 "hitsAllowed": self.hitsAllowed, "homeRuns": self.homeRuns, "losses": self.losses,
+                 "outsRecorded": self.outsRecorded,
+                 "rbis": self.rbis, "runs": self.runs, "stolenBases": self.stolenBases, "strikeouts": self.strikeouts,
+                 "struckouts": self.struckouts, "triples": self.triples, "walks": self.walks,
+                 "walksIssued": self.walksIssued, "wins": self.wins, "hitByPitch": self.hitByPitch,
+                 "hitBatters": self.hitBatters, "quadruples": self.quadruples, "pitchesThrown": self.pitchesThrown,
+                 "rotation_changed": self.rotation_changed, "position": self.position, "rotation": self.rotation,
+                 "shutout": self.shutout, "noHitter": self.noHitter, "perfectGame": self.perfectGame}}
+
+
+class CycleInstance:
+    def __init__(self, playerId, teamId, gameId, name, hits, doubles, triples, homeRuns, atBats, Id):
+        self.playerId = playerId
+        self.teamId = teamId
+        self.gameId = gameId
+        self.name = name
+        self.hits = hits
+        self.doubles = doubles
+        self.triples = triples
+        self.homeRuns = homeRuns
+        self.atBats = atBats
+        self.Id = Id

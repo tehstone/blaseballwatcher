@@ -3,13 +3,14 @@ import itertools
 import json
 import os
 
+import aiosqlite
 import discord
-import gspread
 import requests
 from discord.ext import commands
 from requests import Timeout
 
 from watcher import utils
+from watcher.exts.db.watcher_db import PlayerStatSheetsInstance, CycleInstance
 
 PM_ID = "de21c97e-f575-43b7-8be7-ecc5d8c4eaff"
 WHEERER_ID = "0bb35615-63f2-4492-80ec-b6b322dc5450"
@@ -50,7 +51,13 @@ class Pendants(commands.Cog):
                 await asyncio.sleep(.75)
         return None
 
-    async def get_daily_stats(self, all_statsheets, day, season):
+    async def get_daily_stats(self, day, season):
+        # if daily stats sheet file exists, read from that into db
+        # if not, then make all the requests to get the player stat sheet ids
+        # separate actual scanning of playerstatsheets into a separate method that
+        # can be called regardless of previous thing
+        filename = f"{season}_{day}player_statsheets.json"
+        day_sheet_exists = False
         try:
             with open(os.path.join('data', 'pendant_data', 'statsheets', 'pitching_rotations.json'), 'r') as file:
                 pitching_rotations = json.load(file)
@@ -61,61 +68,68 @@ class Pendants(commands.Cog):
                 team_stats = json.load(file)
         except FileNotFoundError:
             team_stats = {}
-        games = await self.retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
-        for game in games.json():
-            if not game["gameComplete"]:
-                return None
-        game_team_map = {}
-        for game in games.json():
-            game_team_map[game['homeTeam']] = {"game_id": game["id"], "opponent": game['awayTeam']}
-            game_team_map[game['awayTeam']] = {"game_id": game["id"], "opponent": game['homeTeam']}
-        game_statsheet_ids = [game["statsheet"] for game in games.json()]
-        game_statsheets = await self.retry_request(
-            f"https://www.blaseball.com/database/gameStatsheets?ids={','.join(game_statsheet_ids)}")
-        if not game_statsheets:
-            return None
-        team_statsheet_ids = [game["awayTeamStats"] for game in game_statsheets.json()]
-        team_statsheet_ids += [game["homeTeamStats"] for game in game_statsheets.json()]
-        team_statsheets = await self.retry_request(
-            f"https://www.blaseball.com/database/teamStatsheets?ids={','.join(team_statsheet_ids)}")
-        player_statsheet_ids = [team["playerStats"] for team in team_statsheets.json()]
-        flat_playerstatsheet_ids = list(itertools.chain.from_iterable(player_statsheet_ids))
-        print(f"day {day} player count: {len(flat_playerstatsheet_ids)}")
-        chunked_player_ids = [flat_playerstatsheet_ids[i:i + 50] for i in range(0, len(flat_playerstatsheet_ids), 50)]
+        try:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', 'daily', filename), 'r') as file:
+                statsheets = json.load(file)
+            with open(os.path.join('data', 'pendant_data', 'statsheets',
+                                   'game_team_maps', f's{season}_d{day}_game_team_map.json'), 'r') as file:
+                game_team_map = json.load(file)
+            day_sheet_exists = True
+        except FileNotFoundError:
+            statsheets = {}
+            games = await self.retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
+            if not games:
+                return True
+            for game in games.json():
+                if not game["gameComplete"]:
+                    return True
+            game_team_map = {}
+            for game in games.json():
+                game_team_map[game['homeTeam']] = {"game_id": game["id"], "opponent": game['awayTeam']}
+                game_team_map[game['awayTeam']] = {"game_id": game["id"], "opponent": game['homeTeam']}
+            with open(os.path.join('data', 'pendant_data', 'statsheets', 'game_team_maps',
+                                   f's{season}_d{day}_game_team_map.json'), 'w') as file:
+                json.dump(game_team_map, file)
+            game_statsheet_ids = [game["statsheet"] for game in games.json()]
+            game_statsheets = await self.retry_request(
+                f"https://www.blaseball.com/database/gameStatsheets?ids={','.join(game_statsheet_ids)}")
+            if not game_statsheets:
+                return True
+            team_statsheet_ids = [game["awayTeamStats"] for game in game_statsheets.json()]
+            team_statsheet_ids += [game["homeTeamStats"] for game in game_statsheets.json()]
+            team_statsheets = await self.retry_request(
+                f"https://www.blaseball.com/database/teamStatsheets?ids={','.join(team_statsheet_ids)}")
+            player_statsheet_ids = [team["playerStats"] for team in team_statsheets.json()]
+            flat_playerstatsheet_ids = list(itertools.chain.from_iterable(player_statsheet_ids))
+            print(f"day {day} player count: {len(flat_playerstatsheet_ids)}")
+            chunked_player_ids = [flat_playerstatsheet_ids[i:i + 50] for i in range(0, len(flat_playerstatsheet_ids), 50)]
+            for chunk in chunked_player_ids:
+                statsheet_chunk = await self.get_player_statsheets(chunk)
+                for statsheet in statsheet_chunk:
+                    statsheets[statsheet["id"]] = statsheet
 
-        statsheets = {}
-        pitcher_p_values = {}
-        notable = {"perfect": {}, "nohitter": {}, "shutout": {}, "cycle": {},
-                   "4homerun": {}, "bighits": {}, "rbimaster": {}}
-        for chunk in chunked_player_ids:
-            c_notable = await self.get_player_statsheets(chunk, day, statsheets, game_team_map,
-                                                         pitching_rotations, team_stats, pitcher_p_values)
-            for key, value in c_notable.items():
-                for ikey, ivalue in c_notable[key].items():
-                    notable[key][ikey] = ivalue
-        day_stats = {'day': day, 'season': season, 'statsheets': statsheets, "notable": notable}
-        all_statsheets.append(day_stats)
-        filename = f"{season}_{day}player_statsheets.json"
-        with open(os.path.join('data', 'pendant_data', 'statsheets', filename), 'w') as file:
-            json.dump([statsheets], file)
+        await self.amend_player_statsheets(statsheets, season, day, game_team_map,
+                                           pitching_rotations, team_stats)
 
-        with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'w') as file:
-            json.dump(all_statsheets, file)
+        if not day_sheet_exists:
+            with open(os.path.join('data', 'pendant_data', 'statsheets', 'daily', filename), 'w') as file:
+                json.dump(statsheets, file)
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'pitching_rotations.json'), 'w') as file:
             json.dump(pitching_rotations, file)
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'team_stats.json'), 'w') as file:
             json.dump(team_stats, file)
-        return notable
+        return False
 
-    async def get_player_statsheets(self, player_ids, day, statsheets, game_team_map,
-                                    pitching_rotations, team_stats, pitcher_p_values):
-        notable = {"perfect": {}, "nohitter": {}, "shutout": {},
-                   "cycle": {}, "4homerun": {}, "bighits": {}, "rbimaster": {}}
+    async def get_player_statsheets(self, player_ids):
         player_statsheets = await self.retry_request(
             f"https://www.blaseball.com/database/playerStatsheets?ids={','.join(player_ids)}")
-        players_list = player_statsheets.json()
+        return player_statsheets.json()
 
-        for p_values in players_list:
+    async def amend_player_statsheets(self, players_statsheets, season, day, game_team_map,
+                                      pitching_rotations, team_stats):
+        statsheets = {}
+        pitcher_p_values = {}
+        for pid, p_values in players_statsheets.items():
             save = True
             p_values["rotation_changed"] = False
             if p_values["outsRecorded"] >= 24 and p_values["earnedRuns"] <= 0:
@@ -128,34 +142,34 @@ class Pendants(commands.Cog):
                 if p_values['hitsAllowed'] == 0:
                     if p_values['walksIssued'] == 0:
                         p_values['perfectGame'] = 1
-                        notable["perfect"][p_values["playerId"]] = {
-                            "name": p_values["name"],
-                            "strikeouts": p_values["strikeouts"],
-                            "outsRecorded": p_values["outsRecorded"],
-                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                            "statsheet_id": p_values["id"]
-                        }
+                        # notable["perfect"][p_values["playerId"]] = {
+                        #     "name": p_values["name"],
+                        #     "strikeouts": p_values["strikeouts"],
+                        #     "outsRecorded": p_values["outsRecorded"],
+                        #     "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                        #     "statsheet_id": p_values["id"]
+                        # }
                     else:
-                        p_values['nohitter'] = 1
-                        notable["nohitter"][p_values["playerId"]] = {
-                            "name": p_values["name"],
-                            "strikeouts": p_values["strikeouts"],
-                            "outsRecorded": p_values["outsRecorded"],
-                            "walksIssued": p_values['walksIssued'],
-                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                            "statsheet_id": p_values["id"]
-                        }
+                        p_values['noHitter'] = 1
+                        # notable["nohitter"][p_values["playerId"]] = {
+                        #     "name": p_values["name"],
+                        #     "strikeouts": p_values["strikeouts"],
+                        #     "outsRecorded": p_values["outsRecorded"],
+                        #     "walksIssued": p_values['walksIssued'],
+                        #     "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                        #     "statsheet_id": p_values["id"]
+                        # }
                 else:
                     p_values["shutout"] = 1
-                    notable["shutout"][p_values["playerId"]] = {
-                        "name": p_values["name"],
-                        "strikeouts": p_values["strikeouts"],
-                        "outsRecorded": p_values["outsRecorded"],
-                        "walksIssued": p_values['walksIssued'],
-                        "hitsAllowed": p_values['hitsAllowed'],
-                        "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                        "statsheet_id": p_values["id"]
-                    }
+                    # notable["shutout"][p_values["playerId"]] = {
+                    #     "name": p_values["name"],
+                    #     "strikeouts": p_values["strikeouts"],
+                    #     "outsRecorded": p_values["outsRecorded"],
+                    #     "walksIssued": p_values['walksIssued'],
+                    #     "hitsAllowed": p_values['hitsAllowed'],
+                    #     "game_id": game_team_map[p_values["teamId"]]["game_id"],
+                    #     "statsheet_id": p_values["id"]
+                    # }
             if p_values["outsRecorded"] > 0:
                 p_values["position"] = "rotation"
                 rot = (day + 1) % 5
@@ -202,316 +216,393 @@ class Pendants(commands.Cog):
                     team_stats[team_id]["lineup_pa"][p_values["playerId"]] = 0
                 team_stats[team_id]["lineup_pa"][p_values["playerId"]] += plate_appearances
 
-                if p_values["hits"] >= 4:
-                    if p_values["homeRuns"] > 0 and p_values["doubles"] > 0 and p_values["triples"] > 0 and \
-                            p_values["hits"] - p_values["homeRuns"] - p_values["doubles"] - p_values["triples"] > 0:
-                        notable["cycle"][p_values["playerId"]] = {
-                            "name": p_values["name"],
-                            "atBats": p_values["atBats"],
-                            "hits": p_values["hits"],
-                            "homeRuns": p_values["homeRuns"],
-                            "doubles": p_values["doubles"],
-                            "triples": p_values["triples"],
-                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                            "statsheet_id": p_values["id"]
-                        }
-                        print("Cycle")
-                    if p_values["hits"] >= 6:
-                        print("bighits")
-                        notable["bighits"][p_values["playerId"]] = {
-                            "name": p_values["name"],
-                            "atBats": p_values["atBats"],
-                            "hits": p_values["hits"],
-                            "homeRuns": p_values["homeRuns"],
-                            "doubles": p_values["doubles"],
-                            "triples": p_values["triples"],
-                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                            "statsheet_id": p_values["id"]
-                        }
-                    if p_values["homeRuns"] >= 4:
-                        print("4homerun")
-                        notable["4homerun"][p_values["playerId"]] = {
-                            "name": p_values["name"],
-                            "atBats": p_values["atBats"],
-                            "hits": p_values["hits"],
-                            "homeRuns": p_values["homeRuns"],
-                            "doubles": p_values["doubles"],
-                            "triples": p_values["triples"],
-                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                            "statsheet_id": p_values["id"]
-                        }
-                    if p_values["rbis"] >= 8:
-                        print("rbimaster")
-                        notable["rbimaster"][p_values["playerId"]] = {
-                            "name": p_values["name"],
-                            "atBats": p_values["atBats"],
-                            "rbis": p_values["rbis"],
-                            "hits": p_values["hits"],
-                            "homeRuns": p_values["homeRuns"],
-                            "doubles": p_values["doubles"],
-                            "triples": p_values["triples"],
-                            "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                            "statsheet_id": p_values["id"]
-                        }
             if "rotation" not in p_values:
                 p_values["rotation"] = -1
-            if "shutout" not in p_values:
-                p_values["shutout"] = -1
+            for notable in ["shutout", "noHitter", "perfectGame"]:
+                if notable not in p_values:
+                    p_values[notable] = 0
+            p_values["gameId"] = game_team_map[p_values["teamId"]]["game_id"]
             if save:
                 statsheets[p_values["id"]] = p_values
-        return notable
+
+        rows = []
+        for p_values in statsheets.values():
+            rows.append((p_values["id"], season, day, p_values["playerId"], p_values["teamId"],
+                         p_values["gameId"], p_values["team"], p_values["name"], p_values["atBats"],
+                         p_values["caughtStealing"], p_values["doubles"], p_values["earnedRuns"],
+                         p_values["groundIntoDp"], p_values["hits"], p_values["hitsAllowed"],
+                         p_values["homeRuns"], p_values["losses"], p_values["outsRecorded"],
+                         p_values["rbis"], p_values["runs"], p_values["stolenBases"],
+                         p_values["strikeouts"], p_values["struckouts"], p_values["triples"],
+                         p_values["walks"], p_values["walksIssued"], p_values["wins"],
+                         p_values["hitByPitch"], p_values["hitBatters"], p_values["quadruples"],
+                         p_values["pitchesThrown"], p_values["rotation_changed"], p_values["position"],
+                         p_values["rotation"], p_values["shutout"], p_values["noHitter"], p_values["perfectGame"]))
+
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            await db.executemany("insert into DailyStatSheets values "
+                                 "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                                 "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", rows)
+            await db.commit()
 
     def print_top(self, player_dict, key, string, cutoff=2, avg=False):
         message = ""
         for pkey, pvalue in player_dict.items():
-            if pvalue[key] >= cutoff:
+            attr_value = pvalue.__getattribute__(key)
+            if attr_value >= cutoff:
                 if key == 'strikeouts':
                     avg_str = ""
                     if avg:
-                        k_9_value = round((pvalue[key] / (pvalue['outsRecorded'] / 27)) * 10) / 10
+                        k_9_value = round((attr_value / (pvalue.outsRecorded / 27)) * 10) / 10
                         avg_str = f"({k_9_value} {key}/9)"
-                    message += f"{pvalue['name']} {pvalue[key]} {string} {avg_str}\n"
+                    message += f"{pvalue.name} {attr_value} {string} {avg_str}\n"
                 else:
-                    message += f"{pvalue['name']} {pvalue[key]} {string}\n"
+                    message += f"{pvalue.name} {attr_value} {string}\n"
         return message
 
-    async def get_latest_pendant_data(self, current_season):
+    async def get_latest_pendant_data(self, current_season: int):
         current_season -= 1
         output_channel = None
         stats_chan_id = self.bot.config['stats_channel']
         if stats_chan_id:
             output_channel = self.bot.get_channel(stats_chan_id)
-        all_statsheets = []
-        try:
-            with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
-                all_statsheets = json.load(file)
-        except FileNotFoundError:
-            pass
-        last_day = -1
-        for day in all_statsheets:
-            if day['season'] != current_season:
-                continue
-            last_day = max(last_day, day['day'])
-        latest_day = last_day + 1
-        notable = 1
-        while notable:
-            notable = await self.get_daily_stats(all_statsheets, latest_day, current_season)
-            latest_day += 1
-            if latest_day == 99:
+
+        day, last_day = 0, 0
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select max(day) from DailyStatSheets where season=?;", [current_season]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        day = last_day = row[0] + 1
+
+        while True:
+            end_loop = await self.get_daily_stats(day, current_season)
+            if end_loop:
                 break
+            day += 1
 
-        for day in all_statsheets:
-            if day['season'] != current_season:
-                continue
-            if day['day'] > last_day:
-                players = day['statsheets']
-                daily_message = [f"**Daily leaders for day {day['day'] + 1}**\n"]
-                daily_message_two = ""
-                sorted_hits = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['hits'], reverse=True)}
-                sorted_homeruns = {k: v for k, v in
-                                   sorted(players.items(), key=lambda item: item[1]['homeRuns'], reverse=True)}
-                sorted_rbis = {k: v for k, v in sorted(players.items(), key=lambda item: item[1]['rbis'], reverse=True)}
-                sorted_stolenbases = {k: v for k, v in
-                                      sorted(players.items(), key=lambda item: item[1]['stolenBases'], reverse=True)}
+        while last_day < day:
+            players = {}
+            async with aiosqlite.connect(self.bot.db_path) as db:
+                async with db.execute("select id, season, day, playerId, teamId, gameId, team, name, atBats, "
+                                      "caughtStealing, doubles, earnedRuns, groundIntoDp, hits, hitsAllowed, "
+                                      "homeRuns, losses, outsRecorded, rbis, runs, stolenBases, "
+                                      "strikeouts, struckouts, triples, walks, walksIssued, wins, "
+                                      "hitByPitch, hitBatters, quadruples, pitchesThrown, "
+                                      "rotation_changed, position, rotation, shutout, noHitter, perfectGame"
+                                      " from DailyStatSheets "
+                                      "where season=? and day=?;", (current_season, last_day)) as cursor:
+                    async for row in cursor:
+                        players[row[0]] = PlayerStatSheetsInstance(*row)
+            daily_message = [f"**Daily leaders for Day {last_day}**\n"]
+            daily_message_two = ""
+            sorted_hits = {k: v for k, v in sorted(players.items(), key=lambda item: item[1].hits, reverse=True)}
+            sorted_homeruns = {k: v for k, v in
+                               sorted(players.items(), key=lambda item: item[1].homeRuns, reverse=True)}
+            sorted_rbis = {k: v for k, v in sorted(players.items(), key=lambda item: item[1].rbis, reverse=True)}
+            sorted_stolenbases = {k: v for k, v in
+                                  sorted(players.items(), key=lambda item: item[1].stolenBases, reverse=True)}
 
-                hit_message = self.print_top(sorted_hits, 'hits', 'hits', 4)
-                if len(hit_message) > 0:
-                    daily_message.append(f"\n**Hits**\n{hit_message}")
+            hit_message = self.print_top(sorted_hits, 'hits', 'hits', 4)
+            if len(hit_message) > 0:
+                daily_message.append(f"\n**Hits**\n{hit_message}")
 
-                hr_message = self.print_top(sorted_homeruns, 'homeRuns', 'home runs', 2)
-                if len(hr_message) > 0:
-                    daily_message.append(f"\n**Home Runs**\n{hr_message}")
+            hr_message = self.print_top(sorted_homeruns, 'homeRuns', 'home runs', 2)
+            if len(hr_message) > 0:
+                daily_message.append(f"\n**Home Runs**\n{hr_message}")
 
-                rbi_message = self.print_top(sorted_rbis, 'rbis', 'RBIs', 4)
-                if len(rbi_message) > 0:
-                    daily_message.append(f"\n**RBIs**\n{rbi_message}")
+            rbi_message = self.print_top(sorted_rbis, 'rbis', 'RBIs', 4)
+            if len(rbi_message) > 0:
+                daily_message.append(f"\n**RBIs**\n{rbi_message}")
 
-                sb_message = self.print_top(sorted_stolenbases, 'stolenBases', 'stolen bases', 2)
-                if len(sb_message) > 0:
-                    daily_message.append(f"\n**Stolen Bases**\n{sb_message}")
+            sb_message = self.print_top(sorted_stolenbases, 'stolenBases', 'stolen bases', 2)
+            if len(sb_message) > 0:
+                daily_message.append(f"\n**Stolen Bases**\n{sb_message}")
 
-                sorted_strikeouts = {k: v for k, v in
-                                     sorted(players.items(), key=lambda item: item[1]['strikeouts'],
-                                            reverse=True)}
-                daily_message_two += f"{self.bot.empty_str}\n**Strikeouts**\n" \
-                                     f"{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 9, True)}"
+            sorted_strikeouts = {k: v for k, v in
+                                 sorted(players.items(), key=lambda item: item[1].strikeouts,
+                                        reverse=True)}
+            daily_message_two += f"{self.bot.empty_str}\n**Strikeouts**\n" \
+                                 f"{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 9, True)}"
 
-                game_watcher_messages = []
-                sh_embed = discord.Embed(title="**Shutout!**")
-                sh_description = ""
-                if 'notable' in day:
-                    notable = day['notable']
-                    for __, event in notable["perfect"].items():
-                        message = f"\n**Perfect Game!**\n{event['name']} with {event['strikeouts']} strikeouts " \
-                                  f"in {event['outsRecorded']} outs.\n" \
-                                  f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
-                        if "statsheet_id" in event:
-                            message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
-                        message += "\n"
-                        if not self.bot.config['live_version']:
-                            daily_message_two += message
-                        game_watcher_messages.append(message)
-                    for __, event in notable["nohitter"].items():
+            game_watcher_messages = []
+            sh_embed = discord.Embed(title="**Shutout!**")
+            sh_description = ""
+            notable_events = await self._query_notable_events(current_season, last_day)
 
-                        message = f"\n**No Hitter!**\n{event['name']} with {event['strikeouts']} strikeouts" \
-                                  f" in {event['outsRecorded']} outs. {event['walksIssued']} batters walked.\n" \
-                                  f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
-                        if "statsheet_id" in event:
-                            message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
-                        message += "\n"
-                        if not self.bot.config['live_version']:
-                            daily_message_two += message
-                        game_watcher_messages.append(message)
-                    for __, event in notable["shutout"].items():
-                        sh_message = f"{event['name']} with {event['strikeouts']} strikeouts " \
-                                     f"in {event['outsRecorded']} outs. {event['hitsAllowed']} hits allowed and " \
-                                     f"{event['walksIssued']} batters walked.\n" \
-                                     f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})" \
-                                     f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})\n"
-                        sh_description += sh_message
+            for __, event in notable_events["perfect"].items():
+                message = f"\n**Perfect Game!**\n{event['name']} with {event['strikeouts']} strikeouts " \
+                          f"in {event['outsRecorded']} outs.\n" \
+                          f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
+                if "statsheet_id" in event:
+                    message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['id']})"
+                message += "\n"
+                if not self.bot.config['live_version']:
+                    daily_message_two += message
+                game_watcher_messages.append(message)
+            for __, event in notable_events["no_hitter"].items():
+                message = f"\n**No Hitter!**\n{event['name']} with {event['strikeouts']} strikeouts" \
+                          f" in {event['outsRecorded']} outs. {event['walksIssued']} batters walked.\n" \
+                          f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
+                if "statsheet_id" in event:
+                    message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['id']})"
+                message += "\n"
+                if not self.bot.config['live_version']:
+                    daily_message_two += message
+                game_watcher_messages.append(message)
+            for __, event in notable_events["shutout"].items():
+                sh_message = f"{event['name']} with {event['strikeouts']} strikeouts " \
+                             f"in {event['outsRecorded']} outs. {event['hitsAllowed']} hits allowed and " \
+                             f"{event['walksIssued']} batters walked.\n" \
+                             f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})" \
+                             f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['id']})\n"
+                sh_description += sh_message
+            for event in notable_events["cycle"]:
+                doubles_str = f"{event.doubles} double"
+                if event.doubles != 1:
+                    doubles_str += "s"
+                triples_str = f"{event.triples} triple"
+                if event.triples != 1:
+                    triples_str += "s"
+                hr_str = f"{event.homeRuns} home run"
+                if event.homeRuns != 1:
+                    hr_str += "s"
+                base_message = "for the cycle"
+                # quad_str = " "
+                # if "quadruples" in event:
+                #     quad_str = f"{event['quadruples']} quadruple"
+                #     if event['quadruples'] != 1:
+                #         quad_str += "s, "
+                #     else:
+                #         quad_str += ", "
+                #     if event['quadruples'] > 0 and event['homeRuns'] > 0 \
+                #             and event['triples'] > 0 and event['doubles'] > 0:
+                #         base_message = "a super cycle!"
+                at_bats_str = f" in {event.atBats} at bats.\n"
+                natural_cycle = await self._check_feed_natural_cycle(event.name, event.playerId, last_day)
+                message = f"\n**{event.name} hit {base_message}!**{at_bats_str} with {event.hits}" \
+                          f" hits, {doubles_str}, {triples_str} " \
+                          f"and {hr_str}.\n" \
+                          f"[reblase](https://reblase.sibr.dev/game/{event.gameId})" \
+                          f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event.Id})"
+                message += f"\n{natural_cycle}\n"
+                if not self.bot.config['live_version']:
+                    daily_message_two += message
+                game_watcher_messages.append(message)
+            for __, event in notable_events["dingerparty"].items():
+                at_bats_str = ".\n"
+                if "atBats" in event:
+                    at_bats_str = f" in {event['atBats']} at bats.\n"
+                message = f"\n**{event['name']} hit 4+ home runs!**\n{event['homeRuns']} home runs " \
+                          f"in {event['hits']} total hits{at_bats_str}" \
+                          f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
+                if "statsheet_id" in event:
+                    message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['Id']})"
+                message += "\n"
+                if not self.bot.config['live_version']:
+                    daily_message_two += message
+                game_watcher_messages.append(message)
+            for __, event in notable_events["bighits"].items():
+                doubles_str = f"{event['doubles']} double"
+                if event['doubles'] != 1:
+                    doubles_str += "s"
+                triples_str = f"{event['triples']} triple"
+                if event['triples'] != 1:
+                    triples_str += "s"
+                hr_str = f"{event['homeRuns']} home run"
+                if event['homeRuns'] != 1:
+                    hr_str += "s"
+                # quad_str = ""
+                # if "quadruples" in event:
+                #     quad_str = f"{event['quadruples']} quadruple"
+                #     if event['quadruples'] != 1:
+                #         quad_str += "s, "
+                #     else:
+                #         quad_str += ", "
+                at_bats_str = "\n"
+                if "atBats" in event:
+                    at_bats_str = f" in {event['atBats']} at bats.\n"
+                message = f"\n**{event['name']} got {event['hits']} hits!**{at_bats_str}" \
+                          f"with {doubles_str}, {triples_str} and {hr_str}.\n" \
+                          f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
+                if "statsheet_id" in event:
+                    message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['Id']})"
+                message += "\n"
+                if not self.bot.config['live_version']:
+                    daily_message_two += message
+                game_watcher_messages.append(message)
+            for __, event in notable_events["rbimaster"].items():
+                doubles_str = f"{event['doubles']} double"
+                if event['doubles'] != 1:
+                    doubles_str += "s"
+                triples_str = f"{event['triples']} triple"
+                if event['triples'] != 1:
+                    triples_str += "s"
+                hr_str = f"{event['homeRuns']} home run"
+                if event['homeRuns'] != 1:
+                    hr_str += "s"
+                # quad_str = ""
+                # if "quadruples" in event:
+                #     quad_str = f"{event['quadruples']} quadruple"
+                #     if event['quadruples'] != 1:
+                #         quad_str += "s, "
+                #     else:
+                #         quad_str += ", "
+                at_bats_str = "\n"
+                if "atBats" in event:
+                    at_bats_str = f" with {event['hits']} in {event['atBats']} at bats.\n"
+                message = f"\n**{event['name']} got {event['rbis']} RBIs!**{at_bats_str}" \
+                          f"with {doubles_str}, {triples_str} and {hr_str}.\n" \
+                          f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
+                if "statsheet_id" in event:
+                    message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['Id']})"
+                message += "\n"
+                if not self.bot.config['live_version']:
+                    daily_message_two += message
+                game_watcher_messages.append(message)
+            if output_channel and len(game_watcher_messages) > 0:
+                desription = ""
+                for message in game_watcher_messages:
+                    desription += message + "\n"
+                msg_embed = discord.Embed(description=desription[:2047])
+                # await output_channel.send(embed=msg_embed)
+            if len(daily_message) > 0:
+                sh_embed.description = sh_description
+                debug_chan_id = self.bot.config.setdefault('debug_channel', None)
+                if debug_chan_id:
+                    debug_channel = self.bot.get_channel(debug_chan_id)
+                    if debug_channel:
+                        if len(sh_description) > 0:
+                            # await utils.send_message_in_chunks(daily_message, debug_channel)
+                            # await debug_channel.send(daily_message_two, embed=sh_embed)
+                            pass
+                        else:
+                            # await utils.send_message_in_chunks(daily_message, debug_channel)
+                            # await debug_channel.send(daily_message_two)
+                            pass
+                daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
+                if daily_stats_channel_id:
+                    daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
+                    if daily_stats_channel:
+                        if len(sh_description) > 0:
+                            # await utils.send_message_in_chunks(daily_message, daily_stats_channel)
+                            # await daily_stats_channel.send(daily_message_two, embed=sh_embed)
+                            pass
+                        else:
+                            # await utils.send_message_in_chunks(daily_message, daily_stats_channel)
+                            # await daily_stats_channel.send(daily_message_two)
+                            pass
+            else:
+                self.bot.logger.info(f"No daily message sent for {day['day']}")
+            last_day += 1
+        return day
 
-                    if 'cycle' in notable:
-                        for player_id, event in notable["cycle"].items():
-                            doubles_str = f"{event['doubles']} double"
-                            if event['doubles'] != 1:
-                                doubles_str += "s"
-                            triples_str = f"{event['triples']} triple"
-                            if event['triples'] != 1:
-                                triples_str += "s"
-                            hr_str = f"{event['homeRuns']} home run"
-                            if event['homeRuns'] != 1:
-                                hr_str += "s"
-                            quad_str = " "
-                            base_message = "for the cycle"
-                            if "quadruples" in event:
-                                quad_str = f"{event['quadruples']} quadruple"
-                                if event['quadruples'] != 1:
-                                    quad_str += "s, "
-                                else:
-                                    quad_str += ", "
-                                if event['quadruples'] > 0 and event['homeRuns'] > 0 \
-                                        and event['triples'] > 0 and event['doubles'] > 0:
-                                    base_message = "a super cycle!"
-                            at_bats_str = ".\n"
-                            if "atBats" in event:
-                                at_bats_str = f" in {event['atBats']} at bats.\n"
-                            natural_cycle = await self._check_feed_natural_cycle(event['name'], player_id, day['day'])
-                            message = f"\n**{event['name']} hit {base_message}!**{at_bats_str} with {event['hits']}" \
-                                      f" hits, {doubles_str}, {triples_str}, {quad_str}" \
-                                      f"and {hr_str}.\n" \
-                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
+    async def _query_notable_events(self, season, day):
+        notable = {"perfect": {}, "no_hitter": {}, "shutout": {},
+                   "cycle": [], "bighits": {}, "rbimaster": {}, "dingerparty": {}}
 
-                            if "statsheet_id" in event:
-                                message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
-                            message += f"\n{natural_cycle}\n"
-                            if not self.bot.config['live_version']:
-                                daily_message_two += message
-                            game_watcher_messages.append(message)
-                    if '4homerun' in notable:
-                        for __, event in notable["4homerun"].items():
-                            at_bats_str = ".\n"
-                            if "atBats" in event:
-                                at_bats_str = f" in {event['atBats']} at bats.\n"
-                            message = f"\n**{event['name']} hit 4+ home runs!**\n{event['homeRuns']} home runs " \
-                                      f"in {event['hits']} total hits{at_bats_str}" \
-                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
-                            if "statsheet_id" in event:
-                                message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
-                            message += "\n"
-                            if not self.bot.config['live_version']:
-                                daily_message_two += message
-                            game_watcher_messages.append(message)
-                    if 'bighits' in notable:
-                        for __, event in notable["bighits"].items():
-                            doubles_str = f"{event['doubles']} double"
-                            if event['doubles'] != 1:
-                                doubles_str += "s"
-                            triples_str = f"{event['triples']} triple"
-                            if event['triples'] != 1:
-                                triples_str += "s"
-                            hr_str = f"{event['homeRuns']} home run"
-                            if event['homeRuns'] != 1:
-                                hr_str += "s"
-                            quad_str = ""
-                            if "quadruples" in event:
-                                quad_str = f"{event['quadruples']} quadruple"
-                                if event['quadruples'] != 1:
-                                    quad_str += "s, "
-                                else:
-                                    quad_str += ", "
-                            at_bats_str = "\n"
-                            if "atBats" in event:
-                                at_bats_str = f" in {event['atBats']} at bats.\n"
-                            message = f"\n**{event['name']} got {event['hits']} hits!**{at_bats_str}" \
-                                      f"with {doubles_str}, {triples_str}, {quad_str}and {hr_str}.\n" \
-                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
-                            if "statsheet_id" in event:
-                                message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
-                            message += "\n"
-                            if not self.bot.config['live_version']:
-                                daily_message_two += message
-                            game_watcher_messages.append(message)
-                    if "rbimaster" in notable:
-                        for __, event in notable["rbimaster"].items():
-                            doubles_str = f"{event['doubles']} double"
-                            if event['doubles'] != 1:
-                                doubles_str += "s"
-                            triples_str = f"{event['triples']} triple"
-                            if event['triples'] != 1:
-                                triples_str += "s"
-                            hr_str = f"{event['homeRuns']} home run"
-                            if event['homeRuns'] != 1:
-                                hr_str += "s"
-                            quad_str = ""
-                            if "quadruples" in event:
-                                quad_str = f"{event['quadruples']} quadruple"
-                                if event['quadruples'] != 1:
-                                    quad_str += "s, "
-                                else:
-                                    quad_str += ", "
-                            at_bats_str = "\n"
-                            if "atBats" in event:
-                                at_bats_str = f" with {event['hits']} in {event['atBats']} at bats.\n"
-                            message = f"\n**{event['name']} got {event['rbis']} RBIs!**{at_bats_str}" \
-                                      f"with {doubles_str}, {triples_str}, {quad_str}and {hr_str}.\n" \
-                                      f"[reblase](https://reblase.sibr.dev/game/{event['game_id']})"
-                            if "statsheet_id" in event:
-                                message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['statsheet_id']})"
-                            message += "\n"
-                            if not self.bot.config['live_version']:
-                                daily_message_two += message
-                            game_watcher_messages.append(message)
-                if output_channel and len(game_watcher_messages) > 0:
-                    desription = ""
-                    for message in game_watcher_messages:
-                        desription += message + "\n"
-                    msg_embed = discord.Embed(description=desription[:2047])
-                    await output_channel.send(embed=msg_embed)
-                if len(daily_message) > 0:
-                    sh_embed.description = sh_description
-                    debug_chan_id = self.bot.config.setdefault('debug_channel', None)
-                    if debug_chan_id:
-                        debug_channel = self.bot.get_channel(debug_chan_id)
-                        if debug_channel:
-                            if len(sh_description) > 0:
-                                await utils.send_message_in_chunks(daily_message, debug_channel)
-                                await debug_channel.send(daily_message_two, embed=sh_embed)
-                            else:
-                                await utils.send_message_in_chunks(daily_message, debug_channel)
-                                await debug_channel.send(daily_message_two)
-                    daily_stats_channel_id = self.bot.config.setdefault('daily_stats_channel', None)
-                    if daily_stats_channel_id:
-                        daily_stats_channel = self.bot.get_channel(daily_stats_channel_id)
-                        if daily_stats_channel:
-                            if len(sh_description) > 0:
-                                await utils.send_message_in_chunks(daily_message, daily_stats_channel)
-                                await daily_stats_channel.send(daily_message_two, embed=sh_embed)
-                            else:
-                                await utils.send_message_in_chunks(daily_message, daily_stats_channel)
-                                await daily_stats_channel.send(daily_message_two)
-                else:
-                    self.bot.logger.info(f"No daily message sent for {day['day']}")
-        return latest_day
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select playerId, teamId, gameId, name, outsRecorded, pitchesThrown, "
+                                  "strikeouts, Id from DailyStatSheets where "
+                                  "season=? and day=? and perfectGame=1;", [season, day]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        notable["perfect"][row[0]] = {
+                            "teamId": row[1],
+                            "gameId": row[2],
+                            "name": row[3],
+                            "outsRecorded": row[4],
+                            "pitchesThrown": row[5],
+                            "strikeouts": row[6],
+                            "id": row[7]
+                        }
+            async with db.execute("select playerId, teamId, gameId, name, outsRecorded, pitchesThrown, "
+                                  "strikeouts, walksIssued, Id from DailyStatSheets where "
+                                  "season=? and day=? and noHitter=1;", [season, day]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        notable["no_hitter"][row[0]] = {
+                            "teamId": row[1],
+                            "gameId": row[2],
+                            "name": row[3],
+                            "outsRecorded": row[4],
+                            "pitchesThrown": row[5],
+                            "strikeouts": row[6],
+                            "walksIssued": row[7],
+                            "id": row[8]
+                        }
+            async with db.execute("select playerId, teamId, gameId, name, outsRecorded, pitchesThrown, "
+                                  "strikeouts, walksIssued, hitsAllowed, Id from DailyStatSheets where "
+                                  "season=? and day=? and shutout=1;", [season, day]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        notable["shutout"][row[0]] = {
+                            "teamId": row[1],
+                            "gameId": row[2],
+                            "name": row[3],
+                            "outsRecorded": row[4],
+                            "pitchesThrown": row[5],
+                            "strikeouts": row[6],
+                            "walksIssued": row[7],
+                            "hitsAllowed": row[8],
+                            "id": row[9]
+                        }
+            async with db.execute("select playerId, teamId, gameId, name, hits, doubles, triples, "
+                                  "homeRuns, atBats, Id from DailyStatSheets where season=? and day=? "
+                                  "and doubles>0 and triples>0 and homeRuns>0 and hits>3 "
+                                  "and doubles+triples+homeRuns < hits;", [season, day]) as cursor:
+                async for row in cursor:
+                    if row:
+                        notable["cycle"].append(CycleInstance(*row))
+
+            async with db.execute("select playerId, teamId, gameId, name, hits, doubles, triples, "
+                                  "homeRuns, atBats, Id from DailyStatSheets where season=? and day=? "
+                                  "and hits>5 ", [season, day]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        notable["bighits"][row[0]] = {
+                            "teamId": row[1],
+                            "gameId": row[2],
+                            "name": row[3],
+                            "hits": row[4],
+                            "doubles": row[5],
+                            "triples": row[6],
+                            "homeRuns": row[7],
+                            "atBats": row[8],
+                            "id": row[9]
+                        }
+            async with db.execute("select playerId, teamId, gameId, name, hits, "
+                                  "homeRuns, atBats, Id from DailyStatSheets where season=? and day=? "
+                                  "and homeRuns>3 ", [season, day]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        notable["dingerparty"][row[0]] = {
+                            "teamId": row[1],
+                            "gameId": row[2],
+                            "name": row[3],
+                            "hits": row[4],
+                            "homeRuns": row[5],
+                            "atBats": row[6],
+                            "id": row[7]
+                        }
+            async with db.execute("select playerId, teamId, gameId, name, hits, doubles, triples, "
+                                  "homeRuns, atBats, rbis, Id from DailyStatSheets where season=? and day=? "
+                                  "and rbis>7 ", [season, day]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        notable["rbimaster"][row[0]] = {
+                            "teamId": row[1],
+                            "gameId": row[2],
+                            "name": row[3],
+                            "hits": row[4],
+                            "doubles": row[5],
+                            "triples": row[6],
+                            "homeRuns": row[7],
+                            "atBats": row[8],
+                            "rbis": row[9],
+                            "id": row[10]
+                        }
+
+        return notable
 
     @staticmethod
     async def _check_feed_natural_cycle(player_name, player_id, day):
@@ -543,35 +634,41 @@ class Pendants(commands.Cog):
                             return "Reverse Cycle!"
         return "Not a natural cycle."
 
-    async def compile_stats(self):
-        try:
-            with open(os.path.join('data', 'pendant_data', 'statsheets', 'all_statsheets.json'), 'r') as file:
-                all_statsheets = json.load(file)
-        except FileNotFoundError:
-            all_statsheets = []
-        players = {}
-        for day in all_statsheets:
-            for pid in day['statsheets']:
-                player = day['statsheets'][pid]
-                if player["playerId"] not in players:
-                    players[player["playerId"]] = player
-                else:
-                    for key in ["atBats", "caughtStealing", "doubles", "earnedRuns", "groundIntoDp", "hits",
-                                "hitsAllowed", "homeRuns", "losses", "outsRecorded", "rbis", "runs", "stolenBases",
-                                "strikeouts", "struckouts", "triples", "walks", "walksIssued", "wins",
-                                "hitByPitch", "hitBatters", "shutout"]:
-                        if key in player:
-                            if key in players[player["playerId"]]:
-                                players[player["playerId"]][key] += player[key]
-                            else:
-                                players[player["playerId"]][key] = player[key]
-                    players[player["playerId"]]["teamId"] = player["teamId"]
-                    players[player["playerId"]]["rotation"] = player["rotation"]
-                    players[player["playerId"]]["rotation_changed"] = player["rotation_changed"]
-                    players[player["playerId"]]["name"] = player["name"]
-                    if "position" in player:
-                        players[player["playerId"]]["position"] = player["position"]
-        return players
+    async def compile_stats(self, season):
+        hitters, pitchers = {}, {}
+
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select playerId, name, teamId, sum(hits)-sum(homeRuns), "
+                                  "sum(homeRuns), sum(stolenBases) "
+                                  "from DailyStatSheets where season=? and position='lineup' "
+                                  "group by playerId", [season]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        hitters[row[0]] = {
+                            "name": row[1],
+                            "teamId": row[2],
+                            "hitsMinusHrs": row[3],
+                            "homeRuns": row[4],
+                            "stolenBases": row[5]
+                        }
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select playerId, name, teamId, sum(outsRecorded), sum(strikeouts), "
+                                  "sum(walksIssued), sum(shutout), rotation, rotation_changed "
+                                  "from DailyStatSheets where season=? and position='rotation' "
+                                  "group by playerId", [season]) as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        pitchers[row[0]] = {
+                            "name": row[1],
+                            "teamId": row[2],
+                            "outsRecorded": row[3],
+                            "strikeouts": row[4],
+                            "walksIssued": row[5],
+                            "shutout": row[6],
+                            "rotation": row[7],
+                            "rotation_changed": row[8]
+                        }
+        return hitters, pitchers
 
     async def update_leaders_sheet(self, season, day):
         season -= 1
@@ -584,13 +681,11 @@ class Pendants(commands.Cog):
             p_worksheet = await sheet.worksheet("Snack Income")
         else:
             p_worksheet = await sheet.worksheet("Pendants")
-        all_players = await self.compile_stats()
+        hitters, pitcher_dict = await self.compile_stats(season)
 
         sorted_hits, sorted_homeruns, \
-            sorted_total_hit_payouts, sorted_stolenbases = self.save_daily_top_players(all_players, day)
+            sorted_total_hit_payouts, sorted_stolenbases = self.save_daily_top_hitters(hitters, day)
         rows = []
-
-        pitcher_dict = {k: v for k, v in all_players.items() if v['outsRecorded'] > 0}
         team_short_map = await self.get_short_map()
         for i in range(1, 6):
             sorted_strikeouts = {k: v
@@ -603,7 +698,7 @@ class Pendants(commands.Cog):
             if len(top_list) > 3:
                 top_keys = top_list[:3]
                 for key in top_keys:
-                    values = all_players[key]
+                    values = pitcher_dict[key]
                     team = team_short_map[values["teamId"]]
                     name = f"({team}) {values['name']}"
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
@@ -623,7 +718,7 @@ class Pendants(commands.Cog):
 
         top_keys = top_list[:7]
         for key in top_keys:
-            values = all_players[key]
+            values = pitcher_dict[key]
             team = team_short_map[values["teamId"]]
             name = f"({team}) {values['name']}"
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
@@ -678,10 +773,7 @@ class Pendants(commands.Cog):
             if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
                 continue
             values = sorted_total_hit_payouts[key]
-            if "hitsMinusHrs" in all_players[key]:
-                hits = all_players[key]["hitsMinusHrs"]
-            else:
-                hits = all_players[key]["hits"]
+            hits = hitters[key]["hitsMinusHrs"]
             team = team_short_map[values["teamId"]]
             name = f"({team}) {values['name']}"
             rows.append([name, '', hits, values["homeRuns"], values["stolenBases"]])
@@ -692,10 +784,7 @@ class Pendants(commands.Cog):
         for key in top_sb_keys:
             if key not in top_keys:
                 values = sorted_stolenbases[key]
-                if "hitsMinusHrs" in all_players[key]:
-                    hits = all_players[key]["hitsMinusHrs"]
-                else:
-                    hits = all_players[key]["hits"]
+                hits = hitters[key]["hitsMinusHrs"]
                 team = team_short_map[values["teamId"]]
                 name = f"({team}) {values['name']}"
                 rows.append([name, '', hits, values["homeRuns"], values["stolenBases"]])
@@ -709,7 +798,7 @@ class Pendants(commands.Cog):
         ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
         ys_row = ["York Silk", '', 0, 0, 0]
         if ys_id in sorted_hits:
-            ys_row[2] = all_players[ys_id].setdefault("hitsMinusHrs", 0)
+            ys_row[2] = hitters[ys_id].setdefault("hitsMinusHrs", 0)
         if ys_id in sorted_homeruns:
             ys_row[3] = sorted_homeruns[ys_id].setdefault("homeRuns", 0)
         if ys_id in sorted_stolenbases:
@@ -718,7 +807,7 @@ class Pendants(commands.Cog):
         wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
         wg_row = ["Wyatt Glover", '', 0, 0, 0]
         if wg_id in sorted_hits:
-            wg_row[2] = all_players[wg_id].setdefault("hitsMinusHrs", 0)
+            wg_row[2] = hitters[wg_id].setdefault("hitsMinusHrs", 0)
         if wg_id in sorted_homeruns:
             wg_row[3] = sorted_homeruns[wg_id].setdefault("homeRuns", 0)
         if wg_id in sorted_stolenbases:
@@ -728,16 +817,13 @@ class Pendants(commands.Cog):
             'values': [ys_row, wg_row]
         }])
 
-        with open(os.path.join('data', 'pendant_data', 'all_players.json'), 'w') as file:
-            json.dump(all_players, file)
-
     @staticmethod
     def load_remaining_teams():
         with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
             team_list = json.load(file)
         return team_list
 
-    def save_daily_top_players(self, all_players, day):
+    def save_daily_top_hitters(self, hitters, day):
         # need to put in logic for playoffs here
         #team_list = self.load_remaining_teams()
 
@@ -747,11 +833,11 @@ class Pendants(commands.Cog):
         #                                            reverse=True) if v['teamId'] in team_list}
         # sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
         #                                               reverse=True) if v['teamId'] in team_list}
-        sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
+        sorted_hits = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['hitsMinusHrs'],
                                                reverse=True)}
-        sorted_homeruns = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['homeRuns'],
+        sorted_homeruns = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['homeRuns'],
                                                    reverse=True)}
-        sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
+        sorted_stolenbases = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['stolenBases'],
                                                       reverse=True)}
         boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2, "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5}
         skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
@@ -761,7 +847,7 @@ class Pendants(commands.Cog):
                 continue
             homeruns = sorted_homeruns[k]["homeRuns"]
             stolenbases = sorted_stolenbases[k]["stolenBases"]
-            hits = v["hits"] - homeruns
+            hits = v["hitsMinusHrs"]
 
             if k in boosted_players:
                 multiplier = boosted_players[k]
@@ -769,10 +855,9 @@ class Pendants(commands.Cog):
                 multiplier = 1
             seed_dog = ((hits * 1500) + (homeruns * 4000)) * multiplier
             combo = ((hits * 1500) + (homeruns * 4000) + (stolenbases * 3000)) * multiplier
-            all_players[k]["multiplier"] = multiplier
-            all_players[k]["hitsMinusHrs"] = hits
+            hitters[k]["multiplier"] = multiplier
 
-            total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hits"],
+            total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hitsMinusHrs"],
                                     "homeRuns": sorted_homeruns[k]["homeRuns"],
                                     "stolenBases": sorted_stolenbases[k]["stolenBases"],
                                     "seed_dog": seed_dog, "combo": combo, "multiplier": multiplier}
@@ -783,15 +868,15 @@ class Pendants(commands.Cog):
 
         daily_leaders = {"hits": [], "home_runs": [], "stolen_bases": [], "seed_dog": [], "combo": []}
         for key in list(sorted_hits.keys())[:10]:
-            daily_leaders["hits"].append(all_players[key])
+            daily_leaders["hits"].append(hitters[key])
         for key in list(sorted_homeruns.keys())[:10]:
-            daily_leaders["home_runs"].append(all_players[key])
+            daily_leaders["home_runs"].append(hitters[key])
         for key in list(sorted_stolenbases.keys())[:10]:
-            daily_leaders["stolen_bases"].append(all_players[key])
+            daily_leaders["stolen_bases"].append(hitters[key])
         for key in list(sorted_seed_dog_payouts.keys())[:10]:
-            daily_leaders["seed_dog"].append(all_players[key])
+            daily_leaders["seed_dog"].append(hitters[key])
         for key in list(sorted_combo_payouts.keys())[:10]:
-            daily_leaders["combo"].append(all_players[key])
+            daily_leaders["combo"].append(hitters[key])
 
         with open(os.path.join('data', 'pendant_data', 'statsheets', f'd{day}_leaders.json'), 'w') as file:
             json.dump(daily_leaders, file)
@@ -831,6 +916,26 @@ class Pendants(commands.Cog):
         self.bot.config['daily_watch_message'] = message_text
         self.bot.daily_watch_message = message_text
         return await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(name='test_flood_count', aliases=['ttfc'])
+    async def _test_flood_count(self, ctx):
+        day_flood_count = 0
+        day_runner_count = 0
+        game_ids = ["99113b38-77af-48a3-aad8-1cb48f679130", "9274e98a-15c7-4b9a-bd5c-e8275b300cd8", "26cc26b3-dc9f-4339-b9f8-5f40c4aec590", "691a703a-5142-44dd-910c-5ea3fe701e63", "57748419-e0ce-4399-96f4-ae535f942ae9", "3159730a-208d-466f-b6f4-c7756aa3a1cc", "2ec0e69f-5fb4-4eb0-aa09-284e8c9eb7c3", "b1c075fe-ed60-4b7a-bfb1-ded6878d9366", "93c80cb1-59f6-4f89-8c70-674c4efffdb2", "b17f09b5-fc41-481d-b494-0b53d8f06def", "ed6ba6c3-d3c1-4d19-8393-05374042a8a9", "be7e61c3-29b0-44a3-a2c6-9c6bb657f077", "6a00cc1f-9f26-4528-9a84-e6f253a28635", "f3e2c0b0-4fb7-4b96-9dce-f05d90754bec", "88aee411-fcae-4e38-bf84-057012df34cc", "6e2bf11f-577c-4095-95d0-db366b4b1b75", "74210406-9b06-48fe-acde-1f6ee53df07c", "4ac2f8c9-8f2f-49bd-a6e0-d518e32ced75", "b7bb50ac-d06d-442e-83f4-15f4644fc661", "f6b0e995-6292-4f9c-a70d-c20d7c01abf6", "95011bc0-bb43-4373-b0f6-2d90ccaba945", "c0adf4ca-8125-4381-9123-10d3448f0705", "fe643582-c694-4e7e-bc18-6c04bb629ba7", "7523d5dc-4125-49d4-8061-23fe41d70d57", "92bda7ca-d2b1-4b94-a909-e796eb68cfa7", "4894cc29-0aa0-4a68-a326-d227cdaf68ca", "8c4e892f-9c28-4597-9291-2d927206df6a", "22d12ad3-88b1-4f4c-9df4-16ad03a56a33", "c0c93d06-99c8-48a2-90af-6e57898b5059", "3eb58ff0-0161-419b-9c8f-6d379a056d7d", "1d570099-7c0f-4d6c-91e6-2415392e74dc", "e322d071-e0cd-4a9b-8491-699ceee6059d"]
+        for game_id in game_ids:
+            game_feed = await utils.retry_request(
+                f"https://api.blaseball-reference.com/v1/events?gameId={game_id}&baseRunners=true")
+            if game_feed:
+                feed_json = game_feed.json()
+                if len(feed_json['results']) > 0:
+                    last_event = None
+                    for food in feed_json['results']:
+                        for text in food['event_text']:
+                            if "Immateria" in text:
+                                day_flood_count += 1
+                                day_runner_count += len(last_event['base_runners'])
+                        last_event = food
+        await ctx.send(day_runner_count)
 
 
 def setup(bot):
