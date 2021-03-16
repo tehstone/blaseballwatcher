@@ -543,6 +543,23 @@ class Snaximum:
             'post_season': post_season
         }
 
+    def personal_revenue(self, snaxfolio: Optional[Snaxfolio] = None) -> Dict:
+        snaxfolio = self.mksnax(snaxfolio)
+        revenue_dict = {'wet_pretzel': self.black_holes * self.get_payout('wet_pretzel', snaxfolio['wet_pretzel']),
+                        'doughnut': self.sunsets * self.get_payout('doughnut', snaxfolio['doughnut']),
+                        'sundae': self.incinerations * self.get_payout('sundae', snaxfolio['sundae']),
+                        'slushies': self.flooded_runners * self.get_payout('slushies', snaxfolio['slushies']),
+                        'snake_oil': self.bets.payout(
+                            bet=self.get_payout('snake_oil', snaxfolio['snake_oil']),
+                            threshold=self.betting_threshold,
+                            efficiency=self.betting_consistency
+                        )}
+        lbs = self.get_lucrative_batters(snaxfolio)[0]
+        revenue_dict['seeds'] = lbs[0]['hits']
+        revenue_dict['hot_dog'] = lbs[0]['home_runs']
+        revenue_dict['pickles'] = lbs[0]['stolen_bases']
+        return revenue_dict
+
     def calc_upgrade_costs(self, snaxfolio: Optional[Snaxfolio],
                            ignore_list: Optional[list],
                            strategy: Strategy = Strategy.LONG_TERM

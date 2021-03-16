@@ -375,6 +375,23 @@ class SnaxCog(commands.Cog):
 
         return await ctx.send(embed=embed)
 
+    @commands.command(name='personal_revenue', aliases=['pr'])
+    @checks.allow_snax_commands()
+    async def _personal_revenue(self, ctx):
+        snaxfolio = await self._get_user_snax(ctx.author.id)
+        revenue_dict = self.snaximum_instance.personal_revenue(snaxfolio)
+        revenue_msg = ""
+        for snack, revenue in revenue_dict.items():
+            if revenue > 0:
+                name = snack.replace('_', ' ')
+                revenue_msg += f"{name.capitalize()}: {revenue:,} coins\n"
+        embed = discord.Embed(color=discord.Colour.green(),
+                              title="Total season revenue based on current snax quantities",
+                              description=revenue_msg)
+        embed.set_footer(text="Note: This calculation assumes you had your current snack quantities from Day 1.")
+        await ctx.send(embed=embed)
+
+
     @commands.command(name="snaxfolio", aliases=['snax_folio', 'snax_portfolio', 'my_snax', 'mysnax', 'snackfolio'])
     @checks.allow_snax_commands()
     async def _snaxfolio(self, ctx):
