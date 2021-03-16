@@ -389,6 +389,15 @@ class SnaxCog(commands.Cog):
                                   description="Use the `!set_snax` command to set it up.")
             return await ctx.send(embed=embed)
 
+        if len(snaxfolio.items()) < 2:
+            if len(snaxfolio.items()) < 1:
+                return await ctx.send(embed=discord.Embed(colour=discord.Colour.green(),
+                                      title=f"Your snaxfolio is empty {ctx.author.display_name}!"))
+            snack, quantity = list(snaxfolio.items())[0]
+            name = snack.replace('_', ' ')
+            return await ctx.send(embed=discord.Embed(colour=discord.Colour.green(),
+                                                      title=f"{ctx.author.display_name}'s current snaxfolio.",
+                                                      description=f"{name.capitalize()}: {quantity}"))
         snax_msg_parts = []
         for snax, quantity in snaxfolio.items():
             if quantity > 0:
@@ -398,8 +407,12 @@ class SnaxCog(commands.Cog):
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=f"{ctx.author.display_name}'s current snaxfolio.")
         split_idx = len(snax_msg_parts) // 2
-        embed.add_field(name=self.bot.empty_str, value=''.join(snax_msg_parts[:split_idx]))
-        embed.add_field(name=self.bot.empty_str, value=''.join(snax_msg_parts[split_idx:]))
+        left_val = ''.join(snax_msg_parts[:split_idx])
+        right_val = ''.join(snax_msg_parts[split_idx:])
+        if len(left_val) > 0:
+            embed.add_field(name=self.bot.empty_str, value=left_val)
+        if len(right_val) > 0:
+            embed.add_field(name=self.bot.empty_str, value=right_val)
         return await ctx.send(embed=embed)
 
     @commands.command(name="cumulative_cost", aliases=['total_cost', 'cc'])
@@ -484,6 +497,9 @@ class SnaxCog(commands.Cog):
                     ignore_list = ignore_list_str.split(',')
 
         return ignore_list
+
+    async def refresh_snax_info(self):
+        await self.snaximum_instance.refresh()
 
 
 def setup(bot):

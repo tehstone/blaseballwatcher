@@ -780,6 +780,11 @@ class GameData(commands.Cog):
         weather_occurrences["flooded_runners"] = runner_count
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'w') as file:
             json.dump(weather_occurrences, file)
+        try:
+            snax_cog = self.bot.cogs.get('SnaxCog')
+            snax_cog.refresh_snax_info()
+        except:
+            self.bot.logger.warning("Failed to refresh snax cog data")
 
     async def _lookup_floods(self, season):
         season_flood_count, season_runner_count = 0, 0
