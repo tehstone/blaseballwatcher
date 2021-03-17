@@ -94,10 +94,12 @@ class SnaxCog(commands.Cog):
                 await db.commit()
 
         if len(errored_parts) > 0:
-            title = "These snacks have spoiled, I've not added them to your snaxfolio:"
+            title = "These snax can't be added to your snaxfolio:"
             error_msg = ""
             for part in errored_parts:
                 error_msg += f"{part}\n"
+            error_msg += "\nCommon errors are forgetting commas, forgetting equals, having invalid snack names, or " \
+                         "values too small or too large. (must be between -1 and 99)"
             embed = discord.Embed(colour=discord.Colour.red(),
                                   title=title, description=error_msg)
             await ctx.send(embed=embed)
@@ -497,6 +499,9 @@ class SnaxCog(commands.Cog):
             try:
                 insert_value = int(quantity)
             except:
+                errored_parts.append(part)
+                continue
+            if insert_value < -1 or insert_value > 99:
                 errored_parts.append(part)
                 continue
             success_parts.append(f"{snax_fields[snack]}={str(insert_value)}")
