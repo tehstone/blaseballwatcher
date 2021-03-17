@@ -343,12 +343,18 @@ class JsonWatcher(commands.Cog):
                 json.dump(data, json_file)
 
     async def check_single_json(self, new_json, old_json, output_channel, name):
-        new_keys = []
+        new_keys, old_keys = [], []
         for key in new_json.keys():
             if key not in old_json:
                 new_keys.append(key)
         if len(new_keys) > 0:
             await output_channel.send(f"New fields added to {name} json: {', '.join(new_keys)}")
+            return True
+        for key in old_json.keys():
+            if key not in new_json:
+                old_keys.append(key)
+        if len(old_keys) > 0:
+            await output_channel.send(f"Fields removed from {name} json: {', '.join(old_keys)}")
             return True
         return False
 
