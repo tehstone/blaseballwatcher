@@ -80,6 +80,10 @@ def initialize(db):
                                 perfectGame	boolean,
                                 PRIMARY KEY(id)
                             );""")
+        try:
+            c.execute("ALTER TABLE DailyStatSheets ADD COLUMN homeRunsAllowed	INTEGER DEFAULT 0;")
+        except Exception as e:
+            pass
         c.close()
 
 
@@ -118,7 +122,8 @@ class PlayerStatSheetsInstance:
     def __init__(self, id, season, day, playerId, teamId, gameId, team, name, atBats, caughtStealing, doubles,
                  earnedRuns, groundIntoDp, hits, hitsAllowed, homeRuns, losses, outsRecorded, rbis, runs,
                  stolenBases, strikeouts, struckouts, triples, walks, walksIssued, wins, hitByPitch, hitBatters,
-                 quadruples, pitchesThrown, rotation_changed, position, rotation, shutout, noHitter, perfectGame):
+                 quadruples, pitchesThrown, rotation_changed, position, rotation, shutout,
+                 noHitter, perfectGame, homeRunsAllowed):
         self.id = id
         self.season = season
         self.day = day
@@ -156,6 +161,7 @@ class PlayerStatSheetsInstance:
         self.shutout = shutout
         self.noHitter = noHitter
         self.perfectGame = perfectGame
+        self.homeRunsAllowed = homeRunsAllowed
 
     def get_as_dict(self):
         return {{"id": self.id, "season": self.season, "day": self.day, "playerId": self.playerId,
@@ -169,7 +175,8 @@ class PlayerStatSheetsInstance:
                  "walksIssued": self.walksIssued, "wins": self.wins, "hitByPitch": self.hitByPitch,
                  "hitBatters": self.hitBatters, "quadruples": self.quadruples, "pitchesThrown": self.pitchesThrown,
                  "rotation_changed": self.rotation_changed, "position": self.position, "rotation": self.rotation,
-                 "shutout": self.shutout, "noHitter": self.noHitter, "perfectGame": self.perfectGame}}
+                 "shutout": self.shutout, "noHitter": self.noHitter,
+                 "perfectGame": self.perfectGame, "homeRunsAllowed": self.homeRunsAllowed}}
 
 
 class CycleInstance:

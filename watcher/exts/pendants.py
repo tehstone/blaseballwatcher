@@ -129,11 +129,16 @@ class Pendants(commands.Cog):
                                       pitching_rotations, team_stats):
         statsheets = {}
         pitcher_p_values = {}
+        pitcher_hr_counts = {}
+        pitcher_team_map = {}
         for pid, p_values in players_statsheets.items():
             save = True
             p_values["rotation_changed"] = False
+            opp_id = game_team_map[p_values["teamId"]]["opponent"]
+            if p_values['outsRecorded'] > 0:
+                pitcher_hr_counts[p_values["teamId"]] = 0
+                pitcher_team_map[p_values["teamId"]] = p_values["id"]
             if p_values["outsRecorded"] >= 24 and p_values["earnedRuns"] <= 0:
-                opp_id = game_team_map[p_values["teamId"]]["opponent"]
                 if opp_id not in team_stats:
                     team_stats[opp_id] = {"shutout": 0, "at_bats": 0, "plate_appearances": 0,
                                           "struckouts": 0, "name": self.bot.team_names[opp_id],
@@ -193,8 +198,11 @@ class Pendants(commands.Cog):
                 if p_values["pitchesThrown"] > 0:
                     save = False
                     if p_values["playerId"] in pitcher_p_values:
-                        statsheet_id = pitcher_p_values[p_values["playerId"]]["statsheetId"]
-                        statsheets[statsheet_id]["pitchesThrown"] += p_values["pitchesThrown"]
+                        if "statsheetId" in pitcher_p_values[p_values["playerId"]]:
+                            statsheet_id = pitcher_p_values[p_values["playerId"]]["statsheetId"]
+                            statsheets[statsheet_id]["pitchesThrown"] += p_values["pitchesThrown"]
+                        else:
+                            pitcher_p_values[p_values["playerId"]]["pitchesThrown"] += p_values["pitchesThrown"]
                     else:
                         pitcher_p_values[p_values["playerId"]] = {"pitchesThrown": p_values["pitchesThrown"]}
                 p_values["position"] = "lineup"
@@ -215,6 +223,9 @@ class Pendants(commands.Cog):
                 if p_values["playerId"] not in team_stats[team_id]["lineup_pa"]:
                     team_stats[team_id]["lineup_pa"][p_values["playerId"]] = 0
                 team_stats[team_id]["lineup_pa"][p_values["playerId"]] += plate_appearances
+                if opp_id not in pitcher_hr_counts:
+                    pitcher_hr_counts[opp_id] = 0
+                pitcher_hr_counts[opp_id] += p_values["homeRuns"]
 
             if "rotation" not in p_values:
                 p_values["rotation"] = -1
@@ -222,9 +233,14 @@ class Pendants(commands.Cog):
                 if notable not in p_values:
                     p_values[notable] = 0
             p_values["gameId"] = game_team_map[p_values["teamId"]]["game_id"]
+            p_values["homeRunsAllowed"] = 0
             if save:
                 statsheets[p_values["id"]] = p_values
 
+        for team_id, hr_count in pitcher_hr_counts.items():
+            stats_id = pitcher_team_map[team_id]
+            if stats_id in statsheets:
+                statsheets[stats_id]["homeRunsAllowed"] = hr_count
         rows = []
         for p_values in statsheets.values():
             rows.append((p_values["id"], season, day, p_values["playerId"], p_values["teamId"],
@@ -237,12 +253,13 @@ class Pendants(commands.Cog):
                          p_values["walks"], p_values["walksIssued"], p_values["wins"],
                          p_values["hitByPitch"], p_values["hitBatters"], p_values["quadruples"],
                          p_values["pitchesThrown"], p_values["rotation_changed"], p_values["position"],
-                         p_values["rotation"], p_values["shutout"], p_values["noHitter"], p_values["perfectGame"]))
+                         p_values["rotation"], p_values["shutout"], p_values["noHitter"],
+                         p_values["perfectGame"], p_values["homeRunsAllowed"]))
 
         async with aiosqlite.connect(self.bot.db_path) as db:
             await db.executemany("insert into DailyStatSheets values "
                                  "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                                 "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", rows)
+                                 "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", rows)
             await db.commit()
 
     def print_top(self, player_dict, key, string, cutoff=2, avg=False):
@@ -288,8 +305,8 @@ class Pendants(commands.Cog):
                                       "homeRuns, losses, outsRecorded, rbis, runs, stolenBases, "
                                       "strikeouts, struckouts, triples, walks, walksIssued, wins, "
                                       "hitByPitch, hitBatters, quadruples, pitchesThrown, "
-                                      "rotation_changed, position, rotation, shutout, noHitter, perfectGame"
-                                      " from DailyStatSheets "
+                                      "rotation_changed, position, rotation, shutout, noHitter, perfectGame, "
+                                      "homeRunsAllowed from DailyStatSheets "
                                       "where season=? and day=?;", (current_season, last_day)) as cursor:
                     async for row in cursor:
                         players[row[0]] = PlayerStatSheetsInstance(*row)
@@ -613,7 +630,7 @@ class Pendants(commands.Cog):
                 filtered_items.append(item)
 
         for i in range(len(filtered_items)):
-            if i + 3 > len(filtered_items):
+            if i + 2 > len(filtered_items):
                 break
             if "hits a Single" in filtered_items[i]['description']:
                 if "hits a Double" in filtered_items[i + 1]['description']:
@@ -621,7 +638,7 @@ class Pendants(commands.Cog):
                         if "home run" in filtered_items[i + 3]['description']:
                             return "Natural Cycle!"
         for i in range(len(filtered_items)):
-            if i + 3 > len(filtered_items):
+            if i + 2 > len(filtered_items):
                 break
             if "home run" in filtered_items[i]['description']:
                 if "hits a Triple" in filtered_items[i + 1]['description']:
@@ -676,9 +693,11 @@ class Pendants(commands.Cog):
         else:
             sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
         if season >= 12:
-            p_worksheet = await sheet.worksheet("Snack Income")
+            p_worksheet = await sheet.worksheet("Pitching Snacks")
+            h_worksheet = await sheet.worksheet("Hitting Snacks")
         else:
             p_worksheet = await sheet.worksheet("Pendants")
+            h_worksheet = await sheet.worksheet("Pendants")
         hitters, pitcher_dict = await self.compile_stats(season)
 
         sorted_combo_payouts, sorted_sickle_payouts, sorted_seed_dog_payouts\
@@ -702,7 +721,7 @@ class Pendants(commands.Cog):
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
                     rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
         await p_worksheet.batch_update([{
-            'range': "A26:F40",
+            'range': "A5:F19",
             'values': rows
         }])
 
@@ -714,7 +733,7 @@ class Pendants(commands.Cog):
                                                 reverse=True) if v["rotation_changed"]}
         top_list = list(sorted_strikeouts.keys())
 
-        top_keys = top_list[:7]
+        top_keys = top_list[:10]
         for key in top_keys:
             values = pitcher_dict[key]
             team = team_short_map[values["teamId"]]
@@ -722,7 +741,7 @@ class Pendants(commands.Cog):
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, '', values["strikeouts"], k_9_value])
         await p_worksheet.batch_update([{
-            'range': "L26:P32",
+            'range': "L23:P32",
             'values': rows
         }])
 
@@ -738,21 +757,36 @@ class Pendants(commands.Cog):
                 name = f"({team}) {values['name']}"
                 rows.append([name, '', values["shutout"]])
         await p_worksheet.batch_update([{
-            'range': "H26:J40",
+            'range': "I5:K19",
             'values': rows
         }])
 
         rows = []
         sorted_shutouts = {k: v for k, v in sorted(pitcher_dict.items(), key=lambda item: item[1]['shutout'],
                                                    reverse=True) if v["rotation_changed"]}
-        top_keys = list(sorted_shutouts.keys())[:5]
+        top_keys = list(sorted_shutouts.keys())[:10]
         for key in top_keys:
             values = sorted_shutouts[key]
             team = team_short_map[values["teamId"]]
             name = f"({team}) {values['name']}"
             rows.append([values["rotation"], name, '', values["shutout"]])
         await p_worksheet.batch_update([{
-            'range': "L36:O40",
+            'range': "H23:K32",
+            'values': rows
+        }])
+
+        rows = []
+        sorted_dingers_allowed = {k: v for k, v in sorted(pitcher_dict.items(),
+                                                          key=lambda item: item[1]['homeRunsAllowed'],
+                                                          reverse=True)}
+        top_keys = list(sorted_dingers_allowed.keys())[:12]
+        for key in top_keys:
+            values = sorted_shutouts[key]
+            team = team_short_map[values["teamId"]]
+            name = f"({team}) {values['name']}"
+            rows.append([values["rotation"], name, '', '', values["homeRunsAllowed"]])
+        await p_worksheet.batch_update([{
+            'range': "A36:F47",
             'values': rows
         }])
 
@@ -806,7 +840,7 @@ class Pendants(commands.Cog):
                 if count == 4:
                     break
 
-        await p_worksheet.batch_update([{
+        await h_worksheet.batch_update([{
             'range': f"A9:E{9+len(rows)}",
             'values': rows
         }])
@@ -829,7 +863,7 @@ class Pendants(commands.Cog):
             wg_row[3] = sorted_combo_payouts[wg_id].setdefault("homeRuns", 0)
         if wg_id in sorted_combo_payouts:
             wg_row[4] = sorted_combo_payouts[wg_id].setdefault("stolenBases", 0)
-        await p_worksheet.batch_update([{
+        await h_worksheet.batch_update([{
             'range': "A6:E7",
             'values': [ys_row, wg_row]
         }])
