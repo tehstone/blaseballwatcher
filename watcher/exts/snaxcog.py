@@ -427,6 +427,12 @@ class SnaxCog(commands.Cog):
         Displays a list of your current snax.
         """
         snaxfolio = await self._get_user_snax(ctx.author.id)
+        ignore_list = await self._get_user_ignore_list(ctx.author.id)
+
+        ignore_str = f"{self.bot.empty_str}"
+        if len(ignore_list) > 0:
+            ignore_str = "\nCurrent ignore list:\n"
+            ignore_str += ', '.join(ignore_list)
 
         if len(snaxfolio) < 0:
             embed = discord.Embed(colour=discord.Colour.red(),
@@ -442,7 +448,7 @@ class SnaxCog(commands.Cog):
             name = snack.replace('_', ' ')
             return await ctx.send(embed=discord.Embed(colour=discord.Colour.green(),
                                                       title=f"{ctx.author.display_name}'s current snaxfolio.",
-                                                      description=f"{name.capitalize()}: {quantity}"))
+                                                      description=f"{name.capitalize()}: {quantity}{ignore_str}"))
         snax_msg_parts = []
         for snax, quantity in snaxfolio.items():
             if quantity > 0:
@@ -451,6 +457,8 @@ class SnaxCog(commands.Cog):
 
         embed = discord.Embed(colour=discord.Colour.green(),
                               title=f"{ctx.author.display_name}'s current snaxfolio.")
+        if len(ignore_str) > 1:
+            embed.description = ignore_str
         split_idx = len(snax_msg_parts) // 2
         left_val = ''.join(snax_msg_parts[:split_idx])
         right_val = ''.join(snax_msg_parts[split_idx:])
@@ -542,7 +550,7 @@ class SnaxCog(commands.Cog):
                                   f"where user_id={user_id};") as cursor:
                 async for row in cursor:
                     ignore_list_str = row[1]
-                    ignore_list = ignore_list_str.split(',')
+                    ignore_list = [i for i in ignore_list_str.split(',') if len(i) > 0]
 
         return ignore_list
 
