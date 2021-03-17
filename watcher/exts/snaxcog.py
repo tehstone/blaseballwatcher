@@ -385,14 +385,14 @@ class SnaxCog(commands.Cog):
         quantity of snack so far this season.
         """
         snaxfolio = await self._get_user_snax(ctx.author.id)
-        revenue_dict = self.snaximum_instance.personal_revenue(snaxfolio)
+        revenue_dict, idol_name = self.snaximum_instance.personal_revenue(snaxfolio)
         revenue_msg = ""
         for snack, revenue in revenue_dict.items():
             if revenue > 0:
                 name = snack.replace('_', ' ')
                 revenue_msg += f"{name.capitalize()}: {revenue:,} coins\n"
         embed = discord.Embed(color=discord.Colour.green(),
-                              title="Total season revenue based on current snax quantities",
+                              title=f"Total season revenue based on current snax quantities with idol: {idol_name}",
                               description=revenue_msg)
         embed.set_footer(text="Note: This calculation assumes you had your current snack quantities from Day 1.")
         await ctx.send(embed=embed)
@@ -408,14 +408,14 @@ class SnaxCog(commands.Cog):
             'wet_pretzel': 99, 'doughnut': 99, 'sundae': 99, 'slushies': 99,
             'snake_oil': 99, 'seeds': 99, 'hot_dog': 99, 'pickles': 99
         }
-        revenue_dict = self.snaximum_instance.personal_revenue(snaxfolio)
+        revenue_dict, idol_name = self.snaximum_instance.personal_revenue(snaxfolio)
         revenue_msg = ""
         for snack, revenue in revenue_dict.items():
             if revenue > 0:
                 name = snack.replace('_', ' ')
                 revenue_msg += f"{name.capitalize()}: {revenue:,} coins\n"
         embed = discord.Embed(color=discord.Colour.green(),
-                              title="Total season revenue based on maxed snax quantities",
+                              title=f"Total season revenue based on maxed snax quantities with idol: {idol_name}",
                               description=revenue_msg)
         embed.set_footer(text="Note: This calculation assumes maxed current snack quantities from Day 1.")
         await ctx.send(embed=embed)
