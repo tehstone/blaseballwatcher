@@ -790,7 +790,7 @@ class GameData(commands.Cog):
             json.dump(weather_occurrences, file)
         try:
             snax_cog = self.bot.cogs.get('SnaxCog')
-            snax_cog.refresh_snax_info()
+            await snax_cog.refresh_snax_info()
         except:
             self.bot.logger.warning("Failed to refresh snax cog data")
 
