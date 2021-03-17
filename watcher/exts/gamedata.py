@@ -773,7 +773,7 @@ class GameData(commands.Cog):
             await asyncio.sleep(5)
 
     async def _save_weather_counts(self, sheet, season, weather_occurrences):
-        p_worksheet = await sheet.worksheet("Snack Income")
+        p_worksheet = await sheet.worksheet("Hitting Snacks")
         flood_count, runner_count = await self._lookup_floods(season)
         await p_worksheet.batch_update([{
             'range': "B2:B2",

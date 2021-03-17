@@ -667,7 +667,8 @@ class Pendants(commands.Cog):
                         }
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select playerId, name, teamId, sum(outsRecorded), sum(strikeouts), "
-                                  "sum(walksIssued), sum(shutout), rotation, rotation_changed "
+                                  "sum(walksIssued), sum(shutout), rotation, rotation_changed, "
+                                  "sum(homeRunsAllowed) "
                                   "from DailyStatSheets where season=? and position='rotation' "
                                   "group by playerId", [season]) as cursor:
                 async for row in cursor:
@@ -681,7 +682,8 @@ class Pendants(commands.Cog):
                             "walksIssued": row[5],
                             "shutout": row[6],
                             "rotation": row[7],
-                            "rotation_changed": row[8]
+                            "rotation_changed": row[8],
+                            "homeRunsAllowed": row[9]
                         }
         return hitters, pitchers
 
@@ -739,9 +741,9 @@ class Pendants(commands.Cog):
             team = team_short_map[values["teamId"]]
             name = f"({team}) {values['name']}"
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
-            rows.append([values["rotation"], name, '', values["strikeouts"], k_9_value])
+            rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
         await p_worksheet.batch_update([{
-            'range': "L23:P32",
+            'range': "A23:F32",
             'values': rows
         }])
 
@@ -781,7 +783,7 @@ class Pendants(commands.Cog):
                                                           reverse=True)}
         top_keys = list(sorted_dingers_allowed.keys())[:12]
         for key in top_keys:
-            values = sorted_shutouts[key]
+            values = sorted_dingers_allowed[key]
             team = team_short_map[values["teamId"]]
             name = f"({team}) {values['name']}"
             rows.append([values["rotation"], name, '', '', values["homeRunsAllowed"]])
