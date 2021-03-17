@@ -681,8 +681,8 @@ class Pendants(commands.Cog):
             p_worksheet = await sheet.worksheet("Pendants")
         hitters, pitcher_dict = await self.compile_stats(season)
 
-        sorted_hits, sorted_homeruns, \
-            sorted_total_hit_payouts, sorted_stolenbases = self.save_daily_top_hitters(hitters, day)
+        sorted_combo_payouts, sorted_sickle_payouts, sorted_seed_dog_payouts\
+            = self.save_daily_top_hitters(hitters, day)
         rows = []
         team_short_map = await self.get_short_map()
         for i in range(1, 6):
@@ -702,7 +702,7 @@ class Pendants(commands.Cog):
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
                     rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
         await p_worksheet.batch_update([{
-            'range': "A23:F37",
+            'range': "A26:F40",
             'values': rows
         }])
 
@@ -722,7 +722,7 @@ class Pendants(commands.Cog):
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, '', values["strikeouts"], k_9_value])
         await p_worksheet.batch_update([{
-            'range': "L23:P29",
+            'range': "L26:P32",
             'values': rows
         }])
 
@@ -738,7 +738,7 @@ class Pendants(commands.Cog):
                 name = f"({team}) {values['name']}"
                 rows.append([name, '', values["shutout"]])
         await p_worksheet.batch_update([{
-            'range': "H23:J37",
+            'range': "H26:J40",
             'values': rows
         }])
 
@@ -752,64 +752,83 @@ class Pendants(commands.Cog):
             name = f"({team}) {values['name']}"
             rows.append([values["rotation"], name, '', values["shutout"]])
         await p_worksheet.batch_update([{
-            'range': "L33:O37",
+            'range': "L36:O40",
             'values': rows
         }])
 
         rows = []
 
-        sb_max = 3
-        hit_max = 10
-        top_sb_keys = list(sorted_stolenbases.keys())[:sb_max]
-        top_keys = list(sorted_total_hit_payouts.keys())[:hit_max]
-        for i in range(sb_max):
-            if top_sb_keys[i] not in top_keys:
-                hit_max -= 1
+        players_seen = []
+        top_sickle_keys = list(sorted_sickle_payouts.keys())
+        top_seed_dog_keys = list(sorted_seed_dog_payouts.keys())
+        top_combo_keys = list(sorted_combo_payouts.keys())
 
         count = 0
-        for key in top_keys:
+        for key in top_combo_keys:
             if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
                 continue
-            values = sorted_total_hit_payouts[key]
+            values = sorted_combo_payouts[key]
             hits = hitters[key]["hitsMinusHrs"]
             team = team_short_map[values["teamId"]]
             name = f"({team}) {values['name']}"
             rows.append([name, '', hits, values["homeRuns"], values["stolenBases"]])
+            players_seen.append(key)
             count += 1
-            if count == hit_max:
+            if count == 4:
                 break
 
-        for key in top_sb_keys:
-            if key not in top_keys:
-                values = sorted_stolenbases[key]
+        count = 0
+        for key in top_sickle_keys:
+            if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
+                continue
+            if key not in players_seen:
+                values = sorted_sickle_payouts[key]
                 hits = hitters[key]["hitsMinusHrs"]
                 team = team_short_map[values["teamId"]]
                 name = f"({team}) {values['name']}"
                 rows.append([name, '', hits, values["homeRuns"], values["stolenBases"]])
+                players_seen.append(key)
+                count += 1
+                if count == 4:
+                    break
+
+        count = 0
+        for key in top_seed_dog_keys:
+            if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
+                continue
+            if key not in players_seen:
+                values = sorted_seed_dog_payouts[key]
+                hits = hitters[key]["hitsMinusHrs"]
+                team = team_short_map[values["teamId"]]
+                name = f"({team}) {values['name']}"
+                rows.append([name, '', hits, values["homeRuns"], values["stolenBases"]])
+                count += 1
+                if count == 4:
+                    break
 
         await p_worksheet.batch_update([{
-            'range': "A9:E18",
+            'range': f"A9:E{9+len(rows)}",
             'values': rows
         }])
 
         # York Silk
         ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
         ys_row = ["York Silk", '', 0, 0, 0]
-        if ys_id in sorted_hits:
+        if ys_id in sorted_combo_payouts:
             ys_row[2] = hitters[ys_id].setdefault("hitsMinusHrs", 0)
-        if ys_id in sorted_homeruns:
-            ys_row[3] = sorted_homeruns[ys_id].setdefault("homeRuns", 0)
-        if ys_id in sorted_stolenbases:
-            ys_row[4] = sorted_stolenbases[ys_id].setdefault("stolenBases", 0)
+        if ys_id in sorted_combo_payouts:
+            ys_row[3] = sorted_combo_payouts[ys_id].setdefault("homeRuns", 0)
+        if ys_id in sorted_combo_payouts:
+            ys_row[4] = sorted_combo_payouts[ys_id].setdefault("stolenBases", 0)
         # Wyatt Glover
         wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
         wg_row = ["Wyatt Glover", '', 0, 0, 0]
-        if wg_id in sorted_hits:
+        if wg_id in sorted_combo_payouts:
             wg_row[2] = hitters[wg_id].setdefault("hitsMinusHrs", 0)
-        if wg_id in sorted_homeruns:
-            wg_row[3] = sorted_homeruns[wg_id].setdefault("homeRuns", 0)
-        if wg_id in sorted_stolenbases:
-            wg_row[4] = sorted_stolenbases[wg_id].setdefault("stolenBases", 0)
+        if wg_id in sorted_combo_payouts:
+            wg_row[3] = sorted_combo_payouts[wg_id].setdefault("homeRuns", 0)
+        if wg_id in sorted_combo_payouts:
+            wg_row[4] = sorted_combo_payouts[wg_id].setdefault("stolenBases", 0)
         await p_worksheet.batch_update([{
             'range': "A6:E7",
             'values': [ys_row, wg_row]
@@ -852,19 +871,23 @@ class Pendants(commands.Cog):
             else:
                 multiplier = 1
             seed_dog = ((hits * 1500) + (homeruns * 4000)) * multiplier
+            sickle = ((hits * 1500) + (stolenbases * 3000)) * multiplier
             combo = ((hits * 1500) + (homeruns * 4000) + (stolenbases * 3000)) * multiplier
             hitters[k]["multiplier"] = multiplier
 
             total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hitsMinusHrs"],
                                     "homeRuns": sorted_homeruns[k]["homeRuns"],
                                     "stolenBases": sorted_stolenbases[k]["stolenBases"],
-                                    "seed_dog": seed_dog, "combo": combo, "multiplier": multiplier}
+                                    "seed_dog": seed_dog, "combo": combo,
+                                    "sickle": sickle, "multiplier": multiplier}
         sorted_seed_dog_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
                                                            key=lambda item: item[1]['seed_dog'], reverse=True)}
+        sorted_sickle_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
+                                                        key=lambda item: item[1]['sickle'], reverse=True)}
         sorted_combo_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
                                                         key=lambda item: item[1]['combo'], reverse=True)}
 
-        daily_leaders = {"hits": [], "home_runs": [], "stolen_bases": [], "seed_dog": [], "combo": []}
+        daily_leaders = {"hits": [], "home_runs": [], "stolen_bases": [], "seed_dog": [], "sickle": [], "combo": []}
         for key in list(sorted_hits.keys())[:10]:
             daily_leaders["hits"].append(hitters[key])
         for key in list(sorted_homeruns.keys())[:10]:
@@ -873,13 +896,15 @@ class Pendants(commands.Cog):
             daily_leaders["stolen_bases"].append(hitters[key])
         for key in list(sorted_seed_dog_payouts.keys())[:10]:
             daily_leaders["seed_dog"].append(hitters[key])
+        for key in list(sorted_sickle_payouts.keys())[:10]:
+            daily_leaders["sickle"].append(hitters[key])
         for key in list(sorted_combo_payouts.keys())[:10]:
             daily_leaders["combo"].append(hitters[key])
 
         with open(os.path.join('data', 'pendant_data', 'statsheets', f'd{day}_leaders.json'), 'w') as file:
             json.dump(daily_leaders, file)
 
-        return sorted_hits, sorted_homeruns, sorted_seed_dog_payouts, sorted_stolenbases
+        return sorted_combo_payouts, sorted_sickle_payouts, sorted_seed_dog_payouts
 
     @commands.command(aliases=['upp'])
     async def _update_pendants(self, ctx, season: int):
