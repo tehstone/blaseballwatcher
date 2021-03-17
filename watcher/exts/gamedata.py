@@ -777,7 +777,7 @@ class GameData(commands.Cog):
             'values': [[weather_occurrences["Sunset"]]]
         }])
         await p_worksheet.batch_update([{
-            'range': "AC2:AC2",
+            'range': "AB2:AB2",
             'values': [[weather_occurrences["Incineration"]]]
         }])
         await p_worksheet.batch_update([{
