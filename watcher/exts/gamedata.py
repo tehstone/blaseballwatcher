@@ -648,10 +648,13 @@ class GameData(commands.Cog):
                 team_list += team_columns
 
             async def update_league(league, start_i):
+
                 sorted_league = {k: v for k, v in
                                  sorted(league.items(),
                                         key=lambda item: item[1]["total"]["win"] + item[1]["win_modifier"],
                                         reverse=True)}
+                any_team = list(sorted_league.items())[0]
+                games = any_team[1]['total']['win'] + any_team[1]['total']['loss']
                 teams = []
                 for team, record in sorted_league.items():
                     teams.append([team, record['total']['win'] + record["win_modifier"],
@@ -707,8 +710,12 @@ class GameData(commands.Cog):
                     'values': teams
                 }])
                 await s_worksheet.batch_update([{
-                    'range': "C28",
-                    'values': [[99-day]]
+                    'range': "F32",
+                    'values': [[99-games]]
+                }])
+                await s_worksheet.batch_update([{
+                    'range': "AR1",
+                    'values': [[games]]
                 }])
 
             s_worksheet = await sheet.worksheet("Standings")
