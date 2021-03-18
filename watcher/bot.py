@@ -201,16 +201,17 @@ class WatcherBot(commands.AutoShardedBot):
             current_season = self.config['current_season']
             pendant_cog = self.cogs.get('Pendants')
             latest_day = await pendant_cog.get_latest_pendant_data(current_season)
-            await debug_channel.send(f"Pendant data updated. {time.time()}")
+            await debug_channel.send(f"Pendant data updated.")
+            self.logger.info(f"Pendant data updated.  {time.time()}")
             try:
                 await pendant_cog.update_leaders_sheet(current_season, latest_day)
-                await debug_channel.send(f"Leaders Sheet updated. {time.time()}")
+                self.logger.info(f"Leaders Sheet updated. {time.time()}")
             except Exception as e:
                 self.logger.warning(f"Failed to update pendant leaders: {e}")
 
             betadvice_cog = self.cogs.get('BetAdvice')
             try:
-                await debug_channel.send(f"Starting daily sim.  {time.time()}")
+                self.logger.info(f"Starting daily sim. {time.time()}")
                 message, embed_fields = await betadvice_cog.daily_message()
                 m_embed = discord.Embed(description=message)
                 for field in embed_fields:
@@ -221,14 +222,15 @@ class WatcherBot(commands.AutoShardedBot):
                     publish = self.config.setdefault('publish_rec_message', False)
                     if publish:
                         await bet_msg.publish()
-                await debug_channel.send(f"Daily sim complete.  {time.time()}")
+                self.logger.info(f"Daily sim complete. {time.time()}")
             except Exception as e:
                 self.logger.warning(f"Failed to send pendant picks: {e}")
 
             gamedata_cog = self.cogs.get('GameData')
             await gamedata_cog.save_json_range(current_season-1)
             await gamedata_cog.update_spreadsheets([current_season-1])
-            await debug_channel.send(f"Spreadsheets updated.  {time.time()}")
+            await debug_channel.send(f"Spreadsheets updated.")
+            self.logger.info(f"Spreadsheets updated. {time.time()}")
 
         elif not message.author.bot:
             await self.process_commands(message)
