@@ -22,7 +22,10 @@ async def update_player_cache(bot):
     player_ids = []
     for tid in team_ids:
         team = bot.team_cache[tid]
-        player_ids += team["lineup"] + team["rotation"] + team["bullpen"] + team["bench"]
+        new_player_ids = team["lineup"] + team["rotation"] + team["bullpen"] + team["bench"]
+        player_ids += new_player_ids
+        for pid in new_player_ids:
+            bot.player_team_map[pid] = tid
     chunked_player_ids = [player_ids[i:i + 50] for i in range(0, len(player_ids), 50)]
     for chunk in chunked_player_ids:
         players = await get_players(chunk)
@@ -33,6 +36,8 @@ async def update_player_cache(bot):
         json.dump(bot.player_cache, json_file)
     with open(os.path.join("data", "api_cache", "player_names.json"), 'w', encoding='utf-8') as json_file:
         json.dump(bot.player_names, json_file)
+    with open(os.path.join("data", "api_cache", "player_team_map.json"), 'w', encoding='utf-8') as json_file:
+        json.dump(bot.player_team_map, json_file)
     return True
 
 
