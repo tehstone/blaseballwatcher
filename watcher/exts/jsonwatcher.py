@@ -193,12 +193,12 @@ class JsonWatcher(commands.Cog):
             team_name = self.bot.team_names[park["teamId"]]
             for attr in ["hype", "mods", "name", "model", "weather", "state",
                          "nickname", "mainColor", "secondaryColor", "tertiaryColor"]:
-                if park[attr] != old_park[attr]:
-                    changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
-                    changed = changed or True
+                if attr in park and attr in old_park:
+                    if park[attr] != old_park[attr]:
+                        changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
+                        changed = changed or True
         await utils.send_message_in_chunks(changes, output_channel)
         self.save_files(new_ballpark_json, "ballpark_data.json", changed)
-
 
     async def check_for_content_updates(self):
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
