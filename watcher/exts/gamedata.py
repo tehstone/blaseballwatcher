@@ -861,7 +861,7 @@ class GameData(commands.Cog):
             count = 0
             for j in range(len(odds)):
                 odd = odds[j]
-                if round(odd) >= bet_tiers[i]:
+                if odd >= bet_tiers[i]:
                     if odd == .5:
                         payouts[i] += round(2*1000)
                     if season < 11:
@@ -871,7 +871,7 @@ class GameData(commands.Cog):
                             #payouts[i] += round(1000 * (.571 + 1.429 / (1 + math.pow(3 * (odd - 0.5), .77))))
                             payouts[i] += round(1000 * (3.206 / (1 + math.pow(.443 * (odd - 0.5), .95)) - 1.206))
                     count += 1
-                elif round(odd) < 1 - bet_tiers[i]:
+                elif odd < 1 - bet_tiers[i]:
                     count += 1
             payouts[i] = payouts[i] - (1000 * count)
             bet_counts[i] = count

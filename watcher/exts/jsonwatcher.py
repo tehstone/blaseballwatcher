@@ -319,7 +319,7 @@ class JsonWatcher(commands.Cog):
                     if len(r_diff) > 0:
                         names = [all_players[pid]["name"] for pid in r_diff]
                         messages.append(f"{','.join(names)} added to {new_teams[team]['nickname']} {group}")
-                for attrset in ["seasAttr", "permAttr", "weekAttr", "gameAttr"]:
+                for attrset in ["seasAttr", "permAttr", "weekAttr"]:#, "gameAttr"]:
                     a_diff = set(old_teams[team][attrset]) - set(new_teams[team][attrset])
                     if len(a_diff) > 0:
                         messages.append(f"{','.join(a_diff)} no longer in {old_teams[team]['nickname']} {attrset}")
