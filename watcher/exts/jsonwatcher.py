@@ -28,7 +28,7 @@ class JsonWatcher(commands.Cog):
     @commands.command(name='testjson', aliases=['tj'])
     async def _test2(self, ctx):
         #await self.check_for_field_updates()
-        await self.check_for_comprehensive_updates()
+        await self.check_for_ballpark_updates()
 
     async def check_for_field_updates(self):
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
@@ -171,6 +171,34 @@ class JsonWatcher(commands.Cog):
                         await output_channel.send(message)
         except Exception as e:
             self.bot.logger.warning(f'Failed to acquire allteams data: {e}')
+
+    async def check_for_ballpark_updates(self):
+        output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
+
+        with open(os.path.join("json_data", "ballpark_data.json"), encoding='utf-8') as json_file:
+            ballpark_json = json.load(json_file)
+
+        new_ballpark_data = await utils.retry_request("https://api.sibr.dev/chronicler/v1/stadiums")
+        if not new_ballpark_data:
+            return self.bot.logger.warning('Failed to acquire ballpark data')
+        new_ballpark_json = new_ballpark_data.json()
+        changed = await self.check_single_json(new_ballpark_json['data'][0]['data'], ballpark_json['data'][0]['data'],
+                                               output_channel, "ballpark_data")
+
+        old_parks = {park["id"]: park for park in ballpark_json['data']}
+        changes = []
+        for park in new_ballpark_json['data']:
+            park = park['data']
+            old_park = old_parks[park["id"]]['data']
+            team_name = self.bot.team_names[park["teamId"]]
+            for attr in ["hype", "mods", "name", "model", "weather", "state",
+                         "nickname", "mainColor", "secondaryColor", "tertiaryColor"]:
+                if park[attr] != old_park[attr]:
+                    changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
+                    changed = changed or True
+        await utils.send_message_in_chunks(changes, output_channel)
+        self.save_files(new_ballpark_json, "ballpark_data.json", changed)
+
 
     async def check_for_content_updates(self):
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
@@ -333,7 +361,6 @@ class JsonWatcher(commands.Cog):
                                         f" to {new_teams[team][attr]}")
         return messages
 
-
     @staticmethod
     def save_files(data, filename, changed):
         with open(os.path.join("json_data", filename), 'w') as json_file:
@@ -342,7 +369,8 @@ class JsonWatcher(commands.Cog):
             with open(os.path.join("json_data", "historic", f"{time.time()}{filename}"), 'w') as json_file:
                 json.dump(data, json_file)
 
-    async def check_single_json(self, new_json, old_json, output_channel, name):
+    @staticmethod
+    async def check_single_json(new_json, old_json, output_channel, name):
         new_keys, old_keys = [], []
         for key in new_json.keys():
             if key not in old_json:
@@ -364,6 +392,7 @@ class JsonWatcher(commands.Cog):
             await self.check_for_field_updates()
             await self.check_for_comprehensive_updates()
             await self.check_for_content_updates()
+            await self.check_for_ballpark_updates()
             await self.save()
             await asyncio.sleep(self.bot.config.setdefault('json_watch_interval', 10) * 60)
             continue
