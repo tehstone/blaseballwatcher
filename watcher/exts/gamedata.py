@@ -797,9 +797,9 @@ class GameData(commands.Cog):
             json.dump(weather_occurrences, file)
         try:
             snax_cog = self.bot.cogs.get('SnaxCog')
-            await snax_cog.refresh_snax_info()
-        except:
-            self.bot.logger.warning("Failed to refresh snax cog data")
+            snax_cog.refresh_snax_info()
+        except Exception as e:
+            self.bot.logger.warning(f"Failed to refresh snax cog data: {e}")
 
     async def _lookup_floods(self, season):
         season_flood_count, season_runner_count = 0, 0

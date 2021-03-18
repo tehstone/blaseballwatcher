@@ -554,8 +554,8 @@ class SnaxCog(commands.Cog):
 
         return ignore_list
 
-    async def refresh_snax_info(self):
-        await self.snaximum_instance.refresh()
+    def refresh_snax_info(self):
+        self.snaximum_instance.refresh()
 
 
 def setup(bot):
