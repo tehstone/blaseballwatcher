@@ -9,7 +9,6 @@ import time
 import requests
 from google.oauth2.service_account import Credentials
 
-from watcher import utils
 from watcher.logs import init_loggers
 from watcher.errors import custom_error_handling
 
@@ -17,7 +16,7 @@ import discord
 from discord.ext import commands
 
 default_exts = ['admincommands', 'betadvice', 'gamedata', 'gamesim', 'helpcommand',
-                'jsonwatcher', 'pendants', 'playerdata', 'ruleswatcher', 'snaxcog',
+                'jsonwatcher', 'pendants', 'playerdata', 'playerstats', 'ruleswatcher', 'snaxcog',
                 'teamlookups', 'winexp', 'wordreactor']
 
 
@@ -107,6 +106,9 @@ class WatcherBot(commands.AutoShardedBot):
         self.current_day = 0
         self.tasks = []
         self.agcm = gspread_asyncio.AsyncioGspreadClientManager(self.get_creds)
+        self.team_cache = {}
+        self.player_cache = {}
+        self.player_names = {}
 
         for ext in default_exts:
             try:

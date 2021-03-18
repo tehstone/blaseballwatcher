@@ -6,6 +6,8 @@ import discord
 
 from watcher import utils
 from watcher.bot import WatcherBot
+from watcher.blaseball_data import teams
+from watcher.blaseball_data import players
 from watcher.exts.db import watcher_db
 
 watcher_db.initialize('data/watcher.db')
@@ -45,6 +47,9 @@ async def start_task_loops(bot):
         if bot.check_for_new_schedules:
             gamedata_cog = bot.get_cog('GameData')
             bot.tasks.append(event_loop.create_task(gamedata_cog.check_new_schedule_loop()))
+
+        bot.tasks.append(event_loop.create_task(teams.check_teams_loop(bot)))
+        bot.tasks.append(event_loop.create_task(players.check_players_loop(bot)))
         logger.info('Loops initiated')
     except KeyboardInterrupt:
         [task.cancel() for task in bot.tasks]
