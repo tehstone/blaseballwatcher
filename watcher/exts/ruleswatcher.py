@@ -125,12 +125,26 @@ class RulesWatcher(commands.Cog):
             messages.append("Failed to find a js URL.")
             return messages, None
         old_url = self.bot.config.setdefault('last_js_url', None)
+        script_response = await utils.retry_request(js_url)
+        backend = True
+        if script_response:
+            script_text = script_response.text
+            if script_text:
+                with open(os.path.join("json_data", "script_text.js"), encoding='utf-8') as fd:
+                    old_script_text = fd.read()
+                if script_text != old_script_text:
+                    backend = False
+                    with open(os.path.join("json_data", "script_text.js"), 'w', encoding='utf-8') as fd:
+                        fd.write(script_text)
 
         self.bot.logger.info(f"Current url: {js_url} Old url: {old_url}")
         if not old_url:
             self.bot.config['last_js_url'] = js_url
         else:
             if old_url != js_url:
+                backend_str = ""
+                if backend:
+                    backend_str = "Possibly just a backend change."
                 self.bot.config['last_js_url'] = js_url
                 appended = False
                 ping_role_id = self.bot.config.setdefault('rules_ping_role', None)
@@ -138,10 +152,11 @@ class RulesWatcher(commands.Cog):
                     guild = await self.bot.fetch_guild(self.main_guild_id)
                     ping_role = guild.get_role(ping_role_id)
                     if ping_role:
-                        messages.append(f'Script URL has changed {ping_role.mention}!\nOld: <{old_url}>\nNew: <{js_url}>')
+                        messages.append(f'Script URL has changed {ping_role.mention}!\nOld: <{old_url}>\nNew: <{js_url}>'
+                                        f'\n{backend_str}')
                         appended = True
                 if not appended:
-                    messages.append(f'Script URL has changed!\nOld: <{old_url}>\nNew: <{js_url}>')
+                    messages.append(f'Script URL has changed!\nOld: <{old_url}>\nNew: <{js_url}>\n{backend_str}')
 
         if not new_page_text:
             #self.bot.logger.warning("Failed to obtain updated page text.")
@@ -170,7 +185,6 @@ class RulesWatcher(commands.Cog):
         messages, filename = await self._check_for_rules_update()
         for m in messages:
             await ctx.send(m)
-            self.bot.logger.info(m)
         if filename:
             output_channel_id = self.bot.guild_dict[ctx.guild.id]['configure_dict'].setdefault('notify_channel', None)
             if output_channel_id:
@@ -268,7 +282,6 @@ class RulesWatcher(commands.Cog):
                     for m in messages:
                         if m not in self.no_reply_messages:
                             await output_channel.send(m)
-                        self.bot.logger.info(m)
                     if filename:
                         with open(os.path.join('diffs', filename), 'rb') as logfile:
                             await output_channel.send(file=discord.File(logfile, filename=filename))
