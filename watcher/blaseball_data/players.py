@@ -1,4 +1,6 @@
 import asyncio
+import json
+import os
 
 from watcher import utils
 
@@ -27,16 +29,24 @@ async def update_player_cache(bot):
         for player in players:
             bot.player_cache[player["name"]] = player
             bot.player_names[player["name"].lower()] = player["id"]
+    with open(os.path.join("data", "api_cache", "player_cache.json"), 'w', encoding='utf-8') as json_file:
+        json.dump(bot.player_cache, json_file)
+    with open(os.path.join("data", "api_cache", "player_names.json"), 'w', encoding='utf-8') as json_file:
+        json.dump(bot.player_names, json_file)
     return True
 
 
 async def check_players_loop(bot):
     while True:
-        success = await update_player_cache(bot)
-        if success:
-            # todo make this configurable, 30 minutes should be ok for now
-            sleep = 60 * 30
-            bot.logger.info("Successfully updated player cache")
+        if bot.team_cache_updated:
+            success = await update_player_cache(bot)
+            if success:
+                # todo make this configurable, 30 minutes should be ok for now
+                sleep = 60 * 30
+                bot.logger.info("Successfully updated player cache")
+            else:
+                sleep = 60
+                bot.logger.info("Failed to update player cache, trying again in 1 minute")
         else:
             sleep = 60
             bot.logger.info("Failed to update player cache, trying again in 1 minute")
