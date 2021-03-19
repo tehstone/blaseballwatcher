@@ -883,25 +883,25 @@ class Pendants(commands.Cog):
 
     def save_daily_top_hitters(self, hitters, day):
         # need to put in logic for playoffs here
-        #team_list = self.load_remaining_teams()
+        team_list = self.load_remaining_teams()
 
-        # sorted_hits = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['hits'],
-        #                                        reverse=True) if v['teamId'] in team_list}
-        # sorted_homeruns = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['homeRuns'],
-        #                                            reverse=True) if v['teamId'] in team_list}
-        # sorted_stolenbases = {k: v for k, v in sorted(all_players.items(), key=lambda item: item[1]['stolenBases'],
-        #                                               reverse=True) if v['teamId'] in team_list}
-        sorted_hits = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['hitsMinusHrs'],
-                                               reverse=True)}
+        sorted_hits = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['hits'],
+                                               reverse=True) if v['teamId'] in team_list}
         sorted_homeruns = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['homeRuns'],
-                                                   reverse=True)}
+                                                   reverse=True) if v['teamId'] in team_list}
         sorted_stolenbases = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['stolenBases'],
-                                                      reverse=True)}
+                                                      reverse=True) if v['teamId'] in team_list}
+        # sorted_hits = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['hitsMinusHrs'],
+        #                                        reverse=True)}
+        # sorted_homeruns = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['homeRuns'],
+        #                                            reverse=True)}
+        # sorted_stolenbases = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['stolenBases'],
+        #                                               reverse=True)}
         boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2, "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5}
-        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185", "86d4e22b-f107-4bcf-9625-32d387fcb521"]
+        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
-            if k in skip_players:
+            if k in skip_players or k in self.bot.deceased_players.keys():
                 continue
             homeruns = sorted_homeruns[k]["homeRuns"]
             stolenbases = sorted_stolenbases[k]["stolenBases"]

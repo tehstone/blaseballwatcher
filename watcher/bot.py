@@ -85,6 +85,7 @@ class WatcherBot(commands.AutoShardedBot):
         self.player_names = {}
         self.team_names = {}
         self.player_team_map = {}
+        self.deceased_players = {}
         self.team_cache_updated = False
         self.load_defaults()
 
@@ -121,6 +122,11 @@ class WatcherBot(commands.AutoShardedBot):
         try:
             with open(os.path.join("data", "api_cache", "player_team_map.json"), encoding='utf-8') as json_file:
                 self.player_team_map = json.load(json_file)
+        except FileNotFoundError:
+            pass
+        try:
+            with open(os.path.join("data", "api_cache", "deceased_players.json"), encoding='utf-8') as json_file:
+                self.deceased_players = json.load(json_file)
         except FileNotFoundError:
             pass
 

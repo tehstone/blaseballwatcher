@@ -287,13 +287,13 @@ class Snaximum:
                 for game in games:
                     team_ids.append(game['homeTeam'])
                     team_ids.append(game['awayTeam'])
-            else:
-                with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
-                    team_ids = json.load(file)
 
-        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185", "86d4e22b-f107-4bcf-9625-32d387fcb521"]
+            with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
+                team_ids = json.load(file)
+
+        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         for player in players:
-            if player['player_id'] not in skip_players:
+            if player['player_id'] not in skip_players and player['player_id'] not in self.bot.deceased_players.keys():
                 if self.simulation_data["day"] > 98:
                     self.player_map[player['player_id']] = player
                 else:
