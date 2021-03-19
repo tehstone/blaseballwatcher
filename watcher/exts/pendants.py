@@ -924,11 +924,11 @@ class Pendants(commands.Cog):
     def save_daily_top_hitters(self, hitters, day, ps_teams_updated):
         # need to put in logic for playoffs here
         if ps_teams_updated == True:
-            team_list = self.bot.postseason_teams
+            team_list = self.bot.playoff_teams
         else:
             team_list = self.load_remaining_teams()
 
-        sorted_hits = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['hits'],
+        sorted_hits = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['hitsMinusHrs'],
                                                reverse=True) if v['teamId'] in team_list}
         sorted_homeruns = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['homeRuns'],
                                                    reverse=True) if v['teamId'] in team_list}
