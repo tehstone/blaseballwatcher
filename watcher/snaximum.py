@@ -291,7 +291,7 @@ class Snaximum:
                 with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
                     team_ids = json.load(file)
 
-        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
+        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185", "86d4e22b-f107-4bcf-9625-32d387fcb521"]
         for player in players:
             if player['player_id'] not in skip_players:
                 if self.simulation_data["day"] > 98:
