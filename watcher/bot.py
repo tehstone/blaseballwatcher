@@ -88,6 +88,7 @@ class WatcherBot(commands.AutoShardedBot):
         self.deceased_players = {}
         self.team_cache_updated = False
         self.load_defaults()
+        self.playoff_teams = []
 
         for ext in default_exts:
             try:
@@ -208,9 +209,12 @@ class WatcherBot(commands.AutoShardedBot):
             pendant_cog = self.cogs.get('Pendants')
             latest_day = await pendant_cog.get_latest_pendant_data(current_season)
             await debug_channel.send(f"Pendant data updated.")
+            result = await pendant_cog.check_remaining_teams(self)
+            if result == False:
+                self.logger.info("Failed to update current post season teams.")
             self.logger.info(f"Pendant data updated.  {time.time()}")
             try:
-                await pendant_cog.update_leaders_sheet(current_season, latest_day)
+                await pendant_cog.update_leaders_sheet(current_season, latest_day, False)
                 self.logger.info(f"Leaders Sheet updated. {time.time()}")
             except Exception as e:
                 self.logger.warning(f"Failed to update pendant leaders: {e}")

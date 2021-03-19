@@ -692,7 +692,7 @@ class Pendants(commands.Cog):
                         }
         return hitters, pitchers
 
-    async def update_leaders_sheet(self, season, day):
+    async def update_leaders_sheet(self, season, day, ps_teams_updated):
         season -= 1
         agc = await self.bot.authorize_agcm()
         if self.bot.config['live_version'] == True:
@@ -708,7 +708,7 @@ class Pendants(commands.Cog):
         hitters, pitcher_dict = await self.compile_stats(season)
 
         sorted_combo_payouts, sorted_sickle_payouts, sorted_seed_dog_payouts\
-            = self.save_daily_top_hitters(hitters, day)
+            = self.save_daily_top_hitters(hitters, day, ps_teams_updated)
         rows = []
         team_short_map = await self.get_short_map()
         for i in range(1, 6):
@@ -881,9 +881,52 @@ class Pendants(commands.Cog):
             team_list = json.load(file)
         return team_list
 
-    def save_daily_top_hitters(self, hitters, day):
+    @staticmethod
+    async def check_remaining_teams(bot):
+        sim_data = await utils.retry_request("https://www.blaseball.com/database/simulationData")
+        if not sim_data:
+            return False
+        sd_json = sim_data.json()
+        # still midseason, nothing to check
+        if sd_json["day"] < 98:
+            return True
+        if sd_json["day"] == 98:
+            # todo check if games complete
+            pass
+        round_num = sd_json["playOffRound"]
+        playoffs = await utils.retry_request(f"https://www.blaseball.com/database/playoffs?number={sd_json['season']}")
+        if not playoffs:
+            return False
+        round_id = playoffs.json()["rounds"][round_num]
+        playoff_round = await utils.retry_request(f"https://www.blaseball.com/database/playoffRound?id={round_id}")
+        if not playoff_round:
+            return False
+        pr_json = playoff_round.json()
+        matchups = pr_json["matchups"]
+        url = f"https://www.blaseball.com/database/playoffMatchups?ids={','.join(matchups)}"
+        playoff_matchups = await utils.retry_request(url)
+        if not playoff_matchups:
+            return False
+        pm_json = playoff_matchups.json()
+        team_ids = []
+        for matchup in pm_json:
+            if not matchup["homeTeam"] or not matchup["awayTeam"]:
+                continue
+            games_needed = int(matchup["gamesNeeded"])
+            if matchup["homeWins"] >= games_needed or matchup["awayWins"] >= games_needed:
+                continue
+            team_ids.append(matchup["homeTeam"])
+            team_ids.append(matchup["awayTeam"])
+        bot.playoff_teams = team_ids
+        with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'w') as file:
+            json.dump(team_ids, file)
+
+    def save_daily_top_hitters(self, hitters, day, ps_teams_updated):
         # need to put in logic for playoffs here
-        team_list = self.load_remaining_teams()
+        if ps_teams_updated == True:
+            team_list = self.bot.postseason_teams
+        else:
+            team_list = self.load_remaining_teams()
 
         sorted_hits = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['hits'],
                                                reverse=True) if v['teamId'] in team_list}
@@ -983,6 +1026,9 @@ class Pendants(commands.Cog):
 
     @commands.command(name='test_flood_count', aliases=['ttfc'])
     async def _test_flood_count(self, ctx):
+        result = await self.check_remaining_teams(self.bot)
+        print(result)
+        return
         day_flood_count = 0
         day_runner_count = 0
         game_ids = ["99113b38-77af-48a3-aad8-1cb48f679130", "9274e98a-15c7-4b9a-bd5c-e8275b300cd8", "26cc26b3-dc9f-4339-b9f8-5f40c4aec590", "691a703a-5142-44dd-910c-5ea3fe701e63", "57748419-e0ce-4399-96f4-ae535f942ae9", "3159730a-208d-466f-b6f4-c7756aa3a1cc", "2ec0e69f-5fb4-4eb0-aa09-284e8c9eb7c3", "b1c075fe-ed60-4b7a-bfb1-ded6878d9366", "93c80cb1-59f6-4f89-8c70-674c4efffdb2", "b17f09b5-fc41-481d-b494-0b53d8f06def", "ed6ba6c3-d3c1-4d19-8393-05374042a8a9", "be7e61c3-29b0-44a3-a2c6-9c6bb657f077", "6a00cc1f-9f26-4528-9a84-e6f253a28635", "f3e2c0b0-4fb7-4b96-9dce-f05d90754bec", "88aee411-fcae-4e38-bf84-057012df34cc", "6e2bf11f-577c-4095-95d0-db366b4b1b75", "74210406-9b06-48fe-acde-1f6ee53df07c", "4ac2f8c9-8f2f-49bd-a6e0-d518e32ced75", "b7bb50ac-d06d-442e-83f4-15f4644fc661", "f6b0e995-6292-4f9c-a70d-c20d7c01abf6", "95011bc0-bb43-4373-b0f6-2d90ccaba945", "c0adf4ca-8125-4381-9123-10d3448f0705", "fe643582-c694-4e7e-bc18-6c04bb629ba7", "7523d5dc-4125-49d4-8061-23fe41d70d57", "92bda7ca-d2b1-4b94-a909-e796eb68cfa7", "4894cc29-0aa0-4a68-a326-d227cdaf68ca", "8c4e892f-9c28-4597-9291-2d927206df6a", "22d12ad3-88b1-4f4c-9df4-16ad03a56a33", "c0c93d06-99c8-48a2-90af-6e57898b5059", "3eb58ff0-0161-419b-9c8f-6d379a056d7d", "1d570099-7c0f-4d6c-91e6-2415392e74dc", "e322d071-e0cd-4a9b-8491-699ceee6059d"]

@@ -50,6 +50,8 @@ async def start_task_loops(bot):
 
         bot.tasks.append(event_loop.create_task(teams.check_teams_loop(bot)))
         bot.tasks.append(event_loop.create_task(players.check_players_loop(bot)))
+        pendants_cog = bot.get_cog('Pendants')
+        event_loop.create_task(pendants_cog.check_remaining_teams(bot))
         logger.info('Loops initiated')
     except KeyboardInterrupt:
         [task.cancel() for task in bot.tasks]
