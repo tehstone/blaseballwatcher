@@ -128,7 +128,6 @@ class RulesWatcher(commands.Cog):
         old_url = self.bot.config.setdefault('last_js_url', None)
         script_response = await utils.retry_request(js_url)
         backend = True
-        old_url += "a"
         if script_response:
             script_text = script_response.text
             if script_text:
