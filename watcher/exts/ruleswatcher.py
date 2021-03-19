@@ -3,6 +3,7 @@ import datetime
 import difflib
 import json
 import os
+import random
 import time
 
 import aiohttp
@@ -127,6 +128,7 @@ class RulesWatcher(commands.Cog):
         old_url = self.bot.config.setdefault('last_js_url', None)
         script_response = await utils.retry_request(js_url)
         backend = True
+        old_url += "a"
         if script_response:
             script_text = script_response.text
             if script_text:
@@ -276,15 +278,21 @@ class RulesWatcher(commands.Cog):
             print("checking for book changes")
             messages, filename = await self._check_for_rules_update()
             output_channel_id = self.bot.config['notify_channel']
+            sent = False
             if output_channel_id:
                 output_channel = self.bot.get_channel(output_channel_id)
                 if output_channel:
                     for m in messages:
                         if m not in self.no_reply_messages:
+                            sent = True
                             await output_channel.send(m)
                     if filename:
                         with open(os.path.join('diffs', filename), 'rb') as logfile:
                             await output_channel.send(file=discord.File(logfile, filename=filename))
+                if sent:
+                    clark = utils.get_a_clark()
+                    await asyncio.sleep(random.randint(5, 15))
+                    await output_channel.send(clark)
 
             interval = self.bot.config['interval_minutes']
             await self.save()

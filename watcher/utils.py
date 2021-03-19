@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import random
 import re
 
 import discord
@@ -97,6 +98,22 @@ async def game_check_loop(bot):
         else:
             interval = 2
         await asyncio.sleep(interval * 60)
+
+
+def get_a_clark():
+    clarks = ["<:ballclark:786049152969867341>",
+              "<:coolark:822271813026840597>",
+              "<:blushclark:822271813102731285>",
+              "<:happyclark:822271813643927563>",
+              "<:incinclark:822271814083280918>",
+              "<:mehclark:822271814100582452>",
+              "<:ohokclark:822271814289457153>",
+              "<:happyincinclark:822271814381993994>",
+              "<:skepticlark:822271814511493130>",
+              "<:laptopclark:822271814653706260>",
+              "<a:rubclark:822271814482001941>",
+              "<a:patpatcatcatclark:822271814033866772>"]
+    return random.choice(clarks)
 
 
 async def update_cumulative_statsheets(season):

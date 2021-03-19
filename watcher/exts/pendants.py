@@ -262,19 +262,24 @@ class Pendants(commands.Cog):
                                  "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", rows)
             await db.commit()
 
-    def print_top(self, player_dict, key, string, cutoff=2, avg=False):
+    @staticmethod
+    def print_top(player_dict, key, string, cutoff=2, limit=7, avg=False):
         message = ""
+        count = 0
         for pkey, pvalue in player_dict.items():
             attr_value = pvalue.__getattribute__(key)
-            if attr_value >= cutoff:
-                if key == 'strikeouts':
-                    avg_str = ""
-                    if avg:
-                        k_9_value = round((attr_value / (pvalue.outsRecorded / 27)) * 10) / 10
-                        avg_str = f"({k_9_value} {key}/9)"
-                    message += f"{pvalue.name} {attr_value} {string} {avg_str}\n"
-                else:
+            if key == 'strikeouts':
+                if count > limit:
+                    break
+                avg_str = ""
+                if avg:
+                    k_9_value = round((attr_value / (pvalue.outsRecorded / 27)) * 10) / 10
+                    avg_str = f"({k_9_value} {key}/9)"
+                message += f"{pvalue.name} {attr_value} {string} {avg_str}\n"
+            else:
+                if attr_value >= cutoff:
                     message += f"{pvalue.name} {attr_value} {string}\n"
+            count += 1
         return message
 
     async def get_latest_pendant_data(self, current_season: int):
@@ -339,7 +344,7 @@ class Pendants(commands.Cog):
                                  sorted(players.items(), key=lambda item: item[1].strikeouts,
                                         reverse=True)}
             daily_message_two += f"{self.bot.empty_str}\n**Strikeouts**\n" \
-                                 f"{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 9, True)}"
+                                 f"{self.print_top(sorted_strikeouts, 'strikeouts', 'strikeouts', 9, 8, True)}"
 
             game_watcher_messages = []
             sh_embed = discord.Embed(title="**Shutout!**")
