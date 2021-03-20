@@ -184,6 +184,9 @@ class GameData(commands.Cog):
         while True:
             if done:
                 break
+            # todo remove this and handle better for next season
+            if day == 107:
+                day += 1
             url = f"https://blaseball.com/database/games?day={day}&season={season}"
             print(f"day: {day}")
             html_response = await utils.retry_request(url)
