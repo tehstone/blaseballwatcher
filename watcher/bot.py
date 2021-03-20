@@ -214,7 +214,7 @@ class WatcherBot(commands.AutoShardedBot):
                 self.logger.info("Failed to update current post season teams.")
             self.logger.info(f"Pendant data updated.  {time.time()}")
             try:
-                await pendant_cog.update_leaders_sheet(current_season, latest_day, False)
+                await pendant_cog.update_leaders_sheet(current_season, latest_day, result)
                 self.logger.info(f"Leaders Sheet updated. {time.time()}")
             except Exception as e:
                 self.logger.warning(f"Failed to update pendant leaders: {e}")

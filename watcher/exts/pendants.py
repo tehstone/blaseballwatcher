@@ -56,6 +56,9 @@ class Pendants(commands.Cog):
         # if not, then make all the requests to get the player stat sheet ids
         # separate actual scanning of playerstatsheets into a separate method that
         # can be called regardless of previous thing
+        # todo remove this after this season and handle better
+        if day == 107:
+            return False
         filename = f"{season}_{day}player_statsheets.json"
         day_sheet_exists = False
         try:
@@ -272,10 +275,11 @@ class Pendants(commands.Cog):
                 if count > limit:
                     break
                 avg_str = ""
-                if avg:
-                    k_9_value = round((attr_value / (pvalue.outsRecorded / 27)) * 10) / 10
-                    avg_str = f"({k_9_value} {key}/9)"
-                message += f"{pvalue.name} {attr_value} {string} {avg_str}\n"
+                if pvalue.outsRecorded > 0:
+                    if avg:
+                        k_9_value = round((attr_value / (pvalue.outsRecorded / 27)) * 10) / 10
+                        avg_str = f"({k_9_value} {key}/9)"
+                    message += f"{pvalue.name} {attr_value} {string} {avg_str}\n"
             else:
                 if attr_value >= cutoff:
                     message += f"{pvalue.name} {attr_value} {string}\n"
@@ -893,33 +897,47 @@ class Pendants(commands.Cog):
         if sd_json["day"] == 98:
             # todo check if games complete
             pass
+        bot.logger.info("Checking for teams still in playoff contention")
+
+        async def _get_playoff_info(bot, round_id):
+            playoff_round = await utils.retry_request(f"https://www.blaseball.com/database/playoffRound?id={round_id}")
+            if not playoff_round:
+                return False
+            pr_json = playoff_round.json()
+            matchups = pr_json["matchups"]
+            url = f"https://www.blaseball.com/database/playoffMatchups?ids={','.join(matchups)}"
+            playoff_matchups = await utils.retry_request(url)
+            if not playoff_matchups:
+                return False
+            pm_json = playoff_matchups.json()
+            team_ids = []
+            for matchup in pm_json:
+                if not matchup["homeTeam"] or not matchup["awayTeam"]:
+                    continue
+                games_needed = int(matchup["gamesNeeded"])
+                if matchup["homeWins"] >= games_needed or matchup["awayWins"] >= games_needed:
+                    continue
+                team_ids.append(matchup["homeTeam"])
+                team_ids.append(matchup["awayTeam"])
+            if len(team_ids) < 1:
+                return False
+            bot.playoff_teams = team_ids
+            with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'w') as file:
+                json.dump(team_ids, file)
+            return True
+
         round_num = sd_json["playOffRound"]
         playoffs = await utils.retry_request(f"https://www.blaseball.com/database/playoffs?number={sd_json['season']}")
         if not playoffs:
             return False
         round_id = playoffs.json()["rounds"][round_num]
-        playoff_round = await utils.retry_request(f"https://www.blaseball.com/database/playoffRound?id={round_id}")
-        if not playoff_round:
-            return False
-        pr_json = playoff_round.json()
-        matchups = pr_json["matchups"]
-        url = f"https://www.blaseball.com/database/playoffMatchups?ids={','.join(matchups)}"
-        playoff_matchups = await utils.retry_request(url)
-        if not playoff_matchups:
-            return False
-        pm_json = playoff_matchups.json()
-        team_ids = []
-        for matchup in pm_json:
-            if not matchup["homeTeam"] or not matchup["awayTeam"]:
-                continue
-            games_needed = int(matchup["gamesNeeded"])
-            if matchup["homeWins"] >= games_needed or matchup["awayWins"] >= games_needed:
-                continue
-            team_ids.append(matchup["homeTeam"])
-            team_ids.append(matchup["awayTeam"])
-        bot.playoff_teams = team_ids
-        with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'w') as file:
-            json.dump(team_ids, file)
+        success = await _get_playoff_info(bot, round_id)
+        if not success:
+            if round_num + 1 < len(playoffs.json()["rounds"]):
+                round_id = playoffs.json()["rounds"][round_num+1]
+                success = await _get_playoff_info(bot, round_id)
+                return success
+        return success
 
     def save_daily_top_hitters(self, hitters, day, ps_teams_updated):
         # need to put in logic for playoffs here
