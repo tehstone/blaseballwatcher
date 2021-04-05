@@ -1,18 +1,17 @@
 import asyncio
 import json
 import os
-import statistics
 from decimal import Decimal
 from typing import Dict, Any, List
 
 import requests
 from requests import Timeout
 
-from watcher.game_sim.common import get_player_stlats, enabled_player_buffs, PlayerBuff
+from watcher.game_sim.common import enabled_player_buffs
 from watcher.game_sim.common import BlaseballStatistics as Stats, blood_name_map
 from watcher.game_sim.common import ForbiddenKnowledge as FK
-from watcher.game_sim.common import BloodType, Team, team_id_map, blood_id_map, fk_key, PlayerBuff, Weather
-from watcher.game_sim.team_state import TeamState, DEF_ID, TEAM_ID
+from watcher.game_sim.common import BloodType, Team, blood_id_map, fk_key, PlayerBuff, Weather
+from watcher.game_sim.team_state import TeamState, DEF_ID
 from watcher.game_sim.game_state import GameState, InningHalf
 from watcher.game_sim.stadium import Stadium
 
@@ -319,7 +318,15 @@ async def run_daily_sim(iterations=250):
                 upset = True
 
         results[game['homeTeam']] = {
-            "game_info": game,
+            "game_info": {
+                "id": game["id"],
+                "homeOdds": game["homeOdds"],
+                "awayOdds": game["awayOdds"],
+                "homeTeam": game["homeTeam"],
+                "awayTeam": game["awayTeam"],
+                "homeTeamName": game["homeTeamName"],
+                "awayTeamName": game["awayTeamName"]
+            },
             "upset": upset,
             "shutout_percentage": home_shutout_per,
             "win_percentage": home_win_per,
@@ -335,7 +342,15 @@ async def run_daily_sim(iterations=250):
                 }
              }
         results[game['awayTeam']] = {
-            "game_info": game,
+            "game_info": {
+                "id": game["id"],
+                "homeOdds": game["homeOdds"],
+                "awayOdds": game["awayOdds"],
+                "homeTeam": game["homeTeam"],
+                "awayTeam": game["awayTeam"],
+                "homeTeamName": game["homeTeamName"],
+                "awayTeamName": game["awayTeamName"]
+            },
             "upset": upset,
             "shutout_percentage": away_shutout_per,
             "win_percentage": away_win_per,

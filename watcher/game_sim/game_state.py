@@ -3,7 +3,7 @@ def warn(*args, **kwargs):
 import warnings
 warnings.warn = warn
 
-from decimal import Decimal, getcontext
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple, Union
 from enum import Enum
 from joblib import load
@@ -144,6 +144,14 @@ class GameState(object):
 
     def refresh_game_status(self):
         """Refresh game state variables dependant on which team is batting"""
+        if self.weather == Weather.COFFEE3 and self.half == InningHalf.TOP and self.inning == 1 and self.outs == 0 and \
+            self.strikes == 0 and self.balls == 0 and len(self.cur_base_runners) == 0:
+            # This means its a fresh game and we must set the triple threat buff
+            self.cur_batting_team.player_buffs[self.cur_batting_team.starting_pitcher][PlayerBuff.TRIPLE_THREAT] = 1
+            self.cur_pitching_team.player_buffs[self.cur_pitching_team.starting_pitcher][PlayerBuff.TRIPLE_THREAT] = 1
+            self.log_event(f'{self.cur_batting_team.player_names[self.cur_batting_team.starting_pitcher]} and'
+                           f'{self.cur_pitching_team.player_names[self.cur_pitching_team.starting_pitcher]} are now '
+                           f'triple threats.')
         if self.half == InningHalf.TOP:
             self.log_event(f'\nTop of the {self.inning}, {self.away_team.team_enum.name} batting.')
             self.log_event(f'{self.away_team.get_cur_batter_name()} at bat. {self.home_team.get_cur_pitcher_name()} '
@@ -262,18 +270,17 @@ class GameState(object):
             self.attempt_to_advance_inning()
             self.cur_batting_team.validate_game_state_additives(self.get_batting_team_score())
             self.cur_pitching_team.validate_game_state_additives(self.get_pitching_team_score())
-            if self.weather == Weather.COFFEE3 and self.inning == 4 and self.half == InningHalf.TOP and \
-                len(self.cur_base_runners) == 0 and self.outs == 0 and self.strikes == 0 and self.balls == 0:
-                if self._random_roll() <= REMOVE_COFFEE_3_PERCENTAGE:
-                    self.log_event(f'{self.cur_batting_team.player_names[self.cur_batting_team.starting_pitcher]} '
-                                   f'loses triple threat.')
-                    if PlayerBuff.TRIPLE_THREAT in self.cur_batting_team.player_buffs[self.cur_batting_team.starting_pitcher]:
+            if self.inning == 4 and self.half == InningHalf.TOP and len(self.cur_base_runners) == 0 and \
+                self.outs == 0 and self.strikes == 0 and self.balls == 0:
+                if PlayerBuff.TRIPLE_THREAT in self.cur_batting_team.player_buffs[self.cur_batting_team.starting_pitcher]:
+                    if self._random_roll() <= REMOVE_COFFEE_3_PERCENTAGE:
+                        self.log_event(f'{self.cur_batting_team.player_names[self.cur_batting_team.starting_pitcher]} '
+                                       f'loses triple threat.')
                         del self.cur_batting_team.player_buffs[self.cur_batting_team.starting_pitcher][PlayerBuff.TRIPLE_THREAT]
-                if self._random_roll() <= REMOVE_COFFEE_3_PERCENTAGE:
-                    self.log_event(f'{self.cur_pitching_team.player_names[self.cur_pitching_team.starting_pitcher]} '
-                                   f'loses triple threat.')
-                    if PlayerBuff.TRIPLE_THREAT in self.cur_pitching_team.player_buffs[
-                        self.cur_pitching_team.starting_pitcher]:
+                if PlayerBuff.TRIPLE_THREAT in self.cur_pitching_team.player_buffs[self.cur_pitching_team.starting_pitcher]:
+                    if self._random_roll() <= REMOVE_COFFEE_3_PERCENTAGE:
+                        self.log_event(f'{self.cur_pitching_team.player_names[self.cur_pitching_team.starting_pitcher]} '
+                                       f'loses triple threat.')
                         del self.cur_pitching_team.player_buffs[self.cur_pitching_team.starting_pitcher][PlayerBuff.TRIPLE_THREAT]
         if self.away_score == 0:
             self.home_team.update_stat(self.home_team.starting_pitcher, Stats.PITCHER_SHUTOUTS, 1.0, self.day)
@@ -283,9 +290,7 @@ class GameState(object):
         self.away_team.update_stat(self.away_team.starting_pitcher, Stats.PITCHER_SHUTOUTS, 0.0, self.day)
         self.home_team.update_stat(self.home_team.starting_pitcher, Stats.PITCHER_GAMES_APPEARED, 1.0, self.day)
         self.away_team.update_stat(self.away_team.starting_pitcher, Stats.PITCHER_GAMES_APPEARED, 1.0, self.day)
-        home_win = False
         if self.home_score > self.away_score:
-            home_win = True
             self.home_team.update_stat(TEAM_ID, Stats.TEAM_WINS, 1.0, self.day)
             self.away_team.update_stat(TEAM_ID, Stats.TEAM_LOSSES, 1.0, self.day)
         else:
@@ -426,8 +431,7 @@ class GameState(object):
         self.cur_batting_team.reset_hit_buffs(self.cur_batting_team.cur_batter)
 
         # Let's check if coffee3 applies
-        if self.weather == Weather.COFFEE3 and \
-            PlayerBuff.TRIPLE_THREAT in self.cur_pitching_team.player_buffs[self.cur_pitching_team.starting_pitcher]:
+        if PlayerBuff.TRIPLE_THREAT in self.cur_pitching_team.player_buffs[self.cur_pitching_team.starting_pitcher]:
             if self.balls == 3:
                 self.increase_batting_team_runs(Decimal("-0.3"))
             if len(self.cur_base_runners) == 3:
