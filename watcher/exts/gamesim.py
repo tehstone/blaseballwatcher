@@ -412,7 +412,7 @@ class GameSim(commands.Cog):
     @commands.command(aliases=['tsho'])
     async def _test_shut_out_sim(self, ctx):
         t1 = time.time()
-        results = await daily_sim.run_daily_sim()
+        results, day, games_json = await daily_sim.run_daily_sim()
         t2 = time.time()
         print(f"Total run time: {t2-t1}")
         filename = os.path.join('data', 'season_sim', 'results', 'test_daily_run.json')

@@ -272,8 +272,8 @@ async def run_daily_sim(iterations=250):
             away_scores.append(away_score)
             game_sim.reset_game_state()
 
-        home_wins = home_team_state.game_stats["TEAM"][Stats.TEAM_WINS]
-        away_wins = away_team_state.game_stats["TEAM"][Stats.TEAM_WINS]
+        home_wins = home_team_state.game_stats["TEAM"].get(Stats.TEAM_WINS, 0)
+        away_wins = away_team_state.game_stats["TEAM"].get(Stats.TEAM_WINS, 0)
         home_odds_str = round(home_odds * 1000) / 10
         away_odds_str = round(away_odds * 1000) / 10
         print(f"{home_team_name}: {home_wins} ({home_wins / iterations}) - {home_odds_str}% "
@@ -308,30 +308,46 @@ async def run_daily_sim(iterations=250):
         home_xbig_scores = sum(1 for x in home_scores if x > 20) / iterations
         away_xbig_scores = sum(1 for x in away_scores if x > 20) / iterations
 
-        results[game['homeTeam']] = {"shutout_percentage": home_shutout_per,
-                                     "win_percentage": home_win_per,
-                                     "strikeout_avg": home_k_per,
-                                     "over_ten": home_big_scores,
-                                     "over_twenty": home_xbig_scores,
-                                     "weather": game['weather'],
-                                     "opp_pitcher": {
-                                         "pitcher_id": away_pitcher,
-                                         "pitcher_name": game["awayPitcherName"],
-                                         "p_team_id": away_team,
-                                         "p_team_name": game["awayTeamName"]
-                                        }
-                                     }
-        results[game['awayTeam']] = {"shutout_percentage": away_shutout_per,
-                                     "win_percentage": away_win_per,
-                                     "strikeout_avg": away_k_per,
-                                     "over_ten": away_big_scores,
-                                     "over_twenty": away_xbig_scores,
-                                     "weather": game['weather'],
-                                     "opp_pitcher": {
-                                         "pitcher_id": home_pitcher,
-                                         "pitcher_name": game["homePitcherName"],
-                                         "p_team_id": home_team,
-                                         "p_team_name": game["homeTeamName"]
-                                     }
-                                     }
+        upset = False
+        home_odds = game["homeOdds"]
+        away_odds = game["awayOdds"]
+        if home_odds > away_odds:
+            if away_wins > home_wins:
+                upset = True
+        else:
+            if home_wins > away_wins:
+                upset = True
+
+        results[game['homeTeam']] = {
+            "game_info": game,
+            "upset": upset,
+            "shutout_percentage": home_shutout_per,
+            "win_percentage": home_win_per,
+            "strikeout_avg": home_k_per,
+            "over_ten": home_big_scores,
+            "over_twenty": home_xbig_scores,
+            "weather": game['weather'],
+            "opp_pitcher": {
+                "pitcher_id": away_pitcher,
+                "pitcher_name": game["awayPitcherName"],
+                "p_team_id": away_team,
+                "p_team_name": game["awayTeamName"]
+                }
+             }
+        results[game['awayTeam']] = {
+            "game_info": game,
+            "upset": upset,
+            "shutout_percentage": away_shutout_per,
+            "win_percentage": away_win_per,
+            "strikeout_avg": away_k_per,
+            "over_ten": away_big_scores,
+            "over_twenty": away_xbig_scores,
+            "weather": game['weather'],
+            "opp_pitcher": {
+                "pitcher_id": home_pitcher,
+                "pitcher_name": game["homePitcherName"],
+                "p_team_id": home_team,
+                "p_team_name": game["homeTeamName"]
+            }
+        }
     return results, day

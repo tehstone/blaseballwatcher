@@ -267,11 +267,14 @@ class GameState(object):
                 if self._random_roll() <= REMOVE_COFFEE_3_PERCENTAGE:
                     self.log_event(f'{self.cur_batting_team.player_names[self.cur_batting_team.starting_pitcher]} '
                                    f'loses triple threat.')
-                    del self.cur_batting_team.player_buffs[self.cur_batting_team.starting_pitcher][PlayerBuff.TRIPLE_THREAT]
+                    if PlayerBuff.TRIPLE_THREAT in self.cur_batting_team.player_buffs[self.cur_batting_team.starting_pitcher]:
+                        del self.cur_batting_team.player_buffs[self.cur_batting_team.starting_pitcher][PlayerBuff.TRIPLE_THREAT]
                 if self._random_roll() <= REMOVE_COFFEE_3_PERCENTAGE:
                     self.log_event(f'{self.cur_pitching_team.player_names[self.cur_pitching_team.starting_pitcher]} '
                                    f'loses triple threat.')
-                    del self.cur_pitching_team.player_buffs[self.cur_pitching_team.starting_pitcher][PlayerBuff.TRIPLE_THREAT]
+                    if PlayerBuff.TRIPLE_THREAT in self.cur_pitching_team.player_buffs[
+                        self.cur_pitching_team.starting_pitcher]:
+                        del self.cur_pitching_team.player_buffs[self.cur_pitching_team.starting_pitcher][PlayerBuff.TRIPLE_THREAT]
         if self.away_score == 0:
             self.home_team.update_stat(self.home_team.starting_pitcher, Stats.PITCHER_SHUTOUTS, 1.0, self.day)
         if self.home_score == 0:
