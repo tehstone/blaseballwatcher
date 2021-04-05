@@ -852,7 +852,7 @@ class Pendants(commands.Cog):
                     break
 
         await h_worksheet.batch_update([{
-            'range': f"A9:E{9+len(rows)}",
+            'range': f"A10:E{10+len(rows)}",
             'values': rows
         }])
 
@@ -874,9 +874,18 @@ class Pendants(commands.Cog):
             wg_row[3] = sorted_combo_payouts[wg_id].setdefault("homeRuns", 0)
         if wg_id in sorted_combo_payouts:
             wg_row[4] = sorted_combo_payouts[wg_id].setdefault("stolenBases", 0)
+        # Nagomi Mcdaniel
+        nm_id = "c0732e36-3731-4f1a-abdc-daa9563b6506"
+        nm_row = ["Nagomi Mcdaniel", '', 0, 0, 0]
+        if nm_id in sorted_combo_payouts:
+            nm_row[2] = hitters[nm_id].setdefault("hitsMinusHrs", 0)
+        if nm_id in sorted_combo_payouts:
+            nm_row[3] = sorted_combo_payouts[nm_id].setdefault("homeRuns", 0)
+        if nm_id in sorted_combo_payouts:
+            nm_row[4] = sorted_combo_payouts[nm_id].setdefault("stolenBases", 0)
         await h_worksheet.batch_update([{
-            'range': "A6:E7",
-            'values': [ys_row, wg_row]
+            'range': "A6:E8",
+            'values': [ys_row, wg_row, nm_row]
         }])
 
     @staticmethod
@@ -1059,7 +1068,9 @@ class Pendants(commands.Cog):
                         for text in food['event_text']:
                             if "Immateria" in text:
                                 day_flood_count += 1
-                                day_runner_count += len(last_event['base_runners'])
+                                for runner in last_event['base_runners']:
+                                    if runner['base_after_play'] != 4:
+                                        day_runner_count += 1
                         last_event = food
         await ctx.send(day_runner_count)
 

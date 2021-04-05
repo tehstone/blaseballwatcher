@@ -787,7 +787,7 @@ class GameData(commands.Cog):
             'values': [[weather_occurrences["Sunset"]]]
         }])
         await p_worksheet.batch_update([{
-            'range': "AB2:AB2",
+            'range': "AC2:AC2",
             'values': [[weather_occurrences["Incineration"]]]
         }])
         await p_worksheet.batch_update([{
@@ -829,7 +829,9 @@ class GameData(commands.Cog):
                                 for text in food['event_text']:
                                     if "Immateria" in text:
                                         day_flood_count += 1
-                                        day_runner_count += len(last_event['base_runners'])
+                                        for runner in last_event['base_runners']:
+                                            if runner['base_after_play'] != 4:
+                                                day_runner_count += 1
                                 last_event = food
                         else:
                             failed_count += 1
@@ -1012,8 +1014,12 @@ class GameData(commands.Cog):
                 for text in food['event_text']:
                     if "Immateria" in text:
                         floods += 1
-                        total_runners += len(last_event['base_runners'])
-                        print(f"{game_id} - event {food['id']} - runners: {len(last_event['base_runners'])}")
+                        runners = 0
+                        for runner in last_event['base_runners']:
+                            if runner['base_after_play'] != 4:
+                                total_runners += 1
+                                runners += 1
+                        print(f"{game_id} - event {food['id']} - runners: {runners}")
                 last_event = food
             print(f"total runners so far: {total_runners}")
         print(f"total floods: {floods}")
