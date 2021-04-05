@@ -6,13 +6,12 @@ import re
 
 import discord
 
-
-# Convert an arbitrary string into something which
-# is acceptable as a Discord channel name.
 import requests
 from requests import Timeout
 
 
+# Convert an arbitrary string into something which
+# is acceptable as a Discord channel name.
 def sanitize_name(name):
     # Remove all characters other than alphanumerics,
     # dashes, underscores, and spaces

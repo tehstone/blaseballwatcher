@@ -6,7 +6,7 @@ import asyncio
 
 
 class SnaxChannelCheckFail(CommandError):
-    """Exception raised checks.subscriptionchannel fails"""
+    """Exception raised checks.snaxchannel fails"""
     pass
 
 

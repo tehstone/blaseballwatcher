@@ -1058,6 +1058,37 @@ class GameData(commands.Cog):
 
             await asyncio.sleep(120)
 
+    @commands.command(name='clear_new_sheet', aliases=['cns'])
+    async def clear_new_sheet(self, ctx, season):
+        agc = await self.bot.authorize_agcm()
+        sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}"])
+        for team in self.bot.team_names.keys():
+            try:
+                s_worksheet = await sheet.worksheet(spreadsheet_names[team]["schedule"])
+                m_worksheet = await sheet.worksheet(spreadsheet_names[team]["matchups"])
+                empty_rows = []
+                for i in range(112):
+                    empty_rows.append([''] * 16)
+                await s_worksheet.batch_update([{
+                    'range': f"A{2}:Q{2}",
+                    'values': [[''] * 16]
+                }])
+                await s_worksheet.batch_update([{
+                    'range': f"A{4}:Q{115}",
+                    'values': empty_rows
+                }])
+
+                empty_rows = []
+                for i in range(13):
+                    empty_rows.append([''] * 7)
+                await m_worksheet.batch_update([{
+                    'range': f"A{3}:G{15}",
+                    'values': empty_rows
+                }])
+            except KeyError:
+                pass
+        await ctx.message.add_reaction(self.bot.success_react)
+
 
 def setup(bot):
     bot.add_cog(GameData(bot))
