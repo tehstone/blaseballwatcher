@@ -264,11 +264,13 @@ class BetAdvice(commands.Cog):
             if item["game_info"]["homeOdds"] > item["game_info"]["awayOdds"]:
                 win_per = item["win_percentages"][item["game_info"]["awayTeam"]]
                 team_name = item["game_info"]["awayTeamName"]
-                upset_msg += f"{team_name} ({item['game_info']['awayOdds']}% odds) - {win_per}% sim wins\n"
+                odds = round(item['game_info']['awayOdds'] * 1000) / 10
+                upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
             else:
                 win_per = item["win_percentages"][item["game_info"]["homeTeam"]]
                 team_name = item["game_info"]["homeTeamName"]
-                upset_msg += f"{team_name} ({item['game_info']['homeOdds']}% odds) - {win_per}% sim wins\n"
+                odds = round(item['game_info']['homeOdds'] * 1000) / 10
+                upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
 
         if len(upset_msg) > 0:
             embed_fields.append({"name": "Upset Watch",
