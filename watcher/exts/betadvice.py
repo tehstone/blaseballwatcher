@@ -10,6 +10,7 @@ from discord.ext import commands
 
 from watcher import utils
 from watcher.exts import gamedata
+from watcher.game_sim import daily_sim
 
 
 class BetAdvice(commands.Cog):
@@ -90,37 +91,36 @@ class BetAdvice(commands.Cog):
         return odds_sum
 
     async def daily_message(self):
-        sim_results = await self._run_daily_sim()
-        sorted_results = sim_results["sorted_results"]
-        season, day = sim_results["season"], sim_results["day"]
-        pitcher_dict = sim_results["pitcher_dict"]
-        pitcher_ids = sim_results["pitcher_ids"]
-        output_text = ""
-        output_text_2 = ""
-        for key, value in sorted_results.items():
-            rounded_odds = round(key*10)/10
-            output_text += f"{value}: {key}\n"
-            output_text_2 += f"{value}: {rounded_odds}\n"
-        output_text += f"\n{output_text_2}"
-        with open(os.path.join('data', 'pendant_data', 'results', f"s{season}_d{day}_so_model_results.txt"), 'a') as fd:
-            fd.write((output_text))
+        #sim_results = await self._run_daily_sim()
+        # sorted_results = sim_results["sorted_results"]
+        # season, day = sim_results["season"], sim_results["day"]
+        # pitcher_dict = sim_results["pitcher_dict"]
+        # pitcher_ids = sim_results["pitcher_ids"]
+        # output_text = ""
+        # output_text_2 = ""
+        # for key, value in sorted_results.items():
+        #     rounded_odds = round(key*10)/10
+        #     output_text += f"{value}: {key}\n"
+        #     output_text_2 += f"{value}: {rounded_odds}\n"
+        # output_text += f"\n{output_text_2}"
+        # with open(os.path.join('data', 'pendant_data', 'results', f"s{season}_d{day}_so_model_results.txt"), 'a') as fd:
+        #     fd.write((output_text))
+        #
+        # for k in pitcher_dict.keys():
+        #     if pitcher_dict[k]['outsRecorded'] > 0:
+        #         pitcher_dict[k]['so_nine'] = round((pitcher_dict[k]['strikeouts'] /
+        #                                             (pitcher_dict[k]['outsRecorded'] / 27)) * 10) / 10
+        #     else:
+        #         pitcher_dict[k]['so_nine'] = 0
+        #
+        # players = await utils.retry_request(f"https://www.blaseball.com/database/players?ids={','.join(pitcher_ids)}")
+        # players = players.json()
+        # for player in players:
+        #     pitcher_dict[player['id']]['ruth'] = player["ruthlessness"]
 
-        for k in pitcher_dict.keys():
-            if pitcher_dict[k]['outsRecorded'] > 0:
-                pitcher_dict[k]['so_nine'] = round((pitcher_dict[k]['strikeouts'] /
-                                                    (pitcher_dict[k]['outsRecorded'] / 27)) * 10) / 10
-            else:
-                pitcher_dict[k]['so_nine'] = 0
+        results, day = await daily_sim.run_daily_sim(100)
 
-        players = await utils.retry_request(f"https://www.blaseball.com/database/players?ids={','.join(pitcher_ids)}")
-        players = players.json()
-        for player in players:
-            pitcher_dict[player['id']]['ruth'] = player["ruthlessness"]
-
-        game_sim_cog = self.bot.cogs.get('GameSim')
-        results = await game_sim_cog.setup(1000)
-
-        message = f"Daily Outlook for **day {day+1}**\n" \
+        message = f"Daily Outlook for **day {day}**\n" \
                   "Hitting ranks display performance so far this season indicating the current best choice. " \
                   "These lists can fluctuate from day to day to pick a good hitter and stick with them. " \
                   "Multipliers (where applicable) are factored in to the rating.\n" \
@@ -173,20 +173,24 @@ class BetAdvice(commands.Cog):
                              "value": '\n'.join(hitter_list)})
 
         pitcher_opp_strikeouts = {}
-        for pid, pitcher in pitcher_dict.items():
-            pitcher_opp_strikeouts[pid] = results[pitcher["opponent"]]["strikeout_percentage"]
+        for team in results.keys():
+            pitcher_opp_strikeouts[results[team]["opp_pitcher"]["pitcher_id"]] = {
+                "strikeout_avg": results[team]["strikeout_avg"],
+                "name": results[team]["opp_pitcher"]["pitcher_name"],
+                "team": results[team]["opp_pitcher"]["p_team_id"]
+            }
 
         sorted_so_preds = {k: v for k, v in sorted(pitcher_opp_strikeouts.items(),
-                                                   key=lambda item: item[1],
-                                                   reverse=True) if k in pitcher_ids}
+                                                   key=lambda item: item[1]["strikeout_avg"],
+                                                   reverse=True)}
         top_list = list(sorted_so_preds.keys())[:4]
         pitcher_list = []
         for key in top_list:
-            pitcher = pitcher_dict[key]
+            pitcher = pitcher_opp_strikeouts[key]
             name = pitcher["name"]
             shorthand = team_short_map[pitcher["team"]]
 
-            opp_k_per = results[pitcher["opponent"]]["strikeout_percentage"]
+            opp_k_per = pitcher["strikeout_avg"]
             pred = round(opp_k_per * 10) / 10
             entry = f"[{name}]({'https://www.blaseball.com/player/'+key}) "
             entry += f"([{shorthand}]({'https://www.blaseball.com/team/' + pitcher['team']}))"
