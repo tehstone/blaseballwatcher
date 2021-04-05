@@ -245,24 +245,19 @@ class Pendants(commands.Cog):
             if stats_id in statsheets:
                 statsheets[stats_id]["homeRunsAllowed"] = hr_count
         rows = []
-        statsheets_seen = {}
         for p_values in statsheets.values():
-            if p_values["id"] not in statsheets_seen.keys():
-                statsheets_seen[p_values["id"]] = 1
-                rows.append((p_values["id"], season, day, p_values["playerId"], p_values["teamId"],
-                             p_values["gameId"], p_values["team"], p_values["name"], p_values["atBats"],
-                             p_values["caughtStealing"], p_values["doubles"], p_values["earnedRuns"],
-                             p_values["groundIntoDp"], p_values["hits"], p_values["hitsAllowed"],
-                             p_values["homeRuns"], p_values["losses"], p_values["outsRecorded"],
-                             p_values["rbis"], p_values["runs"], p_values["stolenBases"],
-                             p_values["strikeouts"], p_values["struckouts"], p_values["triples"],
-                             p_values["walks"], p_values["walksIssued"], p_values["wins"],
-                             p_values["hitByPitch"], p_values["hitBatters"], p_values["quadruples"],
-                             p_values["pitchesThrown"], p_values["rotation_changed"], p_values["position"],
-                             p_values["rotation"], p_values["shutout"], p_values["noHitter"],
-                             p_values["perfectGame"], p_values["homeRunsAllowed"]))
-            else:
-                self.bot.logger.warn(f"Duplicate statsheet id not inserted: {p_values['id']}")
+            rows.append((p_values["id"], season, day, p_values["playerId"], p_values["teamId"],
+                         p_values["gameId"], p_values["team"], p_values["name"], p_values["atBats"],
+                         p_values["caughtStealing"], p_values["doubles"], p_values["earnedRuns"],
+                         p_values["groundIntoDp"], p_values["hits"], p_values["hitsAllowed"],
+                         p_values["homeRuns"], p_values["losses"], p_values["outsRecorded"],
+                         p_values["rbis"], p_values["runs"], p_values["stolenBases"],
+                         p_values["strikeouts"], p_values["struckouts"], p_values["triples"],
+                         p_values["walks"], p_values["walksIssued"], p_values["wins"],
+                         p_values["hitByPitch"], p_values["hitBatters"], p_values["quadruples"],
+                         p_values["pitchesThrown"], p_values["rotation_changed"], p_values["position"],
+                         p_values["rotation"], p_values["shutout"], p_values["noHitter"],
+                         p_values["perfectGame"], p_values["homeRunsAllowed"]))
 
         async with aiosqlite.connect(self.bot.db_path) as db:
             await db.executemany("insert into DailyStatSheets values "
@@ -302,7 +297,7 @@ class Pendants(commands.Cog):
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select max(day) from DailyStatSheets where season=?;", [current_season]) as cursor:
                 async for row in cursor:
-                    if row and row[0]:
+                    if row and row[0] is not None:
                         day = last_day = row[0] + 1
 
         while True:
