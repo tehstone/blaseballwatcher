@@ -288,8 +288,11 @@ class Snaximum:
                     team_ids.append(game['homeTeam'])
                     team_ids.append(game['awayTeam'])
 
-            with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
-                team_ids = json.load(file)
+            try:
+                with open(os.path.join('data', 'pendant_data', 'statsheets', 'postseason_teams.json'), 'r') as file:
+                    team_ids = json.load(file)
+            except FileNotFoundError:
+                pass
 
         skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         for player in players:
