@@ -118,7 +118,10 @@ class BetAdvice(commands.Cog):
         # for player in players:
         #     pitcher_dict[player['id']]['ruth'] = player["ruthlessness"]
 
-        results, day = await daily_sim.run_daily_sim(250)
+        #results, day = await daily_sim.run_daily_sim(250)
+        async with self.bot.session.post(url=f'http://localhost:5555/v1/dailysim') as response:
+            result = await response.json()
+        results, day = result['data'], result['day']
         with open(os.path.join('data', 'season_sim', 'results', f'd{day}_results.json'), 'w') as file:
             json.dump(results, file)
 

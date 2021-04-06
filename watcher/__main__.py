@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import sys
 
+import aiohttp
 import discord
 
 from watcher import utils
@@ -59,6 +60,8 @@ async def start_task_loops(bot):
 
 @Watcher.event
 async def on_ready():
+    if not Watcher.session:
+        Watcher.session = aiohttp.ClientSession()
     Watcher.owner = Watcher.get_user(config['master'])
     if Watcher.initial_start:
         await _print(Watcher.owner, 'Starting up...')

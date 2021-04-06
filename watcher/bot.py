@@ -90,6 +90,7 @@ class WatcherBot(commands.AutoShardedBot):
         self.team_cache_updated = False
         self.load_defaults()
         self.playoff_teams = []
+        self.session = None
 
         for ext in default_exts:
             try:
