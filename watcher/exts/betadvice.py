@@ -232,12 +232,10 @@ class BetAdvice(commands.Cog):
         black_hole_games, flood_games, sun_two_games, eclipse_games = 0, 0, 0, 0
         for team, game in results.items():
             if game["upset"] == True:
-                if game["game_info"]["id"] not in upset_games:
-                    upset_games[game["game_info"]["id"]] = {
-                        "game_info": game["game_info"],
-                        "win_percentages": {}
-                    }
-                upset_games[game["game_info"]["id"]]["win_percentages"][team] = game["win_percentage"]
+                upset_games[game["game_info"]["id"]] = {
+                    "game_info": game["game_info"],
+                    "win_percentage": game["win_percentage"]
+                }
             if game["weather"] == 14:
                 black_hole_games += 1
             if game["weather"] == 18:
@@ -265,21 +263,22 @@ class BetAdvice(commands.Cog):
                                  "value": weather_msg})
 
         upset_msg = ""
-        for item in upset_games.values():
+        sorted_results = {k: v for k, v in
+                          sorted(upset_games.items(), key=lambda item: item[1]["win_percentage"], reverse=True)}
+        for item in sorted_results.values():
+            win_per = item["win_percentage"]
             if item["game_info"]["homeOdds"] > item["game_info"]["awayOdds"]:
-                win_per = item["win_percentages"][item["game_info"]["awayTeam"]]
                 team_name = item["game_info"]["awayTeamName"]
                 odds = round(item['game_info']['awayOdds'] * 1000) / 10
                 upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
             else:
-                win_per = item["win_percentages"][item["game_info"]["homeTeam"]]
                 team_name = item["game_info"]["homeTeamName"]
                 odds = round(item['game_info']['homeOdds'] * 1000) / 10
                 upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
 
-        #if len(upset_msg) > 0:
-            #embed_fields.append({"name": "Upset Watch",
-                           #      "value": upset_msg})
+        if len(upset_msg) > 0:
+            embed_fields.append({"name": "Upset Watch",
+                                 "value": upset_msg})
 
         return message, embed_fields
 
