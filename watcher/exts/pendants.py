@@ -24,7 +24,9 @@ MOVING_PLAYER_IDS = [
     "d8742d68-8fce-4d52-9a49-f4e33bd2a6fc",
     "9ba361a1-16d5-4f30-b590-fc4fc2fb53d2"
 ]
-
+boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2,
+                           "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5,
+                           "c0732e36-3731-4f1a-abdc-daa9563b6506": 2}
 
 class Pendants(commands.Cog):
     def __init__(self, bot):
@@ -816,7 +818,7 @@ class Pendants(commands.Cog):
 
         count = 0
         for key in top_combo_keys:
-            if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
+            if key in boosted_players:
                 continue
             values = sorted_combo_payouts[key]
             hits = hitters[key]["hitsMinusHrs"]
@@ -830,7 +832,7 @@ class Pendants(commands.Cog):
 
         count = 0
         for key in top_sickle_keys:
-            if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
+            if key in boosted_players:
                 continue
             if key not in players_seen:
                 values = sorted_sickle_payouts[key]
@@ -845,7 +847,7 @@ class Pendants(commands.Cog):
 
         count = 0
         for key in top_seed_dog_keys:
-            if key == "86d4e22b-f107-4bcf-9625-32d387fcb521" or key == "e16c3f28-eecd-4571-be1a-606bbac36b2b":
+            if key in boosted_players:
                 continue
             if key not in players_seen:
                 values = sorted_seed_dog_payouts[key]
@@ -973,13 +975,10 @@ class Pendants(commands.Cog):
                                                    reverse=True)}
         sorted_stolenbases = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['stolenBases'],
                                                       reverse=True)}
-        boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2,
-                           "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5,
-                           "c0732e36-3731-4f1a-abdc-daa9563b6506": 2}
         skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
-            if k in skip_players:# or k in self.bot.deceased_players.keys():
+            if k in skip_players:
                 continue
             homeruns = sorted_homeruns[k]["homeRuns"]
             stolenbases = sorted_stolenbases[k]["stolenBases"]
