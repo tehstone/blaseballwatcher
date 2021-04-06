@@ -626,8 +626,7 @@ class Pendants(commands.Cog):
 
         return notable
 
-    @staticmethod
-    async def _check_feed_natural_cycle(player_name, player_id, day):
+    async def _check_feed_natural_cycle(self, player_name, player_id, day):
         player_feed = await utils.retry_request(f"https://www.blaseball.com/database/feed/player?id={player_id}")
         feed_json = player_feed.json()
         day_items = list(filter(lambda d: d['day'] == day, feed_json))
@@ -638,22 +637,28 @@ class Pendants(commands.Cog):
             if f"{player_name} hits a" in item['description']:
                 filtered_items.append(item)
 
-        for i in range(len(filtered_items)):
-            if i + 2 > len(filtered_items):
-                break
-            if "hits a Single" in filtered_items[i]['description']:
-                if "hits a Double" in filtered_items[i + 1]['description']:
-                    if "hits a Triple" in filtered_items[i + 2]['description']:
-                        if "home run" in filtered_items[i + 3]['description']:
-                            return "Natural Cycle!"
-        for i in range(len(filtered_items)):
-            if i + 2 > len(filtered_items):
-                break
-            if "home run" in filtered_items[i]['description']:
-                if "hits a Triple" in filtered_items[i + 1]['description']:
-                    if "hits a Double" in filtered_items[i + 2]['description']:
-                        if "hits a Single" in filtered_items[i + 3]['description']:
-                            return "Reverse Cycle!"
+        try:
+            for i in range(len(filtered_items)):
+                if i + 1 > len(filtered_items):
+                    break
+                if "hits a Single" in filtered_items[i]['description']:
+                    if "hits a Double" in filtered_items[i + 1]['description']:
+                        if "hits a Triple" in filtered_items[i + 2]['description']:
+                            if "home run" in filtered_items[i + 3]['description']:
+                                return "Natural Cycle!"
+        except IndexError:
+            self.bot.logger.warn(f"Failed cycle check on:\n{filtered_items}")
+        try:
+            for i in range(len(filtered_items)):
+                if i + 1 > len(filtered_items):
+                    break
+                if "home run" in filtered_items[i]['description']:
+                    if "hits a Triple" in filtered_items[i + 1]['description']:
+                        if "hits a Double" in filtered_items[i + 2]['description']:
+                            if "hits a Single" in filtered_items[i + 3]['description']:
+                                return "Reverse Cycle!"
+        except IndexError:
+            self.bot.logger.warn(f"Failed reverse cycle check on:\n{filtered_items}")
         return "Not a natural cycle."
 
     async def compile_stats(self, season):
@@ -967,11 +972,13 @@ class Pendants(commands.Cog):
                                                    reverse=True)}
         sorted_stolenbases = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['stolenBases'],
                                                       reverse=True)}
-        boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2, "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5}
+        boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2,
+                           "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5,
+                           "c0732e36-3731-4f1a-abdc-daa9563b6506": 2}
         skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
-            if k in skip_players or k in self.bot.deceased_players.keys():
+            if k in skip_players:# or k in self.bot.deceased_players.keys():
                 continue
             homeruns = sorted_homeruns[k]["homeRuns"]
             stolenbases = sorted_stolenbases[k]["stolenBases"]
@@ -1021,7 +1028,7 @@ class Pendants(commands.Cog):
     async def _update_pendants(self, ctx, season: int):
         await ctx.message.add_reaction("⏲️")
         latest_day = await self.get_latest_pendant_data(season)
-        await self.update_leaders_sheet(season, latest_day)
+        await self.update_leaders_sheet(season, latest_day, True)
         await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(aliases=['sld'])
