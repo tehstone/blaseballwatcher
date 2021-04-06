@@ -35,6 +35,14 @@ class RulesWatcher(commands.Cog):
         self.bot.config['notify_channel'] = output_channel.id
         return await ctx.message.add_reaction(self.bot.success_react)
 
+    @commands.command(name='archive_notify_channel', aliases=['sanc'])
+    async def _archive_notify_channel(self, ctx, item):
+        output_channel = await utils.get_channel_by_name_or_id(ctx, item)
+        if output_channel is None:
+            return await ctx.message.add_reaction(self.bot.failed_react)
+        self.bot.config['archive_notify_channel'] = output_channel.id
+        return await ctx.message.add_reaction(self.bot.success_react)
+
     @commands.command(name='_set_debug_channel', aliases=['sdb'])
     async def _set_debug_channel(self, ctx, item):
         output_channel = await utils.get_channel_by_name_or_id(ctx, item)
@@ -276,7 +284,7 @@ class RulesWatcher(commands.Cog):
         while not self.bot.is_closed():
             print("checking for book changes")
             messages, filename = await self._check_for_rules_update()
-            output_channel_id = self.bot.config['notify_channel']
+            output_channel_id = self.bot.config['archive_notify_channel']
             sent = False
             if output_channel_id:
                 output_channel = self.bot.get_channel(output_channel_id)
