@@ -230,12 +230,13 @@ class BetAdvice(commands.Cog):
 
         upset_games = {}
         black_hole_games, flood_games, sun_two_games, eclipse_games = 0, 0, 0, 0
-        for team, game in results.items():
-            if game["upset"] == True:
-                upset_games[game["game_info"]["id"]] = {
-                    "game_info": game["game_info"],
-                    "win_percentage": game["win_percentage"]
-                }
+        for game in results.values():
+            for team in game["teams"]:
+                if team["upset"] == True:
+                    upset_games[team["game_info"]["id"]] = {
+                        "game_info": team["game_info"],
+                        "win_percentage": team["win_percentage"]
+                    }
             if game["weather"] == 14:
                 black_hole_games += 1
             if game["weather"] == 18:
@@ -244,10 +245,10 @@ class BetAdvice(commands.Cog):
                 sun_two_games += 1
             if game["weather"] == 7:
                 eclipse_games += 1
-        black_hole_games = int(black_hole_games/2)
-        flood_games = int(flood_games/2)
-        sun_two_games = int(sun_two_games / 2)
-        eclipse_games = int(eclipse_games / 2)
+        black_hole_games = int(black_hole_games)
+        flood_games = int(flood_games)
+        sun_two_games = int(sun_two_games)
+        eclipse_games = int(eclipse_games)
 
         weather_msg = ""
         if black_hole_games > 0:
@@ -280,7 +281,7 @@ class BetAdvice(commands.Cog):
             embed_fields.append({"name": "Upset Watch",
                                  "value": upset_msg})
 
-        return message, embed_fields
+        return message, embed_fields, results["output"]
 
     async def _run_daily_sim(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
@@ -407,8 +408,9 @@ class BetAdvice(commands.Cog):
     @commands.command(aliases=['tdm'])
     async def _testdm(self, ctx):
         bet_chan_id = self.bot.config['bet_channel']
+        game_sim_output_chan_id = 767797600321011732
 
-        message, embed_fields = await self.daily_message()
+        message, embed_fields, output = await self.daily_message()
         m_embed = discord.Embed(description=message)
         for field in embed_fields:
             m_embed.add_field(name=field["name"], value=field["value"])
@@ -417,6 +419,8 @@ class BetAdvice(commands.Cog):
             bet_msg = await output_channel.send(embed=m_embed)
             if self.bot.config['live_version']:
                 await bet_msg.publish()
+        output_channel = self.bot.get_channel(game_sim_output_chan_id)
+        await output_channel.send(output)
 
 
 def setup(bot):
