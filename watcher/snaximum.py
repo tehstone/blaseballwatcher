@@ -388,6 +388,51 @@ class Snaximum:
         payout['total'] = sum(payout.values())
         return payout
 
+    def calc_optimal(self, snaxfolio: Snaxfolio):
+        snaxfolio = self.mksnax(snaxfolio)
+        payouts = {
+            "seeds": 2 * self.get_payout('seeds', snaxfolio['seeds']) * 88,
+            "hot_dog": 2 * self.get_payout('hot_dog', snaxfolio['hot_dog']) * 42,
+            "pickles":  2 * self.get_payout('pickles', snaxfolio['pickles']) * 41,
+            "slushies": self.get_payout('slushies', snaxfolio['slushies']) * 400,
+            "wet_pretzel": self.get_payout('wet_pretzel', snaxfolio['wet_pretzel']) * 5,
+            "doughnut": self.get_payout('doughnut', snaxfolio['doughnut']) * 3,
+            "sundae": self.get_payout('sundae', snaxfolio['sundae']) * 2,
+            "snake_oil": .67 * 436672
+        }
+
+        results = {
+            1: {"payout": 0, "items": []},
+            2: {"payout": 0, "items": []},
+            3: {"payout": 0, "items": []},
+            4: {"payout": 0, "items": []},
+            5: {"payout": 0, "items": []},
+            6: {"payout": 0, "items": []},
+            7: {"payout": 0, "items": []},
+            8: {"payout": 0, "items": []}
+        }
+        payout_modifiers = {8: 1, 7: 1.1, 6: 1.25, 5: 1.5, 4: 1.9, 3: 2.5, 2: 3.5, 1: 6.5}
+        modified_payouts = {1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}}
+        for tier in modified_payouts.keys():
+            for item in payouts:
+                modified_payouts[tier][item] = payouts[item] * payout_modifiers[tier]
+
+        for tier in range(1, 9):
+            sorted_payouts = {k: v for k, v in sorted(modified_payouts[tier].items(),
+                                                      key=lambda item: item[1], reverse=True)}
+            sorted_payout_keys = list(sorted_payouts.keys())
+            tier_payout = 0
+            items = []
+            for t in range(1, tier+1):
+                key = sorted_payout_keys[t-1]
+                payout = round(sorted_payouts[key])
+                tier_payout += payout
+                items.append(f"{key}")
+            results[tier]["payout"] = tier_payout
+            results[tier]["items"] = items
+        return results
+
+
     def mksnax(self, snaxfolio: Optional[Snaxfolio] = None,
                maximum: bool = False) -> Snaxfolio:
         snax: Dict[str, int]

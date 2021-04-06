@@ -397,6 +397,35 @@ class SnaxCog(commands.Cog):
         embed.set_footer(text="Note: This calculation assumes you had your current snack quantities from Day 1.")
         await ctx.send(embed=embed)
 
+    @commands.command(name='optimize')
+    @checks.allow_snax_commands()
+    async def _optimize(self, ctx):
+        snaxfolio = await self._get_user_snax(ctx.author.id)
+        results = self.snaximum_instance.calc_optimal(snaxfolio)
+        sorted_results = {k: v for k, v in sorted(results.items(),
+                                                  key=lambda item: item[1]["payout"], reverse=True)}
+        embed = discord.Embed(title=f"Snaxfolio optimization for {ctx.author.display_name}")
+        embed.description = "The list below displays your total estimated profit and per item profit at each number " \
+                            "of slots. The item listed for each slot count is the least profitable item and assumes " \
+                            "you also have the items listed in the lower slot counts. \nWhile fewer slots may " \
+                            "achieve a higher total profit it is more risky as you increase the chances of a single " \
+                            "event invalidating your strategy."
+        max_payout = 0
+        for slots, result in sorted_results.items():
+            payout = result["payout"]
+            max_payout = max(payout, max_payout)
+            ratio = round((payout / max_payout) * 1000)/10
+            s_t = "slots"
+            if slots == 1:
+                s_t = "slot"
+            title = f"{slots} {s_t} - {payout:,} coins ({ratio}%)"
+            message = ', '.join(result["items"])
+            # for item in result["items"]:
+            #     message += item + "\n"
+            embed.add_field(name=title, value=message)
+        return await ctx.send(embed=embed)
+
+
     @commands.command(name='season_revenue', aliases=['sr'])
     @checks.allow_snax_commands()
     async def _season_revenue(self, ctx):
