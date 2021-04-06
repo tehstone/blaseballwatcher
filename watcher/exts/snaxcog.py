@@ -405,11 +405,10 @@ class SnaxCog(commands.Cog):
         sorted_results = {k: v for k, v in sorted(results.items(),
                                                   key=lambda item: item[1]["payout"], reverse=True)}
         embed = discord.Embed(title=f"Snaxfolio optimization for {ctx.author.display_name}")
-        embed.description = "The list below displays your total estimated profit and per item profit at each number " \
-                            "of slots. The item listed for each slot count is the least profitable item and assumes " \
-                            "you also have the items listed in the lower slot counts. \nWhile fewer slots may " \
-                            "achieve a higher total profit it is more risky as you increase the chances of a single " \
-                            "event invalidating your strategy."
+        embed.description = "The list below ranks your optimal snack loadouts, indicating slots filled, total " \
+                            "estimated coins, percentage of most optimal, and the snacks to hold per loadout. " \
+                            "\nWhile fewer slots may achieve a higher total profit it is more risky as you increase " \
+                            "the chances of a single event invalidating your strategy."
         max_payout = 0
         for slots, result in sorted_results.items():
             payout = result["payout"]
