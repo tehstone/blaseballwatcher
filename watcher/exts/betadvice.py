@@ -277,9 +277,9 @@ class BetAdvice(commands.Cog):
                 odds = round(item['game_info']['homeOdds'] * 1000) / 10
                 upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
 
-        if len(upset_msg) > 0:
-            embed_fields.append({"name": "Upset Watch",
-                                 "value": upset_msg})
+        #if len(upset_msg) > 0:
+            #embed_fields.append({"name": "Upset Watch",
+                           #      "value": upset_msg})
 
         return message, embed_fields
 
