@@ -404,7 +404,8 @@ class Pendants(commands.Cog):
                 #             and event['triples'] > 0 and event['doubles'] > 0:
                 #         base_message = "a super cycle!"
                 at_bats_str = f" in {event.atBats} at bats.\n"
-                natural_cycle = await self._check_feed_natural_cycle(event.name, event.playerId, last_day)
+                natural_cycle = await self._check_feed_natural_cycle(event.name, event.playerId,
+                                                                     last_day, current_season)
                 message = f"\n**{event.name} hit {base_message}!**{at_bats_str} with {event.hits}" \
                           f" hits, {doubles_str}, {triples_str} " \
                           f"and {hr_str}.\n" \
@@ -626,10 +627,10 @@ class Pendants(commands.Cog):
 
         return notable
 
-    async def _check_feed_natural_cycle(self, player_name, player_id, day):
+    async def _check_feed_natural_cycle(self, player_name, player_id, day, season):
         player_feed = await utils.retry_request(f"https://www.blaseball.com/database/feed/player?id={player_id}")
         feed_json = player_feed.json()
-        day_items = list(filter(lambda d: d['day'] == day, feed_json))
+        day_items = list(filter(lambda d: d['day'] == day and d['season'] == season, feed_json))
         sorted_items = sorted(day_items, key=lambda item: item['metadata']['play'])
 
         filtered_items = []
