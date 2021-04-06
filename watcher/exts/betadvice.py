@@ -121,7 +121,7 @@ class BetAdvice(commands.Cog):
         #results, day = await daily_sim.run_daily_sim(250)
         async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim') as response:
             result = await response.json()
-        results, day = result['data'], result['day']
+        results, day, output = result['data'], result['day'], result['output']
         with open(os.path.join('data', 'season_sim', 'results', f'd{day}_results.json'), 'w') as file:
             json.dump(results, file)
 
@@ -174,15 +174,16 @@ class BetAdvice(commands.Cog):
         #                      "value": '\n'.join(hitter_list)})
 
         pitcher_opp_strikeouts = {}
-        for team in results.keys():
-            pitcher_opp_strikeouts[results[team]["opp_pitcher"]["pitcher_id"]] = {
-                "strikeout_avg": results[team]["strikeout_avg"],
-                "name": results[team]["opp_pitcher"]["pitcher_name"],
-                "team": results[team]["opp_pitcher"]["p_team_id"]
-            }
+        for game in results.values():
+            for team in game["teams"].keys():
+                pitcher_opp_strikeouts[game["teams"][team]["opp_pitcher"]["pitcher_id"]] = {
+                    "strikeout_avg": game["teams"][team]["strikeout_avg"],
+                    "name": game["teams"][team]["opp_pitcher"]["pitcher_name"],
+                    "team": game["teams"][team]["opp_pitcher"]["p_team_id"]
+                }
 
         sorted_so_preds = {k: v for k, v in sorted(pitcher_opp_strikeouts.items(),
-                                                   key=lambda item: item[1]["strikeout_avg"],
+                                                   key=lambda item: item[1]['strikeout_avg'],
                                                    reverse=True)}
         top_list = list(sorted_so_preds.keys())[:4]
         pitcher_list = []
@@ -201,21 +202,32 @@ class BetAdvice(commands.Cog):
         embed_fields.append({"name": "Strikeout Predictions",
                              "value": '\n'.join(pitcher_list)})
 
-        top_five_shos = list(results.keys())[:3]
+        shutouts = {}
+        for game in results.values():
+            for team in game["teams"].keys():
+                shutouts[team] = game["teams"][team]["shutout_percentage"]
+
+        sorted_shutout_preds = {k: v for k, v in sorted(shutouts.items(), key=lambda item: item[1], reverse=True)}
+        top_list = list(sorted_shutout_preds.keys())[:3]
         sh_message = ""
-        for key in top_five_shos:
+        for key in top_list:
             team_name = self.bot.team_names[key]
-            sh_message += f"{team_name}: {results[key]['shutout_percentage']}%\n"
+            sh_message += f"{team_name}: {shutouts[key]}%\n"
         embed_fields.append({"name": "Teams most likely to be shutout",
                              "value": sh_message})
 
-        sorted_big_scores = {k: v for k, v in sorted(results.items(),
+        over_ten_check = {}
+        for game in results.values():
+            for team, info in game['teams'].items():
+                info['weather'] = game['weather']
+                over_ten_check[team] = info
+        sorted_big_scores = {k: v for k, v in sorted(over_ten_check.items(),
                                                      key=lambda item: item[1]['over_ten'],
                                                      reverse=True)}
         big_message = ""
         for key in list(sorted_big_scores.keys()):
             if sorted_big_scores[key]['over_ten'] > .03:
-                weather = results[key]["weather"]
+                weather = sorted_big_scores[key]["weather"]
                 if weather == 1 or weather == 14:
                     weather_name = gamedata.weather_types[weather]
                     team_name = self.bot.team_names[key]
@@ -231,7 +243,7 @@ class BetAdvice(commands.Cog):
         upset_games = {}
         black_hole_games, flood_games, sun_two_games, eclipse_games = 0, 0, 0, 0
         for game in results.values():
-            for team in game["teams"]:
+            for team in game["teams"].values():
                 if team["upset"] == True:
                     upset_games[team["game_info"]["id"]] = {
                         "game_info": team["game_info"],
@@ -281,7 +293,7 @@ class BetAdvice(commands.Cog):
             embed_fields.append({"name": "Upset Watch",
                                  "value": upset_msg})
 
-        return message, embed_fields, results["output"]
+        return message, embed_fields, output
 
     async def _run_daily_sim(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
