@@ -234,9 +234,12 @@ class WatcherBot(commands.AutoShardedBot):
                     publish = self.config.setdefault('publish_rec_message', False)
                     if publish:
                         await bet_msg.publish()
-                game_sim_output_chan_id = self.config['game_sim_output_chan_id']
-                output_channel = self.get_channel(game_sim_output_chan_id)
-                await output_channel.send(output)
+                try:
+                    game_sim_output_chan_id = self.config['game_sim_output_chan_id']
+                    output_channel = self.get_channel(game_sim_output_chan_id)
+                    await output_channel.send(output)
+                except:
+                    pass
                 self.logger.info(f"Daily sim complete. {time.time()}")
             except Exception as e:
                 self.logger.warning(f"Failed to send pendant picks: {e}")

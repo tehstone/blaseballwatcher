@@ -397,11 +397,10 @@ class BetAdvice(commands.Cog):
         return await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(aliases=['tdm'])
-    async def _testdm(self, ctx):
+    async def _testdm(self, ctx, season, day):
         bet_chan_id = self.bot.config['bet_channel']
-        game_sim_output_chan_id = 767797600321011732
 
-        message, embed_fields, output = await self.daily_message()
+        message, embed_fields, output = await self.daily_message(season, day)
         m_embed = discord.Embed(description=message)
         for field in embed_fields:
             m_embed.add_field(name=field["name"], value=field["value"])
@@ -410,8 +409,6 @@ class BetAdvice(commands.Cog):
             bet_msg = await output_channel.send(embed=m_embed)
             if self.bot.config['live_version']:
                 await bet_msg.publish()
-        output_channel = self.bot.get_channel(game_sim_output_chan_id)
-        await output_channel.send(output)
 
     async def check_game_sim_loop(self):
         while not self.bot.is_closed():
