@@ -397,7 +397,7 @@ class SnaxCog(commands.Cog):
         embed.set_footer(text="Note: This calculation assumes you had your current snack quantities from Day 1.")
         await ctx.send(embed=embed)
 
-    @commands.command(name='optimize')
+    @commands.command(name='optimize', aliases=['optimise', 'opt'])
     @checks.allow_snax_commands()
     async def _optimize(self, ctx):
         snaxfolio = await self._get_user_snax(ctx.author.id)
