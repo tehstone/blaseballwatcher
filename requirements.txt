@@ -6,6 +6,7 @@ beautifulsoup4==4.7.1
 esprima==4.0.1
 gspread_asyncio==1.4.0
 gspread-formatting==0.3.7
+gspread==3.7
 beautifulsoup4==4.7.1
 matplotlib==3.3.1
 scikit-learn==0.23.2
