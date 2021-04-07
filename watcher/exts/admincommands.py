@@ -149,7 +149,10 @@ class AdminCommands(commands.Cog):
     async def _print(self, owner, message):
         if 'launcher' in sys.argv[1:]:
             if 'debug' not in sys.argv[1:]:
-                await owner.send(message)
+                try:
+                    await owner.send(message)
+                except:
+                    pass
         print(message)
         self.bot.logger.info(message)
 
@@ -165,7 +168,7 @@ class AdminCommands(commands.Cog):
             await self._print(self.bot.owner, err)
         await ctx.channel.send('Restarting...')
         self.bot._shutdown_mode = 26
-        await self.bot.logout()
+        await self.bot.close()
 
     @commands.command()
     @checks.is_owner()
@@ -180,7 +183,7 @@ class AdminCommands(commands.Cog):
             await self._print(self.bot.owner, err)
         await ctx.channel.send('Shutting down...')
         self.bot._shutdown_mode = 0
-        await self.bot.logout()
+        await self.bot.close()
 
     @commands.command(name='load')
     @checks.is_owner()
