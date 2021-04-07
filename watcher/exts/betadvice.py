@@ -94,9 +94,9 @@ class BetAdvice(commands.Cog):
         data = {"iterations": iterations}
         async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
             result = await response.json()
-        results, day, output, time_elapsed = result['data'], result['day'], result['output'], result["time_elapsed"]
+        day, time_elapsed = result['day'], result["time_elapsed"]
         with open(os.path.join('data', 'season_sim', 'results', f"s{season}_d{day}_sim_results.json"), 'w') as file:
-            json.dump(results, file)
+            json.dump(result, file)
         return time_elapsed
 
     async def daily_message(self, season, day):

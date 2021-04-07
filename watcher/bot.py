@@ -224,7 +224,7 @@ class WatcherBot(commands.AutoShardedBot):
             betadvice_cog = self.cogs.get('BetAdvice')
             try:
                 self.logger.info(f"Starting daily sim. {time.time()}")
-                message, embed_fields, output = await betadvice_cog.daily_message()
+                message, embed_fields, output = await betadvice_cog.daily_message(current_season-1, latest_day)
                 m_embed = discord.Embed(description=message)
                 for field in embed_fields:
                     m_embed.add_field(name=field["name"], value=field["value"])
