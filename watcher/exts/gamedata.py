@@ -5,6 +5,7 @@ import asyncio
 import json
 import re
 
+import gspread
 from gspread_formatting import *
 
 from discord.ext import commands
@@ -974,10 +975,10 @@ class GameData(commands.Cog):
         return True
 
     @commands.command(name="apply_conditional_rules", aliases=['acr'])
-    async def _apply_conditional_rules(self, ctx):
-        agc = await self.bot.authorize_agcm()
-        sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
-        od_worksheet = await sheet.worksheet("Daily Results")
+    async def _apply_conditional_rules(self, ctx, season):
+        gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
+        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}"])
+        od_worksheet = sheet.worksheet("Daily Results")
         rules = get_conditional_format_rules(od_worksheet)
         for i in range(5, 106):
             rule = ConditionalFormatRule(
