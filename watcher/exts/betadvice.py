@@ -107,17 +107,12 @@ class BetAdvice(commands.Cog):
         day, time_elapsed = result['day'], result["time_elapsed"]
         with open(os.path.join('data', 'season_sim', 'results', f"s{season}_d{day}_sim_results.json"), 'w') as file:
             json.dump(result, file)
+        debug_message = await self._create_debug_message(result['data'], day)
+        outputchan_id = self.bot.config['game_sim_output_chan_id']
+        output_channel = self.bot.get_channel(outputchan_id)
+        if output_channel:
+            await output_channel.send(debug_message)
         return time_elapsed
-
-    @commands.command()
-    async def rds(self, ctx, day):
-        data = {"iterations": 500, "day": day}
-        async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
-            result = await response.json()
-        day, time_elapsed = result['day'], result["time_elapsed"]
-        with open(os.path.join('data', 'season_sim', 'results', f"s14_d{day}_sim_results.json"), 'w') as file:
-            json.dump(result, file)
-        print(f"ran 500 iter sim for day {day} in {time_elapsed} seconds")
 
     async def update_day_winners(self, season, day):
         try:
@@ -390,8 +385,12 @@ class BetAdvice(commands.Cog):
         if len(upset_msg) > 0:
             embed_fields.append({"name": "Upset Watch",
                                  "value": upset_msg})
+        output_msg = await self._create_debug_message(results, day)
+        return message, embed_fields, output_msg
 
-        output_msg = f"Day {day+1}\n"
+    @staticmethod
+    async def _create_debug_message(results, day):
+        output_msg = f"Day {day + 1}\n"
         sorted_results = {k: v for k, v in
                           sorted(results.items(), key=lambda item: item[1]["odds"], reverse=True)}
         for item in sorted_results.values():
@@ -420,8 +419,7 @@ class BetAdvice(commands.Cog):
                 pred_str = f"**{away_team['team_name']}** sim: {away_team['win_percentage']}% odds: {away_odds} **{diff_str}**"
             msg += f"{pred_str}\n"
             output_msg += msg
-
-        return message, embed_fields, output_msg
+        return output_msg
 
     async def _run_daily_sim(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
@@ -548,14 +546,16 @@ class BetAdvice(commands.Cog):
     @commands.command(aliases=['tdm'])
     async def _testdm(self, ctx, season, day):
         bet_chan_id = self.bot.config['bet_channel']
-
         message, embed_fields, output = await self.daily_message(season, day)
         m_embed = discord.Embed(description=message)
+
         for field in embed_fields:
             m_embed.add_field(name=field["name"], value=field["value"])
         if bet_chan_id:
             output_channel = self.bot.get_channel(bet_chan_id)
             bet_msg = await output_channel.send(embed=m_embed)
+            d_output_chan = self.bot.get_channel(self.bot.config['gamesim_debug_channel'])
+            await d_output_chan.send(output)
             if self.bot.config['live_version']:
                 await bet_msg.publish()
 
@@ -576,7 +576,7 @@ class BetAdvice(commands.Cog):
             if not os.path.exists(filepath):
                 with open(filepath, 'w') as file:
                     json.dump({}, file)
-                time_elapsed = await asyncio.wait_for(self.run_daily_sim(season, 500), 1200)
+                time_elapsed = await asyncio.wait_for(self.run_daily_sim(season, 501), 1200)
                 self.bot.logger.info(f"s{season}_d{day} sim results saved to file in {time_elapsed} seconds")
             await asyncio.sleep(60*15)
 

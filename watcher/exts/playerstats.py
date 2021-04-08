@@ -230,7 +230,6 @@ class PlayerStats(commands.Cog):
         for player in other_players[:10]:
             o_player_name, team_name = player[1], player[4]
             stars = round((player[2] * 100)) / 100
-            print(player[5])
             rating_star = player[5] * 5
             rating = round((rating_star * 100)) / 100
             response += f"**{o_player_name}**: {stars} ({team_name}) - {rating}⭐ {raw_rating}\n"

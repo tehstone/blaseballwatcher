@@ -34,14 +34,11 @@ async def get_deceased():
 
 
 async def update_player_cache(bot):
-    team_ids = bot.team_cache.keys()
-    if len(team_ids) < 1:
-        return None
     player_rows = []
     player_ids = []
     player_positions = {}
     team_map = get_team_league_division_map(bot)
-    for tid in team_ids:
+    for tid in team_map.keys():
         team = bot.team_cache[tid]
         new_player_ids = team["lineup"] + team["rotation"] + team["bullpen"] + team["bench"]
         for position in ["lineup", "rotation", "bullpen", "bench"]:
@@ -95,16 +92,8 @@ async def update_player_cache(bot):
 
 async def check_players_loop(bot):
     while True:
-        if bot.team_cache_updated:
-            success = await update_player_cache(bot)
-            if success:
-                # todo make this configurable, 30 minutes should be ok for now
-                sleep = 60 * 30
-                bot.logger.info("Successfully updated player cache")
-            else:
-                sleep = 60
-                bot.logger.info("Failed to update player cache, trying again in 1 minute")
-        else:
-            sleep = 60
-            bot.logger.info("Failed to update player cache, trying again in 1 minute")
+        await update_player_cache(bot)
+        # todo make this configurable, 30 minutes should be ok for now
+        sleep = 60 * 30
+        bot.logger.info("Successfully updated player cache")
         await asyncio.sleep(sleep)
