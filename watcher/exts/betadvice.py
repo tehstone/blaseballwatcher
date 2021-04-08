@@ -211,9 +211,9 @@ class BetAdvice(commands.Cog):
             ratio = round((130/198) * 1000)/10
             message += f"\n\nSo far this season **{correct_count}** of **{predict_count}** predicted upsets have been " \
                        f"correct (**{ratio}%**)."
-            message += f"\nOf **{game_count}** games this season, odds displayed on the site have predicted " \
-                       f"**{site_win_count}** wins while the bot has predicted **{predict_win_count}** for an " \
-                       f"improvement of **{predict_win_count-site_win_count}** bet wins."
+            # message += f"\nOf **{game_count}** games this season, odds displayed on the site have predicted " \
+            #            f"**{site_win_count}** wins while the bot has predicted **{predict_win_count}** for an " \
+            #            f"improvement of **{predict_win_count-site_win_count}** bet wins."
         except:
             pass
 
