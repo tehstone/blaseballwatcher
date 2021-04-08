@@ -520,6 +520,11 @@ class BetAdvice(commands.Cog):
             if self.bot.config['live_version']:
                 await bet_msg.publish()
 
+    @commands.command()
+    async def fill_daily_table(self, ctx):
+        for day in range(0, 59):
+            await self.update_day_winners(self, 14, day)
+
     async def check_game_sim_loop(self):
         while not self.bot.is_closed():
             self.bot.logger.info("Checking for game sim run")
