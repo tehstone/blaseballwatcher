@@ -180,6 +180,62 @@ class PlayerStats(commands.Cog):
 
         return await response_channel.send(embed=embed)
 
+    @commands.command(name="equivalent_exchange", aliases=['ee', 'equiv'])
+    async def _equivalent_exchange(self, ctx, *, info):
+        player_id = None
+        info_split = info.split(",")
+        raw_rating = info_split[0]
+        player_name = info_split[1].strip()
+        if player_name in self.bot.player_cache:
+            player_id = self.bot.player_cache[player_name]["id"]
+        elif player_name.lower() in self.bot.player_names:
+            player_id = self.bot.player_names[player_name.lower()]
+        if not player_id:
+            return await ctx.send(f"Could not find player: {player_name}. Please check your spelling and try again.")
+
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select league, combined_stars from PlayerLeagueAndStars where "
+                                  "player_id=?", [player_id]) as cursor:
+                async for row in cursor:
+                    league, combined_stars = row[0], row[1]
+        if not league:
+            return await ctx.send(f"Could not find league info for player: {player_name}.")
+        if league == 'Mild':
+            other_league = 'Wild'
+        else:
+            other_league = 'Mild'
+        other_players = []
+
+        rating_map = {"baserunning": "baserunning_rating", "running": "baserunning_rating",
+                      "pitching": "pitching_rating",
+                      "hitting": "hitting_rating", "batting": "hitting_rating",
+                      "defense": "defense_rating"}
+        if raw_rating in rating_map:
+            rating = rating_map[raw_rating]
+        else:
+            return await ctx.send(f"Please include one of: baserunning, defense, pitching, hitting rating types.\n"
+                                  f"Command syntax: `!equivalent_exchange rating, player name`")
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute(f"select player_id, player_name, combined_stars, team_id, team_name, {rating} "
+                                  f"from playerleagueandstars where league = '{other_league}' and "
+                                  f"(combined_stars > {combined_stars}-2 and combined_stars < {combined_stars}+2) "
+                                  f"group by player_id order by {rating} desc limit 10;") as cursor:
+                async for row in cursor:
+                    other_players.append([row[0], row[1], row[2], row[3], row[4], row[5]])
+        if len(other_players) < 1:
+            return await ctx.send(f"Could not find players within 2 stars of {player_name}.")
+        p_stars = round((combined_stars * 100)) / 100
+        response = f"Top 10 players by {raw_rating} within 2 combined stars of **{player_name}** " \
+                   f"({p_stars}) in {other_league} League\n\n"
+        for player in other_players[:10]:
+            o_player_name, team_name = player[1], player[4]
+            stars = round((player[2] * 100)) / 100
+            print(player[5])
+            rating_star = player[5] * 5
+            rating = round((rating_star * 100)) / 100
+            response += f"**{o_player_name}**: {stars} ({team_name}) - {rating}⭐ {raw_rating}\n"
+        return await ctx.send(response)
+
 
 def setup(bot):
     bot.add_cog(PlayerStats(bot))

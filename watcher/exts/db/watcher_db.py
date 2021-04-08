@@ -97,6 +97,20 @@ def initialize(db):
                                                 awayteamwinpercentage	REAL NOT NULL,
                                                 upset	BOOLEAN NOT NULL,
                                                 weather	INTEGER NOT NULL);""")
+        c.execute("""CREATE TABLE IF NOT EXISTS PlayerLeagueAndStars (
+                                                id INTEGER NOT NULL PRIMARY KEY,
+                                                player_id TEXT NOT NULL,
+                                                player_name TEXT NOT NULL,
+                                                combined_stars REAL NOT NULL,
+                                                baserunning_rating REAL NOT NULL,
+                                                pitching_rating REAL NOT NULL,
+                                                hitting_rating REAL NOT NULL,
+                                                defense_rating REAL NOT NULL,
+                                                team_id TEXT NOT NULL,
+                                                team_name TEXT NOT NULL,
+                                                league TEXT NOT NULL,
+                                                division TEXT NOT NULL
+        );""")
         try:
             c.execute("ALTER TABLE DailyStatSheets ADD COLUMN homeRunsAllowed	INTEGER DEFAULT 0;")
         except Exception as e:

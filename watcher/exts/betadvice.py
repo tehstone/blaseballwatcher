@@ -407,12 +407,18 @@ class BetAdvice(commands.Cog):
             away_odds = round(away_team["odds"] * 1000) / 10
 
             if home_team["win_percentage"] > away_team["win_percentage"]:
-                home_str = f" - **{home_team['team_name']}** sim: {home_team['win_percentage']}% odds: {home_odds}"
-                away_str = f"{away_team['team_name']} sim: {away_team['win_percentage']}% odds: {away_odds}"
+                diff = round((home_team['win_percentage'] - home_odds) * 100) / 100
+                diff_str = f"{diff}"
+                if diff >= 0:
+                    diff_str = f"+{diff_str}"
+                pred_str = f"**{home_team['team_name']}** sim: {home_team['win_percentage']}% odds: {home_odds} **{diff_str}**"
             else:
-                home_str = f" - {home_team['team_name']} sim: {home_team['win_percentage']}% odds: {home_odds}"
-                away_str = f"**{away_team['team_name']}** sim: {away_team['win_percentage']}% odds: {away_odds}"
-            msg += f"{away_str}{home_str}\n"
+                diff = round((away_team['win_percentage'] - away_odds) * 100) / 100
+                diff_str = f"{diff}"
+                if diff >= 0:
+                    diff_str = f"+{diff_str}"
+                pred_str = f"**{away_team['team_name']}** sim: {away_team['win_percentage']}% odds: {away_odds} **{diff_str}**"
+            msg += f"{pred_str}\n"
             output_msg += msg
 
         return message, embed_fields, output_msg

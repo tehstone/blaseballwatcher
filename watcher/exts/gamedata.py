@@ -152,11 +152,10 @@ class GameData(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @staticmethod
-    def get_team_league_division(divisions, teamID):
-        for div in divisions:
+    def get_team_league_division(self, team_id):
+        for div in self.bot.divisions:
             for team in div["teams"]:
-                if team == teamID:
+                if team == team_id:
                     return div["league"], div["name"]
 
     def get_weather(self, weather_id):
@@ -216,8 +215,6 @@ class GameData(commands.Cog):
 
     def base_season_parser(self, seasons, fill):
         schedule, teams, odds, weathers, flood_count = {}, {}, {}, {}, {}
-        with open(os.path.join("data", "divisions.json")) as json_file:
-            divisions = json.load(json_file)
         for seas in seasons:
             with open(os.path.join("season_data", f"season{seas+1}.json")) as json_file:
                 season_data = json.load(json_file)
@@ -260,14 +257,14 @@ class GameData(commands.Cog):
                 home_team = season.setdefault(game["homeTeam"], {})
                 away_team = season.setdefault(game["awayTeam"], {})
                 if game["homeTeam"] not in teams:
-                    league, division = self.get_team_league_division(divisions, game["homeTeam"])
+                    league, division = self.get_team_league_division(game["homeTeam"])
                     teams[game["homeTeam"]] = {
                         "name": game["homeTeamNickname"],
                         "league": league,
                         "division": division
                     }
                 if game["awayTeam"] not in teams:
-                    league, division = self.get_team_league_division(divisions, game["awayTeam"])
+                    league, division = self.get_team_league_division(game["awayTeam"])
                     teams[game["awayTeam"]] = {
                         "name": game["awayTeamNickname"],
                         "league": league,

@@ -88,6 +88,7 @@ class WatcherBot(commands.AutoShardedBot):
         self.player_team_map = {}
         self.deceased_players = {}
         self.team_cache_updated = False
+        self.divisions = None
         self.load_defaults()
         self.playoff_teams = []
         self.session = None
@@ -102,6 +103,12 @@ class WatcherBot(commands.AutoShardedBot):
                     print(f'Loaded {ext} extension.')
 
     def load_defaults(self):
+        # todo add a scheduled check to update this
+        try:
+            with open(os.path.join("data", "divisions.json")) as json_file:
+                self.divisions = json.load(json_file)
+        except FileNotFoundError:
+            pass
         try:
             with open(os.path.join("data", "api_cache", "team_cache.json"), encoding='utf-8') as json_file:
                 self.team_cache = json.load(json_file)

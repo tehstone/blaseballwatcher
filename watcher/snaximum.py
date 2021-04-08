@@ -391,9 +391,9 @@ class Snaximum:
     def calc_optimal(self, snaxfolio: Snaxfolio):
         snaxfolio = self.mksnax(snaxfolio)
         payouts = {
-            "seeds": 2 * self.get_payout('seeds', snaxfolio['seeds']) * 114,
-            "hot_dog": 2 * self.get_payout('hot_dog', snaxfolio['hot_dog']) * 27,
-            "pickles":  2 * self.get_payout('pickles', snaxfolio['pickles']) * 47,
+            "seeds": 2 * self.get_payout('seeds', snaxfolio['seeds']) * 90,
+            "hot_dog": 2 * self.get_payout('hot_dog', snaxfolio['hot_dog']) * 30,
+            "pickles":  2 * self.get_payout('pickles', snaxfolio['pickles']) * 42,
             "slushies": self.get_payout('slushies', snaxfolio['slushies']) * 250,
             "wet_pretzel": self.get_payout('wet_pretzel', snaxfolio['wet_pretzel']) * 8,
             "doughnut": self.get_payout('doughnut', snaxfolio['doughnut']) * 10,
