@@ -264,12 +264,16 @@ class BetAdvice(commands.Cog):
 
         pitcher_opp_strikeouts = {}
         for game in results.values():
-            for team in game["teams"].keys():
-                pitcher_opp_strikeouts[game["teams"][team]["opp_pitcher"]["pitcher_id"]] = {
-                    "strikeout_avg": game["teams"][team]["strikeout_avg"],
-                    "name": game["teams"][team]["opp_pitcher"]["pitcher_name"],
-                    "team": game["teams"][team]["opp_pitcher"]["p_team_id"]
-                }
+            pitcher_opp_strikeouts[game["home_team"]["opp_pitcher"]["pitcher_id"]] = {
+                "strikeout_avg": game["home_team"]["strikeout_avg"],
+                "name": game["home_team"]["opp_pitcher"]["pitcher_name"],
+                "team": game["home_team"]["opp_pitcher"]["p_team_id"]
+            }
+            pitcher_opp_strikeouts[game["away_team"]["opp_pitcher"]["pitcher_id"]] = {
+                "strikeout_avg": game["away_team"]["strikeout_avg"],
+                "name": game["away_team"]["opp_pitcher"]["pitcher_name"],
+                "team": game["away_team"]["opp_pitcher"]["p_team_id"]
+            }
 
         sorted_so_preds = {k: v for k, v in sorted(pitcher_opp_strikeouts.items(),
                                                    key=lambda item: item[1]['strikeout_avg'],
@@ -293,8 +297,8 @@ class BetAdvice(commands.Cog):
 
         shutouts = {}
         for game in results.values():
-            for team in game["teams"].keys():
-                shutouts[team] = game["teams"][team]["shutout_percentage"]
+            shutouts[game["home_team"]["team_id"]] = game["home_team"]["shutout_percentage"]
+            shutouts[game["away_team"]["team_id"]] = game["away_team"]["shutout_percentage"]
 
         sorted_shutout_preds = {k: v for k, v in sorted(shutouts.items(), key=lambda item: item[1], reverse=True)}
         top_list = list(sorted_shutout_preds.keys())[:3]
@@ -307,9 +311,10 @@ class BetAdvice(commands.Cog):
 
         over_ten_check = {}
         for game in results.values():
-            for team, info in game['teams'].items():
-                info['weather'] = game['weather']
-                over_ten_check[team] = info
+            game["home_team"]['weather'] = game['weather']
+            over_ten_check[game["home_team"]["team_id"]] = game["home_team"]
+            game["away_team"]['weather'] = game['weather']
+            over_ten_check[game["away_team"]["team_id"]] = game["away_team"]
         sorted_big_scores = {k: v for k, v in sorted(over_ten_check.items(),
                                                      key=lambda item: item[1]['over_ten'],
                                                      reverse=True)}
@@ -329,15 +334,8 @@ class BetAdvice(commands.Cog):
             embed_fields.append({"name": "Teams most likely to score 10+",
                                  "value": big_message})
 
-        upset_games = {}
         black_hole_games, flood_games, sun_two_games, eclipse_games = 0, 0, 0, 0
         for game in results.values():
-            for team in game["teams"].values():
-                if team["upset"] == True:
-                    upset_games[team["game_info"]["id"]] = {
-                        "game_info": team["game_info"],
-                        "win_percentage": team["win_percentage"]
-                    }
             if game["weather"] == 14:
                 black_hole_games += 1
             if game["weather"] == 18:
@@ -366,23 +364,49 @@ class BetAdvice(commands.Cog):
 
         upset_msg = ""
         sorted_results = {k: v for k, v in
-                          sorted(upset_games.items(), key=lambda item: item[1]["win_percentage"], reverse=True)}
+                          sorted(results.items(), key=lambda item: item[1]["win_percentage"], reverse=True)
+                          if v["upset"] == True}
         for item in sorted_results.values():
             win_per = item["win_percentage"]
-            if item["game_info"]["homeOdds"] > item["game_info"]["awayOdds"]:
-                team_name = item["game_info"]["awayTeamName"]
-                odds = round(item['game_info']['awayOdds'] * 1000) / 10
+            home_team, away_team = item["home_team"], item["away_team"]
+            if home_team["odds"] > away_team["odds"]:
+                team_name = away_team["team_name"]
+                odds = round(away_team["odds"] * 1000) / 10
                 upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
             else:
-                team_name = item["game_info"]["homeTeamName"]
-                odds = round(item['game_info']['homeOdds'] * 1000) / 10
+                team_name = home_team["team_name"]
+                odds = round(home_team["odds"] * 1000) / 10
                 upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
 
         if len(upset_msg) > 0:
             embed_fields.append({"name": "Upset Watch",
                                  "value": upset_msg})
 
-        return message, embed_fields, output
+        output_msg = f"Day {day+1}\n"
+        sorted_results = {k: v for k, v in
+                          sorted(results.items(), key=lambda item: item[1]["odds"], reverse=True)}
+        for item in sorted_results.values():
+            msg = ""
+            home_team, away_team = item["home_team"], item["away_team"]
+            if item["upset"]:
+                msg += "‼️ "
+            elif item["win_percentage"] / 100 > item["odds"]:
+                msg += "✅ "
+            else:
+                msg += "⚠️ "
+            home_odds = round(home_team["odds"] * 1000) / 10
+            away_odds = round(away_team["odds"] * 1000) / 10
+
+            if home_team["win_percentage"] > away_team["win_percentage"]:
+                home_str = f" - **{home_team['team_name']}** sim: {home_team['win_percentage']}% odds: {home_odds}"
+                away_str = f"{away_team['team_name']} sim: {away_team['win_percentage']}% odds: {away_odds}"
+            else:
+                home_str = f" - {home_team['team_name']} sim: {home_team['win_percentage']}% odds: {home_odds}"
+                away_str = f"**{away_team['team_name']}** sim: {away_team['win_percentage']}% odds: {away_odds}"
+            msg += f"{away_str}{home_str}\n"
+            output_msg += msg
+
+        return message, embed_fields, output_msg
 
     async def _run_daily_sim(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
