@@ -96,15 +96,15 @@ try:
     event_loop.run_until_complete(Watcher.start(config['bot_token']))
 except discord.LoginFailure:
     logger.critical('Invalid token')
-    event_loop.run_until_complete(Watcher.logout())
+    event_loop.run_until_complete(Watcher.close())
     Watcher._shutdown_mode = 0
 except KeyboardInterrupt:
     logger.info('Keyboard interrupt detected. Quitting...')
-    event_loop.run_until_complete(Watcher.logout())
+    event_loop.run_until_complete(Watcher.close())
     Watcher._shutdown_mode = 0
 except Exception as e:
     logger.critical('Fatal exception', exc_info=e)
-    event_loop.run_until_complete(Watcher.logout())
+    event_loop.run_until_complete(Watcher.close())
 finally:
     pass
 try:

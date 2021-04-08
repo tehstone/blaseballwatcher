@@ -6,7 +6,7 @@ def initialize(db):
         c = conn.cursor()
         c.execute("""CREATE TABLE IF NOT EXISTS hitterstatstable (
                                                 id INTEGER NOT NULL PRIMARY KEY, 
-                                                player_id INTEGER NOT NULL,
+                                                player_id TEXT NOT NULL,
                                                 day INTEGER NOT NULL, 
                                                 hits INTEGER NOT NULL, 
                                                 home_runs INTEGER NOT NULL,
@@ -80,6 +80,23 @@ def initialize(db):
                                 perfectGame	boolean,
                                 PRIMARY KEY(id)
                             );""")
+        c.execute("""CREATE TABLE IF NOT EXISTS DailyGameResultsTable (
+                                                id	INTEGER NOT NULL PRIMARY KEY,
+                                                season	INTEGER NOT NULL,
+                                                day	INTEGER NOT NULL,
+                                                gameid	TEXT NOT NULL,
+                                                hometeamid	TEXT NOT NULL,
+                                                hometeamodds	REAL NOT NULL,
+                                                hometeamshutoutpercentage	REAL NOT NULL,
+                                                hometeamwin	BOOLEAN NOT NULL,
+                                                hometeamwinpercentage	REAL NOT NULL,
+                                                awayteamid	TEXT NOT NULL,
+                                                awayteamodds	REAL NOT NULL,
+                                                awayteamshutoutpercentage	REAL NOT NULL,
+                                                awayteamwin	BOOLEAN NOT NULL,
+                                                awayteamwinpercentage	REAL NOT NULL,
+                                                upset	BOOLEAN NOT NULL,
+                                                weather	INTEGER NOT NULL);""")
         try:
             c.execute("ALTER TABLE DailyStatSheets ADD COLUMN homeRunsAllowed	INTEGER DEFAULT 0;")
         except Exception as e:

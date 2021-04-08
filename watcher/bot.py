@@ -223,6 +223,7 @@ class WatcherBot(commands.AutoShardedBot):
 
             betadvice_cog = self.cogs.get('BetAdvice')
             try:
+                await betadvice_cog.update_day_winners(current_season - 1, latest_day - 1)
                 self.logger.info(f"Starting daily sim. {time.time()}")
                 message, embed_fields, output = await betadvice_cog.daily_message(current_season-1, latest_day)
                 m_embed = discord.Embed(description=message)
