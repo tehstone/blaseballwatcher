@@ -522,8 +522,8 @@ class BetAdvice(commands.Cog):
 
     @commands.command()
     async def fill_daily_table(self, ctx):
-        for day in range(0, 59):
-            await self.update_day_winners(self, 14, day)
+        for day in range(0, 60):
+            await self.update_day_winners(14, day)
 
     async def check_game_sim_loop(self):
         while not self.bot.is_closed():
