@@ -90,6 +90,16 @@ class BetAdvice(commands.Cog):
             odds_sum += odds
         return odds_sum
 
+    @commands.command()
+    async def rds(self, ctx, day):
+        data = {"iterations": 500, "day": day}
+        async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
+            result = await response.json()
+        day, time_elapsed = result['day'], result["time_elapsed"]
+        with open(os.path.join('data', 'season_sim', 'results', f"s14_d{day}_sim_results.json"), 'w') as file:
+            json.dump(result, file)
+        print(f"ran 500 iter sim for day {day} in {time_elapsed} seconds")
+
     async def run_daily_sim(self, season, iterations):
         data = {"iterations": iterations}
         async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
@@ -122,26 +132,25 @@ class BetAdvice(commands.Cog):
                     day_data = html_response.json()
                     for game in day_data:
                         if game["homeScore"] > game["awayScore"]:
-                            winner = game["homeTeam"]
+                            day_results["data"][game["id"]]["home_team"]["win"] = True
                         else:
-                            winner = game["awayTeam"]
-                        day_results["data"][game["id"]]["teams"][winner]["win"] = True
-                        upset = day_results["data"][game["id"]]["teams"][game["homeTeam"]]["upset"] or \
-                            day_results["data"][game["id"]]["teams"][game["awayTeam"]]["upset"]
+                            day_results["data"][game["id"]]["away_team"]["win"] = True
+
+                        upset = day_results["data"][game["id"]]["upset"]
                         row = [
                             season,
                             day,
                             game["id"],
-                            game["homeTeam"],
-                            game["homeOdds"],
-                            day_results["data"][game["id"]]["teams"][game["homeTeam"]]["shutout_percentage"],
-                            day_results["data"][game["id"]]["teams"][game["homeTeam"]]["win"],
-                            day_results["data"][game["id"]]["teams"][game["homeTeam"]]["win_percentage"],
-                            game["awayTeam"],
-                            game["awayOdds"],
-                            day_results["data"][game["id"]]["teams"][game["awayTeam"]]["shutout_percentage"],
-                            day_results["data"][game["id"]]["teams"][game["awayTeam"]]["win"],
-                            day_results["data"][game["id"]]["teams"][game["awayTeam"]]["win_percentage"],
+                            day_results["data"][game["id"]]["home_team"]["team_id"],
+                            day_results["data"][game["id"]]["home_team"]["odds"],
+                            day_results["data"][game["id"]]["home_team"]["shutout_percentage"],
+                            day_results["data"][game["id"]]["home_team"]["win"],
+                            day_results["data"][game["id"]]["home_team"]["win_percentage"],
+                            day_results["data"][game["id"]]["away_team"]["team_id"],
+                            day_results["data"][game["id"]]["away_team"]["odds"],
+                            day_results["data"][game["id"]]["away_team"]["shutout_percentage"],
+                            day_results["data"][game["id"]]["away_team"]["win"],
+                            day_results["data"][game["id"]]["away_team"]["win_percentage"],
                             upset,
                             day_results["data"][game["id"]]["weather"],
                         ]

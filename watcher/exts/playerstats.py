@@ -25,8 +25,7 @@ class PlayerStats(commands.Cog):
         else:
             color = discord.Colour.from_rgb(255, 255, 255)
 
-        # todo make this dynamic
-        season = 13
+        season = self.bot.config['current_season'] - 1
         position = None
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select position "
