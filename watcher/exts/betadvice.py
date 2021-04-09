@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+from typing import Dict
 
 import aiosqlite
 from joblib import load
@@ -11,6 +12,33 @@ from discord.ext import commands
 
 from watcher import utils
 from watcher.exts import gamedata
+
+team_id_name_map: Dict[str, str] = {
+        "lovers": "b72f3061-f573-40d7-832a-5ad475bd7909",
+        "tacos": "878c1bf6-0d21-4659-bfee-916c8314d69c",
+        "steaks": "b024e975-1c4a-4575-8936-a3754a08806a",
+        "breath mints": "adc5b394-8f76-416d-9ce9-813706877b84",
+        "firefighters": "ca3f1c8c-c025-4d8e-8eef-5be6accbeb16",
+        "shoe thieves": "bfd38797-8404-4b38-8b82-341da28b1f83",
+        "flowers": "3f8bbb15-61c0-4e3f-8e4a-907a5fb1565e",
+        "fridays": "979aee4a-6d80-4863-bf1c-ee1a78e06024",
+        "magic": "7966eb04-efcc-499b-8f03-d13916330531",
+        "millennials": "36569151-a2fb-43c1-9df7-2df512424c82",
+        "crabs": "8d87c468-699a-47a8-b40d-cfb73a5660ad",
+        "spies": "9debc64f-74b7-4ae1-a4d6-fce0144b6ea5",
+        "pies": "23e4cbc1-e9cd-47fa-a35b-bfa06f726cb7",
+        "sunbeams": "f02aeae2-5e6a-4098-9842-02d2273f25c7",
+        "wild wings": "57ec08cc-0411-4643-b304-0e80dbc15ac7",
+        "tigers": "747b8e4a-7e50-4638-a973-ea7950a3e739",
+        "moist talkers": "eb67ae5e-c4bf-46ca-bbbc-425cd34182ff",
+        "dale": "b63be8c2-576a-4d6e-8daf-814f8bcea96f",
+        "garages": "105bc3ff-1320-4e37-8ef0-8d595cb95dd0",
+        "jazz hands": "a37f9158-7f82-46bc-908c-c9e2dda7c33b",
+        "lift": "c73b705c-40ad-4633-a6ed-d357ee2e2bcf",
+        "georgias": "d9f89a8a-c563-493e-9d64-78e4f9a55d4a",
+        "mechanics": "46358869-dce9-4a01-bfba-ac24fc56f57e",
+        "worms": "bb4a9de5-c924-4923-a0cb-9d1445f1ee5d",
+    }
 
 
 class BetAdvice(commands.Cog):
@@ -89,6 +117,60 @@ class BetAdvice(commands.Cog):
             odds *= plate_appearances / day
             odds_sum += odds
         return odds_sum
+
+    @commands.command(name='single_game_sim', aliases=['sgs'])
+    async def _single_game_sim(self, ctx, *, info):
+        """Usage: !single_game_sim <day>, <iterations>, <away team>, <home team> [, rerun]
+        Team names must be accurate for that day or the sim will run the actual game
+        for whichever team is found first. Optionally include 'true' at the end to rerun
+        a previously run sim."""
+        if ctx.message.author.id not in [329316904714108931, 371387628093833216]:
+            return await ctx.message.delete()
+        season = self.bot.config['current_season'] - 1
+        info_split = info.split(',')
+        day = int(info_split[0].strip())
+        if day < 0 or day > 98:
+            return await ctx.send(f"{day} is out of the range of a season (0-98)")
+        iterations = int(info_split[1].strip())
+        if iterations > 1000:
+            await ctx.send(f"{iterations} is too many, running 1000 iterations.")
+            iterations = 1000
+
+        away_team_name = info_split[2].strip()
+        home_team_name = info_split[3].strip()
+        away_team = team_id_name_map.get(away_team_name, None)
+        home_team = team_id_name_map.get(home_team_name, None)
+        if not away_team:
+            return await ctx.send(f"Could not find team: {away_team_name}")
+        if not home_team:
+            return await ctx.send(f"Could not find team: {home_team_name}")
+        rerun = False
+        if len(info_split) > 4:
+            rerun_str = info_split[4]
+            if rerun_str.strip().lower() == "true":
+                rerun = True
+        if not rerun:
+            filename = os.path.join('data', 'season_sim', 'results', 'singles',
+                                    f"s{season}_d{day}_{iterations}_{away_team_name}_{home_team_name}_sim_results.json")
+            if os.path.exists(filename):
+                with open(filename, 'r') as file:
+                    result = json.load(file)
+
+                debug_message = await self._create_debug_message(result['data'], day)
+                return await ctx.send(debug_message)
+
+        data = {"iterations": iterations, "day": day, "away_team": away_team, "home_team": home_team}
+        async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data,
+                                        timeout=1200) as response:
+            result = await response.json()
+        day, time_elapsed = result['day'], result["time_elapsed"]
+        debug_message = await self._create_debug_message(result['data'], day)
+        await ctx.send(debug_message)
+
+        with open(filename, 'w') as file:
+            json.dump(result, file)
+            print(f"ran {iterations} iter sim for day {day} {away_team_name} "
+                  f"at {home_team_name} in {time_elapsed} seconds")
 
     @commands.command()
     async def rds(self, ctx, day):
@@ -579,6 +661,20 @@ class BetAdvice(commands.Cog):
                 time_elapsed = await asyncio.wait_for(self.run_daily_sim(season, 501), 1200)
                 self.bot.logger.info(f"s{season}_d{day} sim results saved to file in {time_elapsed} seconds")
             await asyncio.sleep(60*15)
+
+    @commands.command(name="pitcher_names", aliases=['pn', 'pnames', 'pitchernames'])
+    async def _pitcher_names(self, ctx, day):
+        with open(os.path.join('data', 'season_sim', 'results', f"s{14}_d{day}_sim_results.json"), 'r') as file:
+            result = json.load(file)
+        msg = ""
+        for game in result["data"].values():
+            home_team, away_team = game["home_team"], game["away_team"]
+            home_pitcher = away_team["opp_pitcher"]["pitcher_name"]
+            away_pitcher = home_team["opp_pitcher"]["pitcher_name"]
+            home_name = home_team["team_name"]
+            away_name = away_team["team_name"]
+            msg += f"{home_name}: {home_pitcher} - {away_name}: {away_pitcher}\n"
+        await ctx.send(msg)
 
 
 def setup(bot):
