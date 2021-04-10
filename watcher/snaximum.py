@@ -297,6 +297,9 @@ class Snaximum:
         skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         for player in players:
             if player['player_id'] not in skip_players:# and player['player_id'] not in self.bot.deceased_players.keys():
+                if 'permAttr' in player:
+                    if 'REDACTED' in player['permAttr']:
+                        continue
                 if self.simulation_data["day"] < 97 or self.simulation_data["phase"] == 0:
                     self.player_map[player['player_id']] = player
                 else:
