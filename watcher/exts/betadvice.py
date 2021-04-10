@@ -223,7 +223,7 @@ class BetAdvice(commands.Cog):
         debug_message = await self._create_debug_message(result['data'], day)
         outputchan_id = self.bot.config['game_sim_output_chan_id']
         output_channel = self.bot.get_channel(outputchan_id)
-        if output_channel:
+        if output_channel and len(debug_message) > 15:
             await output_channel.send(debug_message)
         return time_elapsed
 
