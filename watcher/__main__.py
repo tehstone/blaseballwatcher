@@ -52,7 +52,7 @@ async def start_task_loops(bot):
         bot.tasks.append(event_loop.create_task(teams.check_teams_loop(bot)))
         bot.tasks.append(event_loop.create_task(players.check_players_loop(bot)))
         pendants_cog = bot.get_cog('Pendants')
-        event_loop.create_task(pendants_cog.check_remaining_teams(bot))
+        event_loop.create_task(pendants_cog.check_remaining_teams_loop(bot))
 
         betadvice_cog = bot.get_cog('BetAdvice')
         event_loop.create_task(betadvice_cog.check_game_sim_loop())
