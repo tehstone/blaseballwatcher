@@ -73,6 +73,18 @@ class BetAdvice(commands.Cog):
         self.bot = bot
         self.team_short_map = None
 
+    @commands.command(name="build_power_ranking_matchups", aliases=['bprm'])
+    async def build_power_ranking_matchups(self, ctx):
+        matchups = []
+        for team_name, team_id in team_id_name_map.items():
+            m = {"team_name": team_name, "team_id": team_id, "matches": []}
+            for __, o_team_id in team_id_name_map.items():
+                if o_team_id != team_id:
+                    m["matches"].append(o_team_id)
+            matchups.append(m)
+        with open(os.path.join('data', 'bprm', 'matches.json'), 'w') as file:
+            json.dump(matchups, file)
+
     async def get_short_map(self):
         if self.team_short_map:
             return self.team_short_map
@@ -203,15 +215,30 @@ class BetAdvice(commands.Cog):
             print(f"ran {iterations} iter sim for day {day} {away_team_name} "
                   f"at {home_team_name} in {time_elapsed} seconds")
 
-    @commands.command()
-    async def rds(self, ctx, day):
-        data = {"iterations": 500, "day": day}
-        async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
+    @commands.command(name="run_power_rank_sim", aliases=['rprs', 'power'])
+    async def _run_power_rank_sim(self, ctx, season, iterations):
+        data = {"iterations": iterations,
+                "season": season}
+        async with self.bot.session.get(url=f'http://localhost:5555/v1/powerrankings', json=data,
+                                        timeout=50000) as response:
             result = await response.json()
-        day, time_elapsed = result['day'], result["time_elapsed"]
-        with open(os.path.join('data', 'season_sim', 'results', f"s14_d{day}_sim_results.json"), 'w') as file:
-            json.dump(result, file)
-        print(f"ran 500 iter sim for day {day} in {time_elapsed} seconds")
+            await ctx.send(result["output"])
+
+    @commands.command()
+    async def rds(self, ctx):
+        for day in range(81, 99):
+            data = {"iterations": 501, "day": day}
+            async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
+                result = await response.json()
+            day, time_elapsed = result['day'], result["time_elapsed"]
+            with open(os.path.join('data', 'season_sim', 'results', f"s14_d{day}_sim_results_rerun.json"), 'w') as file:
+                json.dump(result, file)
+            output_msg = await self._create_debug_message(result['data'], day)
+            outputchan_id = self.bot.config['game_sim_output_chan_id']
+            output_channel = self.bot.get_channel(outputchan_id)
+            if output_channel:
+                await output_channel.send(output_msg)
+            print(f"ran 500 iter sim for day {day} in {time_elapsed} seconds")
 
     async def run_daily_sim(self, season, iterations):
         data = {"iterations": iterations}
@@ -674,7 +701,7 @@ class BetAdvice(commands.Cog):
 
     @commands.command()
     async def fill_daily_table(self, ctx):
-        for day in range(0, 60):
+        for day in range(81, 95):
             await self.update_day_winners(14, day)
 
     async def check_game_sim_loop(self):
@@ -712,6 +739,31 @@ class BetAdvice(commands.Cog):
             away_name = away_team["team_name"]
             msg += f"{home_name}: {home_pitcher} - {away_name}: {away_pitcher}\n"
         await ctx.send(msg)
+
+    async def run_single_bprm(self, team_id, o_team):
+        return {"team1": team_name_map[team_id], "team2": team_name_map[o_team]}
+
+    @commands.command(name="run_bprm")
+    async def _run_bprm(self, ctx):
+        results = {}
+        with open(os.path.join('data', 'bprm', 'matches.json'), 'r') as file:
+            matchups = json.load(file)
+        for team in matchups:
+            team_id = team["team_id"]
+            results[team_id] = {}
+            for o_team in team["matches"]:
+                already_run = False
+                results[team_id][o_team] = {}
+                if o_team in results:
+                    if team_id in results[o_team]:
+                        already_run = True
+                        results[team_id][o_team] = results[o_team][team_id]
+                if already_run:
+                    continue
+                result = await self.run_single_bprm(team_id, o_team)
+                results[team_id][o_team] = result
+        with open(os.path.join('data', 'bprm', 'results.json'), 'w') as file:
+            json.dump(results, file)
 
 
 def setup(bot):

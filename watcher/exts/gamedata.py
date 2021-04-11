@@ -212,6 +212,18 @@ class GameData(commands.Cog):
             day += 1
         with open(os.path.join("season_data", f"season{season+1}.json"), 'w') as json_file:
             json.dump(new_season_data, json_file)
+        first = os.path.join('..', 'gamesimsvc', 'season_sim', 'season_data', f"season{season+1}.json")
+        second = os.path.join('..', 'blaseballgamesim', 'season_sim', 'season_data', f"season{season + 1}.json")
+        success = False
+        if os.path.exists(first):
+            success = True
+            with open(first, 'w') as json_file:
+                json.dump(new_season_data, json_file)
+        elif os.path.exists(second):
+            success = True
+            with open(second, 'w') as json_file:
+                json.dump(new_season_data, json_file)
+        return success
 
     def base_season_parser(self, seasons, fill):
         schedule, teams, odds, weathers, flood_count = {}, {}, {}, {}, {}
@@ -885,9 +897,9 @@ class GameData(commands.Cog):
         await ctx.message.add_reaction("⏲️")
         current_season -= 1
         await self.save_json_range(current_season, fill)
-        await self._update_tiebreakers()
-        await self.update_spreadsheets([current_season], fill)
-        await ctx.message.add_reaction(self.bot.success_react)
+        # await self._update_tiebreakers()
+        # await self.update_spreadsheets([current_season], fill)
+        # await ctx.message.add_reaction(self.bot.success_react)
         await ctx.send("Spreadsheets updated.")
 
     @commands.command(name="anc")
@@ -1055,9 +1067,16 @@ class GameData(commands.Cog):
                             self.bot.tasks.pop(t)
                             task.cancel()
                     self.bot.config['check_for_new_schedules'] = False
-                    await self.save_json_range(season, True)
+                    success = await self.save_json_range(season, True)
                     await self.update_spreadsheets(season, True)
                     await self._update_tiebreakers()
+                    if success:
+                        data = {"iterations": 500,
+                                "season": season,
+                                "seg_size": 3}
+                        async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
+                                                        timeout=50000) as response:
+                            result = await response.json()
                     break
 
             await asyncio.sleep(120)
