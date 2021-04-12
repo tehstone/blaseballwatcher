@@ -900,15 +900,15 @@ class GameData(commands.Cog):
     async def _update_spreadsheets(self, ctx, current_season: int, fill: bool = False):
         await ctx.message.add_reaction("⏲️")
         current_season -= 1
-        # await self.save_json_range(current_season, fill)
-        # await self._update_tiebreakers()
-        # await self.update_spreadsheets([current_season], fill)
-        data = {"iterations": 500,
-                "season": current_season,
-                "seg_size": 3}
-        async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
-                                        timeout=75000) as response:
-            result = await response.json()
+        await self.save_json_range(current_season, fill)
+        await self._update_tiebreakers()
+        await self.update_spreadsheets([current_season], fill)
+        # data = {"iterations": 500,
+        #         "season": current_season,
+        #         "seg_size": 3}
+        # async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
+        #                                 timeout=75000) as response:
+        #     result = await response.json()
         await ctx.message.add_reaction(self.bot.success_react)
         await ctx.send("Spreadsheets updated.")
 
