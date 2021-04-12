@@ -364,14 +364,16 @@ class BetAdvice(commands.Cog):
         embed_fields = []
 
         team_short_map = await self.get_short_map()
-        daily_leaders = None
-        f_day = day+1
-        while daily_leaders == None:
-            try:
-                with open(os.path.join('data', 'pendant_data', 'statsheets', f'd{f_day}_leaders.json'), 'r') as file:
-                    daily_leaders = json.load(file)
-            except FileNotFoundError:
-                f_day -= 1
+        # daily_leaders = None
+        # f_day = day+1
+        # while daily_leaders == None:
+        #     try:
+        #         with open(os.path.join('data', 'pendant_data', 'statsheets', f'd{f_day}_leaders.json'), 'r') as file:
+        #             daily_leaders = json.load(file)
+        #     except FileNotFoundError:
+        #         f_day -= 1
+        #     if f_day < 0:
+        #         break
 
         # hitter_list = []
         # for player in daily_leaders["seed_dog"][:3]:
