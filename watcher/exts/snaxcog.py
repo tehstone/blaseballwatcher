@@ -399,13 +399,18 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name='optimize', aliases=['optimise', 'opt'])
     @checks.allow_snax_commands()
-    async def _optimize(self, ctx):
+    async def _optimize(self, ctx, player="aldon"):
         snaxfolio = await self._get_user_snax(ctx.author.id)
-        results = self.snaximum_instance.calc_optimal(snaxfolio)
+        results = self.snaximum_instance.calc_optimal(snaxfolio, player)
         sorted_results = {k: v for k, v in sorted(results.items(),
                                                   key=lambda item: item[1]["payout"], reverse=True)}
         embed = discord.Embed(title=f"Snaxfolio optimization for {ctx.author.display_name}")
-        embed.description = "The list below ranks your optimal snack loadouts, indicating slots filled, total " \
+        if player == "york":
+            player_str = "York Silk"
+        else:
+            player_str = "Aldon Cashmoney"
+        embed.description = f"The list below ranks your optimal snack loadouts with **{player_str}** as your idol," \
+                            f"indicating slots filled, total " \
                             "estimated coins, percentage of most optimal, and the snacks to hold per loadout. " \
                             "\nWhile fewer slots may achieve a higher total profit it is more risky as you increase " \
                             "the chances of a single event invalidating your strategy."

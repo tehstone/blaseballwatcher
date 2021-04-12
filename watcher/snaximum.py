@@ -391,13 +391,10 @@ class Snaximum:
         payout['total'] = sum(payout.values())
         return payout
 
-    def calc_optimal(self, snaxfolio: Snaxfolio):
+    def calc_optimal(self, snaxfolio: Snaxfolio, player: str="aldon"):
         snaxfolio = self.mksnax(snaxfolio)
         payouts = {
-            # york
-            # "seeds": 2 * self.get_payout('seeds', snaxfolio['seeds']) * 85,
-            # "hot_dog": 2 * self.get_payout('hot_dog', snaxfolio['hot_dog']) * 30,
-            # "pickles":  2 * self.get_payout('pickles', snaxfolio['pickles']) * 6,
+            #aldon
             "seeds": self.get_payout('seeds', snaxfolio['seeds']) * 100,
             "hot_dog": self.get_payout('hot_dog', snaxfolio['hot_dog']) * 36,
             "pickles": self.get_payout('pickles', snaxfolio['pickles']) * 47,
@@ -407,6 +404,12 @@ class Snaximum:
             "sundae": self.get_payout('sundae', snaxfolio['sundae']) * 7,
             "snake_oil": .67 * 436672
         }
+
+        if player == "york":
+            # york
+            payouts["seeds"] = 2 * self.get_payout('seeds', snaxfolio['seeds']) * 85
+            payouts["hot_dog"] = 2 * self.get_payout('hot_dog', snaxfolio['hot_dog']) * 30
+            payouts["pickles"] = 2 * self.get_payout('pickles', snaxfolio['pickles']) * 6
 
         results = {
             1: {"payout": 0, "items": []},
