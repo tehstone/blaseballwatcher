@@ -352,6 +352,12 @@ class GameData(commands.Cog):
             return "Swept Elsewhere"
         if "returned from elsewhere" in outcome.lower():
             return "Returned from Elsewhere"
+        if "attack" in outcome.lower() and "defends" in outcome.lower() and "breaks" in outcome.lower():
+            return "Defend/Break"
+        if "consumers attack" in outcome.lower():
+            return "CONSUMERS"
+        if "bat broke" in outcome.lower():
+            return "Broken Bat"
 
     async def update_spreadsheets(self, seasons, fill=False):
         agc = await self.bot.authorize_agcm()
@@ -589,7 +595,7 @@ class GameData(commands.Cog):
                         outcome_type = self.get_outcome_type(outcome)
                         if outcome_type in weather_occurrences:
                             weather_occurrences[outcome_type] += 1
-                        orows.append([day+1, outcome.strip()])
+                        orows.append([day+1, outcome.strip().replace('\n', ' ')])
                         otypes.append([outcome_type])
             o_worksheet = await sheet.worksheet("Blaseball")
 
@@ -894,9 +900,15 @@ class GameData(commands.Cog):
     async def _update_spreadsheets(self, ctx, current_season: int, fill: bool = False):
         await ctx.message.add_reaction("⏲️")
         current_season -= 1
-        await self.save_json_range(current_season, fill)
-        await self._update_tiebreakers()
-        await self.update_spreadsheets([current_season], fill)
+        # await self.save_json_range(current_season, fill)
+        # await self._update_tiebreakers()
+        # await self.update_spreadsheets([current_season], fill)
+        data = {"iterations": 500,
+                "season": current_season,
+                "seg_size": 3}
+        async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
+                                        timeout=75000) as response:
+            result = await response.json()
         await ctx.message.add_reaction(self.bot.success_react)
         await ctx.send("Spreadsheets updated.")
 
