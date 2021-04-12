@@ -560,11 +560,9 @@ class GameData(commands.Cog):
                         mrows.append(row)
                         j += 1
 
-                    k = 13 - len(mrows)
-                    for m in range(k):
-                        mrows.append(['', '', '', '', '', '', ''])
+
                     await m_worksheet.batch_update([{
-                        'range': f"A{3}:G{15}",
+                        'range': f"A{3}:G{j}",
                         'values': mrows
                     }])
 
@@ -897,9 +895,9 @@ class GameData(commands.Cog):
         await ctx.message.add_reaction("⏲️")
         current_season -= 1
         await self.save_json_range(current_season, fill)
-        # await self._update_tiebreakers()
-        # await self.update_spreadsheets([current_season], fill)
-        # await ctx.message.add_reaction(self.bot.success_react)
+        await self._update_tiebreakers()
+        await self.update_spreadsheets([current_season], fill)
+        await ctx.message.add_reaction(self.bot.success_react)
         await ctx.send("Spreadsheets updated.")
 
     @commands.command(name="anc")
@@ -1075,7 +1073,7 @@ class GameData(commands.Cog):
                                 "season": season,
                                 "seg_size": 3}
                         async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
-                                                        timeout=50000) as response:
+                                                        timeout=75000) as response:
                             result = await response.json()
                     break
 
