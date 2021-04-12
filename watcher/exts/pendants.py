@@ -321,7 +321,7 @@ class Pendants(commands.Cog):
                                       "where season=? and day=?;", (current_season, last_day)) as cursor:
                     async for row in cursor:
                         players[row[0]] = PlayerStatSheetsInstance(*row)
-            daily_message = [f"**Daily leaders for Day {last_day}**\n"]
+            daily_message = [f"**Daily leaders for Day {last_day+1}**\n"]
             daily_message_two = ""
             sorted_hits = {k: v for k, v in sorted(players.items(), key=lambda item: item[1].hits, reverse=True)}
             sorted_homeruns = {k: v for k, v in
