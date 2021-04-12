@@ -702,9 +702,9 @@ class BetAdvice(commands.Cog):
                 await bet_msg.publish()
 
     @commands.command()
-    async def fill_daily_table(self, ctx):
-        for day in range(81, 95):
-            await self.update_day_winners(14, day)
+    async def fill_daily_table(self, ctx, season, start, end):
+        for day in range(start, end+1):
+            await self.update_day_winners(season, day)
 
     async def check_game_sim_loop(self):
         while not self.bot.is_closed():
@@ -742,31 +742,6 @@ class BetAdvice(commands.Cog):
             away_name = away_team["team_name"]
             msg += f"{home_name}: {home_pitcher} - {away_name}: {away_pitcher}\n"
         await ctx.send(msg)
-
-    async def run_single_bprm(self, team_id, o_team):
-        return {"team1": team_name_map[team_id], "team2": team_name_map[o_team]}
-
-    @commands.command(name="run_bprm")
-    async def _run_bprm(self, ctx):
-        results = {}
-        with open(os.path.join('data', 'bprm', 'matches.json'), 'r') as file:
-            matchups = json.load(file)
-        for team in matchups:
-            team_id = team["team_id"]
-            results[team_id] = {}
-            for o_team in team["matches"]:
-                already_run = False
-                results[team_id][o_team] = {}
-                if o_team in results:
-                    if team_id in results[o_team]:
-                        already_run = True
-                        results[team_id][o_team] = results[o_team][team_id]
-                if already_run:
-                    continue
-                result = await self.run_single_bprm(team_id, o_team)
-                results[team_id][o_team] = result
-        with open(os.path.join('data', 'bprm', 'results.json'), 'w') as file:
-            json.dump(results, file)
 
 
 def setup(bot):

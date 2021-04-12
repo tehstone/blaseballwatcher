@@ -16,8 +16,8 @@ import discord
 from discord.ext import commands
 
 default_exts = ['admincommands', 'betadvice', 'gamedata', 'gamesim', 'helpcommand',
-                'jsonwatcher', 'pendants', 'playerdata', 'playerstats', 'ruleswatcher', 'snaxcog',
-                'teamlookups', 'winexp', 'wordreactor']
+                'jsonwatcher', 'pendants', 'playerdata', 'playerstats', 'ruleswatcher', 'seasonsim',
+                'snaxcog', 'teamlookups', 'winexp', 'wordreactor']
 
 
 def _prefix_callable(bot, msg):
