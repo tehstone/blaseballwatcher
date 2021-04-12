@@ -721,9 +721,10 @@ class BetAdvice(commands.Cog):
                     if 'data' in maybe_data:
                         if len(maybe_data['data']) > 0:
                             done = True
-                if not done:
-                    time_elapsed = await asyncio.wait_for(self.run_daily_sim(season, 501), 1200)
-                    self.bot.logger.info(f"s{season}_d{day} sim results saved to file in {time_elapsed} seconds")
+            if not done:
+                self.bot.logger.info("No game sim run found, starting now")
+                time_elapsed = await asyncio.wait_for(self.run_daily_sim(season, 501), 1200)
+                self.bot.logger.info(f"s{season}_d{day} sim results saved to file in {time_elapsed} seconds")
             await asyncio.sleep(60*15)
 
     @commands.command(name="pitcher_names", aliases=['pn', 'pnames', 'pitchernames'])

@@ -704,7 +704,7 @@ class Pendants(commands.Cog):
                         }
         return hitters, pitchers
 
-    async def update_leaders_sheet(self, season, day, ps_teams_updated):
+    async def update_leaders_sheet(self, season, day):
         season -= 1
         agc = await self.bot.authorize_agcm()
         if self.bot.config['live_version'] == True:
@@ -720,7 +720,7 @@ class Pendants(commands.Cog):
         hitters, pitcher_dict = await self.compile_stats(season)
 
         sorted_combo_payouts, sorted_sickle_payouts, sorted_seed_dog_payouts\
-            = self.save_daily_top_hitters(hitters, day, ps_teams_updated)
+            = self.save_daily_top_hitters(hitters, day)
         rows = []
         team_short_map = await self.get_short_map()
         for i in range(1, 6):
@@ -965,9 +965,9 @@ class Pendants(commands.Cog):
         else:
             await asyncio.sleep(60 * 2)
 
-    def save_daily_top_hitters(self, hitters, day, ps_teams_updated):
+    def save_daily_top_hitters(self, hitters, day):
         # need to put in logic for playoffs here
-        if ps_teams_updated == True:
+        if day >= 98:
             team_list = self.bot.playoff_teams
         else:
             team_list = self.load_remaining_teams()

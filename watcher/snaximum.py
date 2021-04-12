@@ -297,8 +297,8 @@ class Snaximum:
         skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
         for player in players:
             if player['player_id'] not in skip_players:# and player['player_id'] not in self.bot.deceased_players.keys():
-                if 'permAttr' in player:
-                    if 'REDACTED' in player['permAttr']:
+                if 'current_state' in player:
+                    if player['current_state'] == 'redacted':
                         continue
                 if self.simulation_data["day"] < 97 or self.simulation_data["phase"] == 0:
                     self.player_map[player['player_id']] = player
@@ -394,13 +394,17 @@ class Snaximum:
     def calc_optimal(self, snaxfolio: Snaxfolio):
         snaxfolio = self.mksnax(snaxfolio)
         payouts = {
-            "seeds": 2 * self.get_payout('seeds', snaxfolio['seeds']) * 90,
-            "hot_dog": 2 * self.get_payout('hot_dog', snaxfolio['hot_dog']) * 30,
-            "pickles":  2 * self.get_payout('pickles', snaxfolio['pickles']) * 42,
-            "slushies": self.get_payout('slushies', snaxfolio['slushies']) * 250,
-            "wet_pretzel": self.get_payout('wet_pretzel', snaxfolio['wet_pretzel']) * 8,
-            "doughnut": self.get_payout('doughnut', snaxfolio['doughnut']) * 10,
-            "sundae": self.get_payout('sundae', snaxfolio['sundae']) * 2,
+            # york
+            # "seeds": 2 * self.get_payout('seeds', snaxfolio['seeds']) * 85,
+            # "hot_dog": 2 * self.get_payout('hot_dog', snaxfolio['hot_dog']) * 30,
+            # "pickles":  2 * self.get_payout('pickles', snaxfolio['pickles']) * 6,
+            "seeds": self.get_payout('seeds', snaxfolio['seeds']) * 100,
+            "hot_dog": self.get_payout('hot_dog', snaxfolio['hot_dog']) * 36,
+            "pickles": self.get_payout('pickles', snaxfolio['pickles']) * 47,
+            "slushies": self.get_payout('slushies', snaxfolio['slushies']) * 228,
+            "wet_pretzel": self.get_payout('wet_pretzel', snaxfolio['wet_pretzel']) * 14,
+            "doughnut": self.get_payout('doughnut', snaxfolio['doughnut']) * 8,
+            "sundae": self.get_payout('sundae', snaxfolio['sundae']) * 7,
             "snake_oil": .67 * 436672
         }
 
