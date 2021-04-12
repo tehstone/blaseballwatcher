@@ -967,10 +967,10 @@ class Pendants(commands.Cog):
 
     def save_daily_top_hitters(self, hitters, day):
         # need to put in logic for playoffs here
-        if day >= 98:
-            team_list = self.bot.playoff_teams
-        else:
-            team_list = self.load_remaining_teams()
+        # if day >= 98:
+        #     team_list = self.bot.playoff_teams
+        # else:
+        #     team_list = self.load_remaining_teams()
 
         # sorted_hits = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['hitsMinusHrs'],
         #                                        reverse=True) if v['teamId'] in team_list}
@@ -1037,7 +1037,7 @@ class Pendants(commands.Cog):
     async def _update_pendants(self, ctx, season: int):
         await ctx.message.add_reaction("⏲️")
         latest_day = await self.get_latest_pendant_data(season)
-        await self.update_leaders_sheet(season, latest_day, True)
+        await self.update_leaders_sheet(season, latest_day)
         await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(aliases=['sld'])
