@@ -529,13 +529,13 @@ class BetAdvice(commands.Cog):
         for item in sorted_results.values():
             win_per = item["win_percentage"]
             home_team, away_team = item["home_team"], item["away_team"]
-            if home_team["odds"] > away_team["odds"]:
-                team_name = away_team["team_name"]
-                odds = round(away_team["odds"] * 1000) / 10
-                upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
-            else:
+            if home_team["win_percentage"] > away_team["win_percentage"]:
                 team_name = home_team["team_name"]
                 odds = round(home_team["odds"] * 1000) / 10
+                upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
+            else:
+                team_name = away_team["team_name"]
+                odds = round(away_team["odds"] * 1000) / 10
                 upset_msg += f"{team_name} ({odds}% odds) - {win_per}% sim wins\n"
 
         if len(upset_msg) > 0:
