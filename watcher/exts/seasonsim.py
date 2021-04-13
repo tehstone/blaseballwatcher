@@ -8,7 +8,7 @@ class SeasonSim(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def run_season_sim(self, ctx, season, iterations, start, end, run=True, file_id=None):
+    async def run_season_sim(self, ctx, season: int, iterations: int, start: int, end: int, run=True, file_id=None):
         if run:
             if not file_id:
                 file_id = str(round(time.time()))
