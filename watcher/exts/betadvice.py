@@ -225,20 +225,19 @@ class BetAdvice(commands.Cog):
             await ctx.send(result["output"])
 
     @commands.command()
-    async def rds(self, ctx):
-        for day in range(81, 99):
-            data = {"iterations": 501, "day": day}
-            async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
-                result = await response.json()
-            day, time_elapsed = result['day'], result["time_elapsed"]
-            with open(os.path.join('data', 'season_sim', 'results', f"s14_d{day}_sim_results_rerun.json"), 'w') as file:
-                json.dump(result, file)
-            output_msg = await self._create_debug_message(result['data'], day)
-            outputchan_id = self.bot.config['game_sim_output_chan_id']
-            output_channel = self.bot.get_channel(outputchan_id)
-            if output_channel:
-                await output_channel.send(output_msg)
-            print(f"ran 500 iter sim for day {day} in {time_elapsed} seconds")
+    async def rds(self, ctx, day: int):
+        data = {"iterations": 501, "day": day}
+        async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
+            result = await response.json()
+        day, time_elapsed = result['day'], result["time_elapsed"]
+        with open(os.path.join('data', 'season_sim', 'results', f"s15_d{day}_sim_results_rerun.json"), 'w') as file:
+            json.dump(result, file)
+        output_msg = await self._create_debug_message(result['data'], day)
+        outputchan_id = self.bot.config['game_sim_output_chan_id']
+        output_channel = self.bot.get_channel(outputchan_id)
+        if output_channel:
+            await output_channel.send(output_msg)
+        print(f"ran 501 iter sim for day {day} in {time_elapsed} seconds")
 
     async def run_daily_sim(self, season, iterations):
         data = {"iterations": iterations}
