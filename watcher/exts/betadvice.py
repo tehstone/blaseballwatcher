@@ -255,6 +255,7 @@ class BetAdvice(commands.Cog):
         return time_elapsed
 
     async def update_day_winners(self, season, day):
+        upset_wins, upset_losses = 0, 0
         try:
             filepath = os.path.join('data', 'season_sim', 'results', f"s{season}_d{day}_sim_results.json")
             if os.path.exists(filepath):
@@ -266,12 +267,24 @@ class BetAdvice(commands.Cog):
                 if html_response:
                     day_data = html_response.json()
                     for game in day_data:
+                        upset = day_results["data"][game["id"]]["upset"]
                         if game["homeScore"] > game["awayScore"]:
                             day_results["data"][game["id"]]["home_team"]["win"] = True
+                            if upset:
+                                if day_results["data"][game["id"]]["home_team"]["win_percentage"] > \
+                                        day_results["data"][game["id"]]["away_team"]["win_percentage"]:
+                                    upset_wins += 1
+                                else:
+                                    upset_losses += 1
                         else:
                             day_results["data"][game["id"]]["away_team"]["win"] = True
+                            if upset:
+                                if day_results["data"][game["id"]]["away_team"]["win_percentage"] > \
+                                        day_results["data"][game["id"]]["home_team"]["win_percentage"]:
+                                    upset_wins += 1
+                                else:
+                                    upset_losses += 1
 
-                        upset = day_results["data"][game["id"]]["upset"]
                         row = [
                             season,
                             day,
@@ -301,6 +314,7 @@ class BetAdvice(commands.Cog):
                     await db.commit()
         except Exception as e:
             print(e)
+        return upset_wins, upset_losses
 
     async def daily_message(self, season, day):
         with open(os.path.join('data', 'season_sim', 'results', f"s{season}_d{day}_sim_results.json"), 'r') as file:
