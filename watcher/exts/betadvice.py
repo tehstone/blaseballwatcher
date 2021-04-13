@@ -712,7 +712,7 @@ class BetAdvice(commands.Cog):
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select day, gameid, hometeamid, hometeamodds, hometeamwin, hometeamwinpercentage, "
                                   "awayteamid, awayteamodds, awayteamwin, awayteamwinpercentage, upset, weather "
-                                  "from dailygameresultstable where season=?;", [season]) as cursor:
+                                  "from dailygameresultstable where season=? order by day;", [season]) as cursor:
                 async for row in cursor:
                     gameresult_rows.append(row)
         fieldnames = ["day", "game_id", "home_team_id", "home_team_odds", "home_team_win",

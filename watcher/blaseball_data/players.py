@@ -57,6 +57,7 @@ async def update_player_cache(bot):
             combined_stars = stars * 5
             bot.player_cache[player["name"]] = player
             bot.player_names[player["name"].lower()] = player["id"]
+            bot.player_id_to_name[player["id"]] = player["name"]
             if player_positions[player["id"]] in ["lineup", "rotation"]:
                 if player["leagueTeamId"] in team_map:
                     league = team_map[player["leagueTeamId"]]["league"]
@@ -80,6 +81,9 @@ async def update_player_cache(bot):
         json.dump(bot.player_team_map, json_file)
     with open(os.path.join("data", "api_cache", "deceased_players.json"), 'w', encoding='utf-8') as json_file:
         json.dump(bot.deceased_players, json_file)
+    with open(os.path.join("data", "api_cache", "player_id_to_name.json"), 'w', encoding='utf-8') as json_file:
+        json.dump(bot.player_id_to_name, json_file)
+
     async with aiosqlite.connect(bot.db_path) as db:
         await db.execute("DELETE FROM PlayerLeagueAndStars;")
         await db.executemany("insert into PlayerLeagueAndStars (player_id, player_name, combined_stars, "

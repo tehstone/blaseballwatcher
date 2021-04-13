@@ -38,7 +38,21 @@ class SeasonSim(commands.Cog):
             if team in self.bot.team_cache:
                 output_msg += f'{self.bot.team_cache[team]["nickname"]}'
                 output_msg += f'\t{sorted_output[team]["wins"]} - {sorted_output[team]["losses"]}\n'
-        return await ctx.send(output_msg)
+        await ctx.send(output_msg)
+
+        player_stats = result["stats"]
+        sorted_hits = {k: v for k, v in sorted(player_stats.items(),
+                                               key=lambda item: item[1].get("Batter hits", 0),
+                                               reverse=True)}
+        hitter_msg = ""
+        top_hit_keys = list(sorted_hits.keys())[:10]
+        for pid in top_hit_keys:
+            if pid not in self.bot.player_id_to_name:
+                continue
+            name = self.bot.player_id_to_name[pid]
+            hitter_msg += f"{name}: {round(sorted_hits[pid]['Batter hits'])}\n"
+        await ctx.send(hitter_msg)
+
 
 def setup(bot):
     bot.add_cog(SeasonSim(bot))
