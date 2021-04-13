@@ -146,7 +146,7 @@ class RulesWatcher(commands.Cog):
                     with open(os.path.join("json_data", "script_text.js"), 'w', encoding='utf-8') as fd:
                         fd.write(script_text)
 
-        self.bot.logger.info(f"Current url: {js_url} Old url: {old_url}")
+        #self.bot.logger.info(f"Current url: {js_url} Old url: {old_url}")
         if not old_url:
             self.bot.config['last_js_url'] = js_url
         else:
