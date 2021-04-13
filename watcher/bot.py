@@ -249,7 +249,7 @@ class WatcherBot(commands.AutoShardedBot):
                     outputchan_id = self.config['game_sim_output_chan_id']
                     output_channel = self.get_channel(outputchan_id)
                     if output_channel:
-                        await output_channel.send(f"Day {latest_day+1} upset record: {upset_wins}-{upset_losses}")
+                        await output_channel.send(f"Day {latest_day} upset record: {upset_wins}-{upset_losses}")
             except Exception as e:
                 self.logger.warning(f"Failed to send pendant picks: {e}")
 
