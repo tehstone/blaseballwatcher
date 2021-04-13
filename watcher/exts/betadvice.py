@@ -702,7 +702,7 @@ class BetAdvice(commands.Cog):
                 await bet_msg.publish()
 
     @commands.command()
-    async def fill_daily_table(self, ctx, season, start, end):
+    async def fill_daily_table(self, ctx, season: int, start: int, end: int):
         for day in range(start, end+1):
             await self.update_day_winners(season, day)
 
