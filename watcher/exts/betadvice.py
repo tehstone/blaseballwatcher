@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import json
 import os
 from typing import Dict
@@ -704,6 +705,28 @@ class BetAdvice(commands.Cog):
     async def fill_daily_table(self, ctx, season: int, start: int, end: int):
         for day in range(start, end+1):
             await self.update_day_winners(season, day)
+
+    @commands.command(name="game_results_to_csv", aliases=['csv'])
+    async def _game_results_to_csv(self, ctx, season: int):
+        gameresult_rows = []
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select day, gameid, hometeamid, hometeamodds, hometeamwin, hometeamwinpercentage, "
+                                  "awayteamid, awayteamodds, awayteamwin, awayteamwinpercentage, upset, weather "
+                                  "from dailygameresultstable where season=?;", [season]) as cursor:
+                async for row in cursor:
+                    gameresult_rows.append(row)
+        fieldnames = ["day", "game_id", "home_team_id", "home_team_odds", "home_team_win",
+                      "home_team_sim_win_percentage", "away_team_id", "away_team_odds", "away_team_win",
+                      "away_team_sim_win_percentage", "sim_upset", "weather"]
+        filename = f"s{season}_simsim_gameresults.csv"
+        with open(os.path.join('data', 'season_sim', 'csv', filename), 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=fieldnames)
+            writer.writeheader()
+            for row in gameresult_rows:
+                rowdict = dict(zip(fieldnames, row))
+                writer.writerow(rowdict)
+        with open(os.path.join('data', 'season_sim', 'csv', filename), 'rb') as csvfile:
+            await ctx.send(file=discord.File(csvfile, filename=filename))
 
     async def check_game_sim_loop(self):
         while not self.bot.is_closed():
