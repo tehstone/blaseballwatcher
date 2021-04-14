@@ -612,8 +612,7 @@ class BetAdvice(commands.Cog):
         output_msg = await self._create_debug_message(results, day)
         return message, embed_fields, output_msg
 
-    @staticmethod
-    async def _create_debug_message(results, day):
+    async def _create_debug_message(self, results, day):
         output_msg = f"Day {day + 1}\n"
         sorted_results = {k: v for k, v in
                           sorted(results.items(), key=lambda item: item[1]["odds"], reverse=True)}
@@ -629,21 +628,43 @@ class BetAdvice(commands.Cog):
             home_odds = round(home_team["odds"] * 1000) / 10
             away_odds = round(away_team["odds"] * 1000) / 10
 
+            ev_raw = self._calculate_ev(home_team["odds"], home_team['win_percentage'],
+                                        away_team["odds"], away_team['win_percentage'])
+            ev_str = f"{round(ev_raw * 1000) / 10}%"
+
             if home_team["win_percentage"] > away_team["win_percentage"]:
                 diff = round((home_team['win_percentage'] - home_odds) * 100) / 100
                 diff_str = f"{diff}"
                 if diff >= 0:
                     diff_str = f"+{diff_str}"
-                pred_str = f"**{home_team['team_name']}** sim: {home_team['win_percentage']}% odds: {home_odds} **{diff_str}**"
+                pred_str = f"**{home_team['team_name']}** sim: {home_team['win_percentage']}% " \
+                           f"odds: {home_odds} **{diff_str}** EV: {ev_str}"
             else:
                 diff = round((away_team['win_percentage'] - away_odds) * 100) / 100
                 diff_str = f"{diff}"
                 if diff >= 0:
                     diff_str = f"+{diff_str}"
-                pred_str = f"**{away_team['team_name']}** sim: {away_team['win_percentage']}% odds: {away_odds} **{diff_str}**"
+                pred_str = f"**{away_team['team_name']}** sim: {away_team['win_percentage']}% " \
+                           f"odds: {away_odds} **{diff_str}** EV: {ev_str}"
             msg += f"{pred_str}\n"
             output_msg += msg
         return output_msg
+
+    @staticmethod
+    def _calculate_ev(home_odds, home_win_percentage, away_odds, away_win_percentage):
+        home_win_percentage /= 100
+        away_win_percentage /= 100
+        site_odds = home_odds if home_win_percentage > away_win_percentage else away_odds
+        winning_team_percentage = max(home_win_percentage, away_win_percentage)
+
+        if site_odds == 0.5:
+            payout_ratio = 2
+        elif site_odds < 0.5:
+            payout_ratio = 2 + 0.0015 * (100 * (0.5 - site_odds)) ** 2.2
+        else:
+            payout_ratio = 3.206 / (1 + (0.443 * (site_odds - 0.5)) ** 0.95) - 1.206
+
+        return (payout_ratio * winning_team_percentage) - 1
 
     async def _run_daily_sim(self):
         html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
