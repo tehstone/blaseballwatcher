@@ -186,6 +186,10 @@ class PlayerStats(commands.Cog):
     async def _equivalent_exchange(self, ctx, *, info):
         player_id = None
         info_split = info.split(",")
+        if len(info_split) <= 2:
+          return await ctx.send(f"Please include one of: baserunning, defense, pitching, hitting rating types.\n"
+                                  f"Command syntax: `!equivalent_exchange rating, player name, options`")
+        
         raw_rating = info_split[0]
         player_name = string.capwords(info_split[1].strip())
         # allows parsing of various keys to the bot
