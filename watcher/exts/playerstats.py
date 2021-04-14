@@ -189,7 +189,7 @@ class PlayerStats(commands.Cog):
         if len(info_split) <= 2:
           return await ctx.send(f"Please include one of: baserunning, defense, pitching, hitting rating types.\n"
                                   f"Command syntax: `!equivalent_exchange rating, player name, options`")
-        
+
         raw_rating = info_split[0]
         player_name = string.capwords(info_split[1].strip())
         # allows parsing of various keys to the bot
@@ -210,7 +210,7 @@ class PlayerStats(commands.Cog):
         if not player_id:
             return await ctx.send(f"Could not find player: {player_name}. Please check your spelling and try again.")
 
-        if len(info_split) >= 3:
+        if len(info_split) > 2:
           for opt in info_split[2:]:
             #Checks if option is one of the output options
             try:
