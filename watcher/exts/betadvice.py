@@ -534,11 +534,8 @@ class BetAdvice(commands.Cog):
             if home_team["win_percentage"] > away_team["win_percentage"]:
                 team_name = self.bot.team_names[home_team["team_id"]]
                 odds = round(home_team["odds"] * 1000) / 10
-                diff = round((home_team['win_percentage'] - odds) * 100) / 100
-                diff_str = f"{diff}"
-                if diff >= 0:
-                    diff_str = f"+{diff_str}"
-                upset_msg += f"{team_name} {odds}% odds - **{win_per}% sim** {diff_str}\n"
+
+                upset_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
             else:
                 team_name = self.bot.team_names[away_team["team_id"]]
                 odds = round(away_team["odds"] * 1000) / 10
@@ -546,7 +543,7 @@ class BetAdvice(commands.Cog):
                 diff_str = f"{diff}"
                 if diff >= 0:
                     diff_str = f"+{diff_str}"
-                upset_msg += f"{team_name} {odds}% odds - **{win_per}% sim** {diff_str}\n"
+                upset_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
 
         if len(upset_msg) > 0:
             embed_fields.append({"name": "SimSim's Spicy Picks",
@@ -562,19 +559,13 @@ class BetAdvice(commands.Cog):
             if home_team["win_percentage"] > away_team["win_percentage"]:
                 team_name = self.bot.team_names[home_team["team_id"]]
                 odds = round(home_team["odds"] * 1000) / 10
-                diff = round((home_team['win_percentage'] - odds) * 100) / 100
-                diff_str = f"{diff}"
-                if diff >= 0:
-                    diff_str = f"+{diff_str}"
-                close_msg += f"{team_name} {odds}% odds - **{win_per}% sim** {diff_str}\n"
+
+                close_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
             else:
                 team_name = self.bot.team_names[away_team["team_id"]]
                 odds = round(away_team["odds"] * 1000) / 10
-                diff = round((away_team['win_percentage'] - odds) * 100) / 100
-                diff_str = f"{diff}"
-                if diff >= 0:
-                    diff_str = f"+{diff_str}"
-                close_msg += f"{team_name} {odds}% odds - **{win_per}% sim** {diff_str}\n"
+
+                close_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
 
         if len(close_msg) > 0:
             embed_fields.append({"name": "Caveat Emptor",
