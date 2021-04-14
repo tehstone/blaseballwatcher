@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import os
 import csv
+import string
 
 class PlayerStats(commands.Cog):
     def __init__(self, bot):
@@ -186,10 +187,9 @@ class PlayerStats(commands.Cog):
         player_id = None
         info_split = info.split(",")
         raw_rating = info_split[0]
-        player_name = info_split[1].strip()
-        print("hi")
+        player_name = string.capwords(info_split[1].strip())
         # allows parsing of various keys to the bot
-        options = {"output": {"inline": 0, "csv": 1}, 
+        options_map = {"output": {"inline": 0, "csv": 1}, 
                    "sort": {"increasing": 'asc', "inc": 'asc', "asc": 'asc', "decreasing": 'desc', "dec": 'desc', 'desc': 'desc'}
                   }
         ouptut_format = 0 
@@ -209,14 +209,14 @@ class PlayerStats(commands.Cog):
         for opt in info_split[2:]:
           #Checks if option is one of the output options
           try:
-            ouptut_format = options["output"][opt.strip()]
+            ouptut_format = options_map["output"][opt.strip()]
             continue
           except:
             pass
 
           #Checks if option is one of the sort options
           try:
-            sort_dir = options["sort"][opt.strip()]
+            sort_dir = options_map["sort"][opt.strip()]
             continue 
           except:
             pass
@@ -240,8 +240,7 @@ class PlayerStats(commands.Cog):
             if self.bot.team_names[team].lower() == opt.strip().lower():
                 on_team = f"and team_id = '{team}'"
                 on_team_name = opt.capitalize()
-                on_team_name.capitalize()
-          
+
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select league, combined_stars from PlayerLeagueAndStars where "
                                   "player_id=?", [player_id]) as cursor:
@@ -263,7 +262,7 @@ class PlayerStats(commands.Cog):
             rating = rating_map[raw_rating]
         else:
             return await ctx.send(f"Please include one of: baserunning, defense, pitching, hitting rating types.\n"
-                                  f"Command syntax: `!equivalent_exchange rating, player name`")
+                                  f"Command syntax: `!equivalent_exchange rating, player name, options`")
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute(f"select player_id, player_name, combined_stars, team_id, team_name, {rating} "
                                   f"from playerleagueandstars where league = '{other_league}' and "
@@ -271,7 +270,7 @@ class PlayerStats(commands.Cog):
                                   f"group by player_id order by {rating} {sort_dir} {limit};") as cursor:
                 async for row in cursor:
                     other_players.append([row[0], row[1], row[2], row[3], row[4], row[5]])
-        team_caviat = f"on {on_team_name}" if on_team != '' else ''
+        team_caviat = f"on {string.capwords(on_team_name)}" if on_team != '' else ''
         if len(other_players) < 1:
             
             return await ctx.send(f"Could not find players within 2 stars of {player_name} {team_caviat}")
@@ -280,12 +279,12 @@ class PlayerStats(commands.Cog):
           if limit == '':
             filter_desc = "All players"
           elif sort_dir == 'asc':
-            filter_desc = f"Top {lim} players"
-          else:
             filter_desc = f"Bottom {lim} players"
+          else:
+            filter_desc = f"Top {lim} players"
 
 
-          response = f"{filter_desc} by {raw_rating} within 2 combined stars of **{player_name}**" \
+          response = f"{filter_desc} by {raw_rating} within 2 combined stars of **{player_name.title()}** " \
                      f"({p_stars}) in {other_league} League {team_caviat}\n\n"
           for player in other_players:
               o_player_name, team_name = player[1], player[4]
