@@ -1,7 +1,9 @@
 import aiosqlite
 import discord
 from discord.ext import commands
-
+import os
+import csv
+import string
 
 class PlayerStats(commands.Cog):
     def __init__(self, bot):
@@ -184,8 +186,33 @@ class PlayerStats(commands.Cog):
     async def _equivalent_exchange(self, ctx, *, info):
         player_id = None
         info_split = info.split(",")
+        if info_split[0].strip().lower() == "help":
+          return await ctx.send("""Command syntax: `!equivalent_exchange rating, player name, options`
+\t• `rating`: one of baserunning, defense, pitching, hitting as a sort order
+\t• `player name`: The player you are interested in
+\t• `options`: Include these terms seperated by a comma, order is not important
+\t\t ∙ output: `csv` or `inline` for how you want to output to be displayed (default: inline)
+\t\t ∙ limit: the number of results you want to show. Ignored for csv (default: 10)
+\t\t ∙ sort: `increasing` or `decreasing`, how the output should be sorted. (default: increasing)
+\t\t ∙ team: limits the search to just a particular team""")
+
+        if len(info_split) < 2:
+          return await ctx.send(f"Please include one of: baserunning, defense, pitching, hitting rating types and a player you are intersted in\n"
+                                f"Command syntax: `!equivalent_exchange rating, player name, options`")
+
         raw_rating = info_split[0]
-        player_name = info_split[1].strip()
+        player_name = string.capwords(info_split[1].strip())
+        # allows parsing of various keys to the bot
+        options_map = {"output": {"inline": 0, "csv": 1}, 
+                   "sort": {"increasing": 'asc', "inc": 'asc', "asc": 'asc', "decreasing": 'desc', "dec": 'desc', 'desc': 'desc'}
+                  }
+        output_format = 0 
+        sort_dir = 'desc'
+        on_team = ''
+        on_team_name = ''
+        limit = 'limit 10'
+        lim = 10
+
         if player_name in self.bot.player_cache:
             player_id = self.bot.player_cache[player_name]["id"]
         elif player_name.lower() in self.bot.player_names:
@@ -193,6 +220,40 @@ class PlayerStats(commands.Cog):
         if not player_id:
             return await ctx.send(f"Could not find player: {player_name}. Please check your spelling and try again.")
 
+        if len(info_split) > 2:
+          for opt in info_split[2:]:
+            #Checks if option is one of the output options
+            try:
+              output_format = options_map["output"][opt.strip()]
+              continue
+            except:
+              pass
+
+            #Checks if option is one of the sort options
+            try:
+              sort_dir = options_map["sort"][opt.strip()]
+              continue 
+            except:
+              pass
+
+            #Sets the limit on the search.
+            try:
+              lim = int(opt)
+              continue
+            except:
+              pass
+
+            # if all that fails check if its a team name
+            for team in self.bot.team_names:
+              if self.bot.team_names[team].lower() == opt.strip().lower():
+                  on_team = f"and team_id = '{team}'"
+                  on_team_name = opt.capitalize()
+
+        if output_format == 1:
+            limit = ""
+            lim = ""
+        elif lim > 0:
+          limit = f"limit {lim}" 
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select league, combined_stars from PlayerLeagueAndStars where "
                                   "player_id=?", [player_id]) as cursor:
@@ -214,26 +275,59 @@ class PlayerStats(commands.Cog):
             rating = rating_map[raw_rating]
         else:
             return await ctx.send(f"Please include one of: baserunning, defense, pitching, hitting rating types.\n"
-                                  f"Command syntax: `!equivalent_exchange rating, player name`")
+                                  f"Command syntax: `!equivalent_exchange rating, player name, options`")
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute(f"select player_id, player_name, combined_stars, team_id, team_name, {rating} "
                                   f"from playerleagueandstars where league = '{other_league}' and "
-                                  f"(combined_stars > {combined_stars}-2 and combined_stars < {combined_stars}+2) "
-                                  f"group by player_id order by {rating} desc limit 10;") as cursor:
+                                  f"(combined_stars > {combined_stars}-2 and combined_stars < {combined_stars}+2) {on_team}"
+                                  f"group by player_id order by {rating} {sort_dir} {limit};") as cursor:
                 async for row in cursor:
                     other_players.append([row[0], row[1], row[2], row[3], row[4], row[5]])
+        team_caviat = f"on {string.capwords(on_team_name)}" if on_team != '' else ''
+        restricted_output = ""
         if len(other_players) < 1:
-            return await ctx.send(f"Could not find players within 2 stars of {player_name}.")
+            return await ctx.send(f"Could not find players within 2 stars of {player_name} {team_caviat}")
+        elif len(other_players) > 10 and output_format == 0:
+          restricted_output = f"**Displaying 10 of {len(other_players)} results** get full output with option `csv`"
+          other_players = other_players[:10]
+
         p_stars = round((combined_stars * 100)) / 100
-        response = f"Top 10 players by {raw_rating} within 2 combined stars of **{player_name}** " \
-                   f"({p_stars}) in {other_league} League\n\n"
-        for player in other_players[:10]:
-            o_player_name, team_name = player[1], player[4]
-            stars = round((player[2] * 100)) / 100
-            rating_star = player[5] * 5
-            rating = round((rating_star * 100)) / 100
-            response += f"**{o_player_name}**: {stars} ({team_name}) - {rating}⭐ {raw_rating}\n"
-        return await ctx.send(response)
+        if output_format == 0:
+          if limit == '':
+            filter_desc = "All players"
+          elif sort_dir == 'asc':
+            filter_desc = f"Bottom {len(other_players)} players"
+          else:
+            filter_desc = f"Top {len(other_players)} players"
+
+
+          response = f"{filter_desc} by {raw_rating} within 2 combined stars of **{player_name.title()}** " \
+                     f"({p_stars}) in {other_league} League {team_caviat}\n\n"
+          for player in other_players:
+              o_player_name, team_name = player[1], player[4]
+              stars = round((player[2] * 100)) / 100
+              rating_star = player[5] * 5
+              rating = round((rating_star * 100)) / 100
+              response += f"**{o_player_name}**: {stars} ({team_name}) - {rating}⭐ {raw_rating}\n"
+          response += restricted_output
+          return await ctx.send(response)
+        else:
+          filename = f"{player_name}-{raw_rating}-equivilant-exchange.csv"
+          fieldnames = ["player", "combined_stars", "team_name", "rating"]
+          with open(os.path.join('data', 'equv', 'csv', filename), 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=fieldnames)
+            writer.writeheader()
+            for player in other_players:
+              o_player_name, team_name = player[1], player[4]
+              stars = round((player[2] * 100)) / 100
+              rating_star = player[5] * 5
+              rating = round((rating_star * 100)) / 100
+              writer.writerow({"player": o_player_name, "combined_stars": stars, "team_name": team_name, "rating": rating})
+
+          with open(os.path.join('data', 'equv', 'csv', filename), 'rb') as csvfile:
+            await ctx.send(file=discord.File(csvfile, filename=filename))
+          pass
+          # Returns CSV
 
 
 def setup(bot):
