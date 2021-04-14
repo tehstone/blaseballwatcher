@@ -192,7 +192,7 @@ class PlayerStats(commands.Cog):
         options_map = {"output": {"inline": 0, "csv": 1}, 
                    "sort": {"increasing": 'asc', "inc": 'asc', "asc": 'asc', "decreasing": 'desc', "dec": 'desc', 'desc': 'desc'}
                   }
-        ouptut_format = 0 
+        output_format = 0 
         sort_dir = 'desc'
         on_team = ''
         on_team_name = ''
@@ -206,41 +206,40 @@ class PlayerStats(commands.Cog):
         if not player_id:
             return await ctx.send(f"Could not find player: {player_name}. Please check your spelling and try again.")
 
-        for opt in info_split[2:]:
-          #Checks if option is one of the output options
-          try:
-            ouptut_format = options_map["output"][opt.strip()]
-            continue
-          except:
-            pass
+        if len(info_split) >= 3:
+          for opt in info_split[2:]:
+            #Checks if option is one of the output options
+            try:
+              output_format = options_map["output"][opt.strip()]
+              continue
+            except:
+              pass
 
-          #Checks if option is one of the sort options
-          try:
-            sort_dir = options_map["sort"][opt.strip()]
-            continue 
-          except:
-            pass
+            #Checks if option is one of the sort options
+            try:
+              sort_dir = options_map["sort"][opt.strip()]
+              continue 
+            except:
+              pass
 
-          #Sets the limit on the search.
-          try:
-            lim = int(opt)
-            if lim > 0:
-              limit = f"limit {lim}"
-            else:
-              limit = ""
-            continue
-          except:
-            pass
+            #Sets the limit on the search.
+            try:
+              lim = int(opt)
+              continue
+            except:
+              pass
 
-          if ouptut_format == 1:
+            # if all that fails check if its a team name
+            for team in self.bot.team_names:
+              if self.bot.team_names[team].lower() == opt.strip().lower():
+                  on_team = f"and team_id = '{team}'"
+                  on_team_name = opt.capitalize()
+
+        if output_format == 1:
             limit = ""
             lim = ""
-          # if all that fails check if its a team name
-          for team in self.bot.team_names:
-            if self.bot.team_names[team].lower() == opt.strip().lower():
-                on_team = f"and team_id = '{team}'"
-                on_team_name = opt.capitalize()
-
+        elif lim > 0:
+          limit = f"limit {lim}" 
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select league, combined_stars from PlayerLeagueAndStars where "
                                   "player_id=?", [player_id]) as cursor:
@@ -271,17 +270,21 @@ class PlayerStats(commands.Cog):
                 async for row in cursor:
                     other_players.append([row[0], row[1], row[2], row[3], row[4], row[5]])
         team_caviat = f"on {string.capwords(on_team_name)}" if on_team != '' else ''
+        restricted_output = ""
         if len(other_players) < 1:
-            
             return await ctx.send(f"Could not find players within 2 stars of {player_name} {team_caviat}")
+        elif len(other_players) > 10 and output_format == 0:
+          restricted_output = f"**Displaying 10 of {len(other_players)} results** get full output with option `csv`"
+          other_players = other_players[:10]
+
         p_stars = round((combined_stars * 100)) / 100
-        if ouptut_format == 0:
+        if output_format == 0:
           if limit == '':
             filter_desc = "All players"
           elif sort_dir == 'asc':
-            filter_desc = f"Bottom {lim} players"
+            filter_desc = f"Bottom {len(other_players)} players"
           else:
-            filter_desc = f"Top {lim} players"
+            filter_desc = f"Top {len(other_players)} players"
 
 
           response = f"{filter_desc} by {raw_rating} within 2 combined stars of **{player_name.title()}** " \
@@ -292,6 +295,7 @@ class PlayerStats(commands.Cog):
               rating_star = player[5] * 5
               rating = round((rating_star * 100)) / 100
               response += f"**{o_player_name}**: {stars} ({team_name}) - {rating}⭐ {raw_rating}\n"
+          response += restricted_output
           return await ctx.send(response)
         else:
           filename = f"{player_name}-{raw_rating}-equivilant-exchange.csv"
