@@ -56,25 +56,7 @@ class WatcherBot(commands.AutoShardedBot):
         self.initial_start = True
         self.watch_servers = [738107179294523402, 671866672562307091]
         self.off_topic_channels = [756667935728074754, 815745893315772426]
-        self.SPREADSHEET_IDS = {'season1': '1yvGP3DwIHC7NOsPIlSCMYKbrZp6Luvir2vRMvVfe4rg',
-                                'season2': '1LT2lE31Azx7iyT-KgHXrknUIXUVjr_WJ5iH7eYIWDmU',
-                                'season3': '1tGDP50yFYbYYrptcUB-735D75ZOTDxHHV-XC32wUFdc',
-                                'season4': '12Ue_hLxbnIefyw_JPrBsYq2cusMMq0ay9MqOJ8WCwvE',
-                                'season5': '1TUEM2RFYcZoNTukX205zwAxOyASmzaAenaBZGCBBKk8',
-                                'season6': '1-A9ioMPiG6SvuGG2BfZoB1W_mR44YoQVc_hUUIjorQA',
-                                'season7': '12OtIj2TOF7XuOCLl7fjy5Ho5A_yy0G95XpLE1euwgcc',
-                                'season8': '1Kl82vIqlNJByLnxlD241cSwokBUPCsCSAGsHZvDglV4',
-                                'season9': '112PR3GNXqGqOdhE-vnkeX0H-_LOycneHCw9RVgmoj3o',
-                                'season10': '1PM-0Ph2qk0bF8oo2Ir5mb6YsLH_6f451BtoejcYQbio',
-                                'season11': '1XwpooTCzeiLYuV7UlreLEXBvBIBISrLtOUbw1221Xw0',
-                                'season12': '1eqjTTUnKokuQyvxQtUkYATXPO8updy8iMNE8yRXIT84',
-                                'season13': '15H7A6oug4vTKOtKRaDXQpxS9NzNyCbkYcOWiCt9gi5o',
-                                'season14': '1ACuJjarKCpoZtxZM9ogsrrYsD7T0GKoWzOI2xcdKGlk',
-                                'season15': '1QZ6EhLSCa6C7HqUsIp71V-D97ithsOHqV1bcjSEOTsU',
-                                'season16': '1IaczlgWwOQoLK-irmeFFdQg3zh_CLxv3l90nrghqqD8',
-                                'seasontest': '1ojfPPpGp5aVDxF7egl-QM__NKIWLMXMKAgaR3kOpC_8'
-                                #'seasontest': '1eS-8UdJEautAS1sbna-ViPn1efCTYpaXwaber5ckqHA'
-                                }
+        self.SPREADSHEET_IDS = {}
         self.favor_rankings = self.config.setdefault('favor_rankings', {})
         self.daily_watch_message = self.config.setdefault('daily_watch_message', 'Go Bet!')
         self.check_for_games_complete = self.config.setdefault('check_for_games_complete', False)
@@ -106,6 +88,11 @@ class WatcherBot(commands.AutoShardedBot):
 
     def load_defaults(self):
         # todo add a scheduled check to update this
+        try:
+            with open(os.path.join("data", "spreadsheet_ids.json")) as json_file:
+                self.SPREADSHEET_IDS = json.load(json_file)
+        except FileNotFoundError:
+            pass
         try:
             with open(os.path.join("data", "divisions.json")) as json_file:
                 self.divisions = json.load(json_file)

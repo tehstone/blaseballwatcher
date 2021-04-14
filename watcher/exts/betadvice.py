@@ -328,21 +328,59 @@ class BetAdvice(commands.Cog):
 
         try:
             async with aiosqlite.connect(self.bot.db_path) as db:
-                async with db.execute("select count(*) from dailygameresultstable where "
-                                      "((hometeamodds > awayteamodds and hometeamwinpercentage < awayteamwinpercentage) or "
-                                      "(awayteamodds > hometeamodds and awayteamwinpercentage "
-                                      "< hometeamwinpercentage)) and season=?;", [season]) as cursor:
+                async with db.execute("select count(*) as correct_upsets from dailygameresultstable where "
+                                      "( "
+                                      "    (.495 < hometeamodds and hometeamodds < .505) and "
+                                      "        ( "
+                                      "            (hometeamwinpercentage > awayteamwinpercentage) or "
+                                      "            (awayteamwinpercentage > hometeamwinpercentage ) "
+                                      "        ) "
+                                      "    ) "
+                                      "or "
+                                      "( "
+                                      "    (hometeamwinpercentage > awayteamwinpercentage and "
+                                      "        ( "
+                                      "            (hometeamodds < .495 or hometeamodds > .505) and "
+                                      "            (hometeamodds < awayteamodds) "
+                                      "        ) "
+                                      "    ) "
+                                      "or "
+                                      "    (awayteamwinpercentage > hometeamwinpercentage and "
+                                      "        ( "
+                                      "            (hometeamodds < .495 or hometeamodds > .505) and "
+                                      "            (awayteamodds < hometeamodds) "
+                                      "        ) "
+                                      "    ) "
+                                      ") "
+                                      " and season = ?;", [season]) as cursor:
                     async for row in cursor:
                         if row and row[0] is not None:
                             predict_count = row[0]
 
-                async with db.execute("select count(*) from dailygameresultstable where "
-                                      "((hometeamodds > awayteamodds and "
-                                      "hometeamwinpercentage < awayteamwinpercentage "
-                                      "and awayteamwin) or "
-                                      "(awayteamodds > hometeamodds and "
-                                      "awayteamwinpercentage < hometeamwinpercentage "
-                                      "and hometeamwin)) and season=?;", [season]) as cursor:
+                async with db.execute("select count(*) as correct_upsets from dailygameresultstable where  "
+                                      "( "
+                                          "(.495 < hometeamodds and hometeamodds < .505) and  "
+                                              "((hometeamwinpercentage > awayteamwinpercentage and hometeamwin) or "
+                                               "(awayteamwinpercentage > hometeamwinpercentage  and awayteamwin)) "
+                                      ") "
+                                      "or  "
+                                      "( "
+                                          "(hometeamwin and hometeamwinpercentage > awayteamwinpercentage and  "
+                                              "( "
+                                                  "(hometeamodds < .495 or hometeamodds > .505) and "
+                                                  "(hometeamodds < awayteamodds) "
+                                              ") "
+                                          ")  "
+                                      "or  "
+                                      "( "
+                                          "awayteamwin and awayteamwinpercentage > hometeamwinpercentage and  "
+                                              "( "
+                                                  "(hometeamodds < .495 or hometeamodds > .505) and  "
+                                                  "(awayteamodds < hometeamodds) "
+                                              ") "
+                                          ")                                    "
+                                      ") "
+                                      "and season = ?; ", [season]) as cursor:
                     async for row in cursor:
                         if row and row[0] is not None:
                             correct_count = row[0]
