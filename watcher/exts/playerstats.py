@@ -186,6 +186,16 @@ class PlayerStats(commands.Cog):
     async def _equivalent_exchange(self, ctx, *, info):
         player_id = None
         info_split = info.split(",")
+        if info_split[0].strip().lower() == "help":
+          return await ctx.send("""Command syntax: `!equivalent_exchange rating, player name, options`
+\t• `rating`: one of baserunning, defense, pitching, hitting as a sort order
+\t• `player name`: The player you are interested in
+\t• `options`: Include these terms seperated by a comma, order is not important
+\t\t ∙ output: `csv` or `inline` for how you want to output to be displayed (default: inline)
+\t\t ∙ limit: the number of results you want to show. Ignored for csv (default: 10)
+\t\t ∙ sort: `increasing` or `decreasing`, how the output should be sorted. (default: increasing)
+\t\t ∙ team: limits the search to just a particular team""")
+
         if len(info_split) < 2:
           return await ctx.send(f"Please include one of: baserunning, defense, pitching, hitting rating types and a player you are intersted in\n"
                                 f"Command syntax: `!equivalent_exchange rating, player name, options`")
