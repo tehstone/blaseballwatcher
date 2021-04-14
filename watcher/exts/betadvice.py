@@ -763,9 +763,9 @@ class BetAdvice(commands.Cog):
                 self.bot.logger.info("No game sim run found, starting now")
                 time_elapsed = await asyncio.wait_for(self.run_daily_sim(season, 501), 1200)
                 self.bot.logger.info(f"s{season}_d{day} sim results saved to file in {time_elapsed} seconds")
-                await asyncio.sleep(60 * 30)
+                await asyncio.sleep(60 * 40)
             else:
-                await asyncio.sleep(60 * 3)
+                await asyncio.sleep(60 * 4)
 
     @commands.command(name="pitcher_names", aliases=['pn', 'pnames', 'pitchernames'])
     async def _pitcher_names(self, ctx, day):
