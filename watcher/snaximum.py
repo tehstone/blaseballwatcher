@@ -314,7 +314,7 @@ class Snaximum:
             season = self.simulation_data['season']
         data = reference.get_stats(
             type_='season', group='hitting',
-            fields=('hits', 'home_runs', 'stolen_bases', 'appearances'),
+            fields=['hits', 'home_runs', 'stolen_bases', 'appearances'],
             season=season
         )
         assert len(data) == 1

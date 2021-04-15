@@ -112,7 +112,7 @@ class RulesWatcher(commands.Cog):
                                   f"https://www.blaseball.com/database/players?ids={player['id']}"
                         await output_channel.send(message)
                     if rituals[player["id"]] != player:
-                        print(f"Player {player['name']} has changed.")
+                        self.bot.logger.info(f"Player {player['name']} has changed.")
                         with open(os.path.join("json_data", "players", f"{player['name']}{time.time()}.json"), 'w') as file:
                             json.dump(player, file)
                 rituals[player['id']] = player
@@ -282,7 +282,7 @@ class RulesWatcher(commands.Cog):
 
     async def check_book_loop(self):
         while not self.bot.is_closed():
-            print("checking for book changes")
+            self.bot.logger.info("checking for book changes")
             messages, filename = await self._check_for_rules_update()
             output_channel_id = self.bot.config['archive_notify_channel']
             sent = False

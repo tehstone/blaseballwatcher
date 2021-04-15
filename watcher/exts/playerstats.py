@@ -139,7 +139,7 @@ class PlayerStats(commands.Cog):
 
         if not stats:
             return await response_channel.send(f"Could not find stats for player: {player_name}.")
-        title = f"Season {season} stats for {player_name.capitalize()}"
+        title = f"Season {season+1} stats for {player_name.capitalize()}"
         embed = discord.Embed(colour=color, title=title)
 
         first_half = f"Record: **{stats['wins']}-{stats['losses']}**\n" \

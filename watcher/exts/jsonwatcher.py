@@ -388,9 +388,9 @@ class JsonWatcher(commands.Cog):
 
     async def check_loop(self):
         while not self.bot.is_closed():
-            print("checking for json changes")
+            self.bot.logger.info("checking for json changes")
             await self.check_for_field_updates()
-            await self.check_for_comprehensive_updates()
+            await self.check_for_comrehensive_updates()
             await self.check_for_content_updates()
             await self.check_for_ballpark_updates()
             await self.save()
