@@ -463,7 +463,6 @@ class Snaximum:
 
         key = (snaxfolio['seeds'], snaxfolio['hot_dog'], snaxfolio['pickles'])
 
-        print(inc_teams)
 
         # Can't rely on cache if selecting a team
         if key in self.batter_analysis_cache and len(inc_teams) == 0:
