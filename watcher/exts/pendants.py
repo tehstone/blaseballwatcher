@@ -152,34 +152,10 @@ class Pendants(commands.Cog):
                 if p_values['hitsAllowed'] == 0:
                     if p_values['walksIssued'] == 0:
                         p_values['perfectGame'] = 1
-                        # notable["perfect"][p_values["playerId"]] = {
-                        #     "name": p_values["name"],
-                        #     "strikeouts": p_values["strikeouts"],
-                        #     "outsRecorded": p_values["outsRecorded"],
-                        #     "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                        #     "statsheet_id": p_values["id"]
-                        # }
                     else:
                         p_values['noHitter'] = 1
-                        # notable["nohitter"][p_values["playerId"]] = {
-                        #     "name": p_values["name"],
-                        #     "strikeouts": p_values["strikeouts"],
-                        #     "outsRecorded": p_values["outsRecorded"],
-                        #     "walksIssued": p_values['walksIssued'],
-                        #     "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                        #     "statsheet_id": p_values["id"]
-                        # }
                 else:
                     p_values["shutout"] = 1
-                    # notable["shutout"][p_values["playerId"]] = {
-                    #     "name": p_values["name"],
-                    #     "strikeouts": p_values["strikeouts"],
-                    #     "outsRecorded": p_values["outsRecorded"],
-                    #     "walksIssued": p_values['walksIssued'],
-                    #     "hitsAllowed": p_values['hitsAllowed'],
-                    #     "game_id": game_team_map[p_values["teamId"]]["game_id"],
-                    #     "statsheet_id": p_values["id"]
-                    # }
             if p_values["outsRecorded"] > 0:
                 p_values["position"] = "rotation"
                 rot = (day + 1) % 5
@@ -493,7 +469,9 @@ class Pendants(commands.Cog):
                 for message in game_watcher_messages:
                     description += message + "\n"
                 msg_embed = discord.Embed(description=description[:2047])
-                await output_channel.send(embed=msg_embed)
+                game_watcher_message = await output_channel.send(embed=msg_embed)
+                if self.bot.config['live_version']:
+                    await game_watcher_message.publish()
             if len(daily_message) > 0:
                 sh_embed.description = sh_description
                 debug_chan_id = self.bot.config.setdefault('debug_channel', None)
