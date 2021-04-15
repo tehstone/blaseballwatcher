@@ -195,8 +195,21 @@ class JsonWatcher(commands.Cog):
                          "nickname", "mainColor", "secondaryColor", "tertiaryColor"]:
                 if attr in park and attr in old_park:
                     if park[attr] != old_park[attr]:
-                        changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
-                        changed = changed or True
+                        if attr == "mods":
+                            new_mods, old_mods = [], []
+                            for mod in park["mods"]:
+                                if mod not in old_park["mods"]:
+                                    new_mods.append(mod)
+                            for mod in old_park["mods"]:
+                                if mod not in park["mods"]:
+                                    old_mods.append(mod)
+                            if len(new_mods) > 0:
+                                changes.append(f"{', '.join(new_mods)} added to {team_name}'s park.\n")
+                            if len(old_mods) > 0:
+                                changes.append(f"{', '.join(old_mods)} removed from {team_name}'s park.\n")
+                        else:
+                            changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
+                            changed = changed or True
         await utils.send_message_in_chunks(changes, output_channel)
         self.save_files(new_ballpark_json, "ballpark_data.json", changed)
 
@@ -389,9 +402,9 @@ class JsonWatcher(commands.Cog):
     async def check_loop(self):
         while not self.bot.is_closed():
             self.bot.logger.info("checking for json changes")
-            await self.check_for_field_updates()
-            await self.check_for_comrehensive_updates()
-            await self.check_for_content_updates()
+            # await self.check_for_field_updates()
+            # await self.check_for_comprehensive_updates()
+            # await self.check_for_content_updates()
             await self.check_for_ballpark_updates()
             await self.save()
             await asyncio.sleep(self.bot.config.setdefault('json_watch_interval', 10) * 60)
