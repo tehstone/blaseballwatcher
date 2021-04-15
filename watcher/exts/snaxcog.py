@@ -263,10 +263,15 @@ class SnaxCog(commands.Cog):
     @checks.allow_snax_commands()
     async def _lucrative_batters(self, ctx, *, info=None):
         """
-        Usage: !lucrative_batters [count] - count is optional.
+        Usage: !lucrative_batters [options]
         Will return the best hitting idol choices for you based on the real performance of each player
-        so far this season. Count is optional, has a default of 3 and has a hard limit of 10. This
-        command is much more useful if you have set up your snaxfolio using the !set_snax command.
+        so far this season. This command is much more useful if you have set up your snaxfolio using the !set_snax command.
+
+        Usage: !lucrative_batters [options] where options are optional and can be in any order.
+            limit: The number of suggestions to display (default: 3, max: 10)
+            team(s): Restrict output to these team(s) multiple teams must be seperated by commas. (default: None)
+            leagues(s): Restrict output to these leagues(s) multiple teams must be seperated by commas. (default: None)
+            output: `csv` outputs all batters matching the criteria above, ignoring the limit. (default: None)
         """
         n_divisions = {"Wild High": ["tigers", "lift", "wild wings", "firefighters", "jazz hands", "georgias"],
                      "Wild Low": ["spies", "flowers", "sunbeams", "dale", "tacos", "worms"],
