@@ -458,12 +458,16 @@ class Snaximum:
         return snax
 
     def get_lucrative_batters(self, snaxfolio: Optional[Snaxfolio] = None,
-                              limit: int = 10) -> List[BatterAnalysis]:
+                              limit: int = 10, inc_teams = None) -> List[BatterAnalysis]:
         snaxfolio = self.mksnax(snaxfolio, maximum=True)
 
         key = (snaxfolio['seeds'], snaxfolio['hot_dog'], snaxfolio['pickles'])
 
-        if key in self.batter_analysis_cache:
+
+        # Can't rely on cache if selecting a team
+        if key in self.batter_analysis_cache and len(inc_teams) == 0:
+            if limit == -1:
+                return self.batter_analysis_cache[key]
             return self.batter_analysis_cache[key][0:limit]
 
         batters = []
@@ -471,6 +475,10 @@ class Snaximum:
             stats = cast(PlayerStats, split['stat'])
             player = self.player_map.get(split['player']['id'], None)
             if player:
+                if len(inc_teams) != 0:
+                    if player['team_id'] not in inc_teams:
+                        continue
+
                 payout = self.calculate_payouts(
                     stats, player,
                     snaxfolio['seeds'],
@@ -482,7 +490,10 @@ class Snaximum:
         batters = sorted(batters, key=lambda x: x[0]['total'], reverse=True)
         self.batter_analysis_cache[key] = batters
 
-        return batters[0:limit]
+        if limit == -1:
+            return batters
+        else:
+            return batters[0:limit]
 
     def lucrative_batters(self, snaxfolio: Optional[Snaxfolio] = None) -> None:
         snaxfolio = self.mksnax(snaxfolio, maximum=True)
