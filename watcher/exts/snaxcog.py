@@ -378,7 +378,7 @@ class SnaxCog(commands.Cog):
                 writer.writeheader()
                 for player in luc_list:
                     stats = player[0]
-                    writer.writerow({"player": player[1]["player"]["fullName"], "team": player[1]["team"]["full_name"], "total": stats['hits'] + stats['home_runs'] + stats['stolen_bases'], "hits": stats['hits'], "home_runs": stats['home_runs'], "stolen_bases": stats['stolen_bases']})
+                    writer.writerow({"player": player[1]["player"]["fullName"], "team": player[1]["team"]["nickname"], "total": stats['hits'] + stats['home_runs'] + stats['stolen_bases'], "hits": stats['hits'], "home_runs": stats['home_runs'], "stolen_bases": stats['stolen_bases']})
 
             with open(os.path.join('data', 'tmp', filename), 'rb') as csvfile:
                 await ctx.send(content=f"**{title}**", file=discord.File(csvfile, filename=filename))
