@@ -183,7 +183,7 @@ class PlayerStats(commands.Cog):
 
         return await response_channel.send(embed=embed)
 
-    @commands.command(name="equivalent_exchange", aliases=['ee', 'equiv'])
+    @commands.command(name="equivalent_exchange", aliases=['ee', 'equiv', 'eq'])
     async def _equivalent_exchange(self, ctx, *, info):
         player_id = None
         info_split = info.split(",")
