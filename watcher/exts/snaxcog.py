@@ -4,6 +4,7 @@ import math
 import os
 import re
 import csv
+from pathlib import Path
 
 import aiosqlite
 import discord
@@ -378,16 +379,17 @@ class SnaxCog(commands.Cog):
         if output_format == 'csv':
             filename = f"lucrative_batters.csv"
             fieldnames = ["player", "team", "total", "hits", "home_runs", "stolen_bases"]
-            with open(os.path.join('data', 'tmp', filename), 'w', newline='') as csvfile:
+            Path(os.path.join('data', 'tmp','lb')).mkdir(parents=True, exist_ok=True)
+            with open(os.path.join('data', 'tmp','lb', filename), 'w', newline='') as csvfile:
                 writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=fieldnames)
                 writer.writeheader()
                 for player in luc_list:
                     stats = player[0]
                     writer.writerow({"player": player[1]["player"]["fullName"], "team": player[1]["team"]["nickname"], "total": stats['hits'] + stats['home_runs'] + stats['stolen_bases'], "hits": stats['hits'], "home_runs": stats['home_runs'], "stolen_bases": stats['stolen_bases']})
 
-            with open(os.path.join('data', 'tmp', filename), 'rb') as csvfile:
+            with open(os.path.join('data', 'tmp', 'lb', filename), 'rb') as csvfile:
                 await ctx.send(content=f"**{title}**", file=discord.File(csvfile, filename=filename))
-            os.remove(os.path.join('data', 'tmp', filename))
+            os.remove(os.path.join('data', 'tmp','lb', filename))
         else:
     
             for player in luc_list[:count]:

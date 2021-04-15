@@ -4,6 +4,7 @@ from discord.ext import commands
 import os
 import csv
 import string
+from pathlib import Path 
 
 class PlayerStats(commands.Cog):
     def __init__(self, bot):
@@ -314,7 +315,8 @@ class PlayerStats(commands.Cog):
         else:
           filename = f"{player_name}-{raw_rating}-equivilant-exchange.csv"
           fieldnames = ["player", "combined_stars", "team_name", "rating"]
-          with open(os.path.join('data', 'equv', 'csv', filename), 'w', newline='') as csvfile:
+          Path(os.path.join('data', 'tmp', 'eq')).mkdir(parents=True, exist_ok=True)
+          with open(os.path.join('data', 'tmp', 'eq', filename), 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=fieldnames)
             writer.writeheader()
             for player in other_players:
@@ -324,9 +326,10 @@ class PlayerStats(commands.Cog):
               rating = round((rating_star * 100)) / 100
               writer.writerow({"player": o_player_name, "combined_stars": stars, "team_name": team_name, "rating": rating})
 
-          with open(os.path.join('data', 'equv', 'csv', filename), 'rb') as csvfile:
+          with open(os.path.join('data', 'tmp', 'eq', filename), 'rb') as csvfile:
             await ctx.send(file=discord.File(csvfile, filename=filename))
           pass
+          os.remove(os.path.join('data', 'tmp', 'eq', filename))
           # Returns CSV
 
 
