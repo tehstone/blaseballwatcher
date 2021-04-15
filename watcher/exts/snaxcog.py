@@ -3,6 +3,7 @@ import json
 import math
 import os
 import re
+import csv
 
 import aiosqlite
 import discord
@@ -260,26 +261,106 @@ class SnaxCog(commands.Cog):
 
     @commands.command(name='lucrative_batters', aliases=['lucrative_batter', 'lb'])
     @checks.allow_snax_commands()
-    async def _lucrative_batters(self, ctx, count: int = 3):
+    async def _lucrative_batters(self, ctx, *, info=None):
         """
         Usage: !lucrative_batters [count] - count is optional.
         Will return the best hitting idol choices for you based on the real performance of each player
         so far this season. Count is optional, has a default of 3 and has a hard limit of 10. This
         command is much more useful if you have set up your snaxfolio using the !set_snax command.
         """
+        n_divisions = {"Wild High": ["tigers", "lift", "wild wings", "firefighters", "jazz hands", "georgias"],
+                     "Wild Low": ["spies", "flowers", "sunbeams", "dale", "tacos", "worms"],
+                     "Mild High": ["lovers", "pies", "garages", "steaks", "millennials", "mechanics"],
+                     "Mild Low": ["fridays", "moist talkers", "breath mints", "shoe thieves", "magic", "crabs"]
+                    }
+        output_format = 'inline' 
+        sort_dir = 'desc'
+        teams_to_include = []
+        teams = set(())
+        team_names = set(())
+        league_names = set(())
+        count = 3
+        options_map = {"output": {"inline": 'inline', "csv": 'csv'}, 
+                   "sort": {"increasing": 'asc', "inc": 'asc', "asc": 'asc', "decreasing": 'desc', "dec": 'desc', 'desc': 'desc'}
+                  }
+
+        if info!=None:
+
+            info_split = info.split(",")
+            if info_split[0].strip().lower() == "help":
+              return await ctx.send("""Command syntax: `!lb options` where options can be in any order.
+    \t• `limit`: The number of suggestions to display (default: 3, max: 10)
+    \t• `team(s)`: Restrict output to these team(s) multiple teams must be seperated by commas. (default: None)
+    \t• `leagues(s)`: Restrict output to these leagues(s) multiple teams must be seperated by commas. (default: None)
+    \t• `output`: `csv` outputs all batters matching the criteria above, ignoring the limit. (default: None)""")
+            
+            for option in info_split:
+                try:
+                    count = int(option)
+                    continue
+                except:
+                    pass
+
+                option = option.lower().strip()
+                try:
+                    output_format = options_map["output"][option]
+                    continue
+                except:
+                    pass
+
+                try:
+                    sort_dir = options_map["sort"][option]
+                    continue 
+                except:
+                    pass
+
+                if option == "wild":
+                    league_names.add("Wild League")
+                    teams_to_include.extend(n_divisions["Wild High"])
+                    teams_to_include.extend(n_divisions["Wild Low"])
+                elif option == "mild":
+                    league_names.add("Mild League")
+                    teams_to_include.extend(n_divisions["Mild High"])
+                    teams_to_include.extend(n_divisions["Mild Low"])
+                elif option == "wild low":
+                    league_names.add("Wild Low Division")
+                    teams_to_include.extend(n_divisions["Wild Low"])
+                elif option == "mild low":
+                    league_names.add("Mild Low Division")
+                    teams_to_include.extend(n_divisions["Mild Low"])
+                elif option == "wild high":
+                    league_names.add("Wild High Division")
+                    teams_to_include.extend(n_divisions["Wild High"])
+                elif option == "mild high":
+                    league_names.add("Mild High Division")
+                    teams_to_include.extend(n_divisions["Mild High"])
+                else:
+                    teams_to_include.append(option)
+
+            if len(teams_to_include) != 0:
+                for team in self.bot.team_names:
+                    if self.bot.team_names[team].lower() in teams_to_include:
+                        teams.add(team)
+
         snaxfolio = await self._get_user_snax(ctx.author.id)
+
+        if output_format != "csv":
+            count = min(count, 10)
+            count = max(count, 1)
+        else:
+            count = -1
 
         if len(snaxfolio) > 0:
             snax_set = True
             title = f"Tastiest snacks in {ctx.author.display_name}'s snaxfolio:\n"
-            luc_list = self.snaximum_instance.get_lucrative_batters(snaxfolio)
+            luc_list = self.snaximum_instance.get_lucrative_batters(snaxfolio, limit=count, inc_teams= teams)
         else:
             snax_set = False
             title = "Tastiest snacks in the League this season"
-            luc_list = self.snaximum_instance.get_lucrative_batters()
+            luc_list = self.snaximum_instance.get_lucrative_batters(limit=count, inc_teams= teams)
 
-        count = min(count, 10)
-        count = max(count, 1)
+        
+
 
         earlseason = self.snaximum_instance.simulation_data['day'] < 5
 
@@ -289,21 +370,36 @@ class SnaxCog(commands.Cog):
                       "between seasons!\n\n"
         else:
             message = ""
-        for player in luc_list[:count]:
-            name = player[1]["player"]["fullName"]
-            player_id = player[1]["player"]["id"]
-            shorthand = player[1]["team"]["team_abbreviation"]
-            entry = f"[{name}]({'https://www.blaseball.com/player/' + player_id}) "
-            stats = player[0]
-            message += f"Coins earned this season from {entry} ({shorthand}):\n"
-            total = stats['hits'] + stats['home_runs'] + stats['stolen_bases']
-            message += f"Total: {total:,} - Hits: {stats['hits']:,} " \
-                       f"HRs: {stats['home_runs']:,} SBs: {stats['stolen_bases']:,}\n\n"
-        embed = discord.Embed(colour=discord.Colour.green(),
-                              title=title, description=message)
-        if not snax_set:
-            embed.set_footer(text="You'll get better results if you set your snaxfolio!")
-        await ctx.send(embed=embed)
+        if output_format == 'csv':
+            filename = f"lucrative_batters.csv"
+            fieldnames = ["player", "team", "total", "hits", "home_runs", "stolen_bases"]
+            with open(os.path.join('data', 'tmp', filename), 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=fieldnames)
+                writer.writeheader()
+                for player in luc_list:
+                    stats = player[0]
+                    writer.writerow({"player": player[1]["player"]["fullName"], "team": player[1]["team"]["full_name"], "total": stats['hits'] + stats['home_runs'] + stats['stolen_bases'], "hits": stats['hits'], "home_runs": stats['home_runs'], "stolen_bases": stats['stolen_bases']})
+
+            with open(os.path.join('data', 'tmp', filename), 'rb') as csvfile:
+                await ctx.send(content=f"**{title}**", file=discord.File(csvfile, filename=filename))
+            os.remove(os.path.join('data', 'tmp', filename))
+        else:
+    
+            for player in luc_list[:count]:
+                name = player[1]["player"]["fullName"]
+                player_id = player[1]["player"]["id"]
+                shorthand = player[1]["team"]["team_abbreviation"]
+                entry = f"[{name}]({'https://www.blaseball.com/player/' + player_id}) "
+                stats = player[0]
+                message += f"Coins earned this season from {entry} ({shorthand}):\n"
+                total = stats['hits'] + stats['home_runs'] + stats['stolen_bases']
+                message += f"Total: {total:,} - Hits: {stats['hits']:,} " \
+                           f"HRs: {stats['home_runs']:,} SBs: {stats['stolen_bases']:,}\n\n"
+            embed = discord.Embed(colour=discord.Colour.green(),
+                                  title=title, description=message)
+            if not snax_set:
+                embed.set_footer(text="You'll get better results if you set your snaxfolio!")
+            await ctx.send(embed=embed)
 
     @commands.command(name='propose_upgrades', aliases=['propose_upgrade', 'what_next', "what_to_buy", 'pu'])
     @checks.allow_snax_commands()
