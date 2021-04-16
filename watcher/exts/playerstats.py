@@ -6,13 +6,17 @@ import csv
 import string
 from pathlib import Path
 
+from watcher import utils
+
 
 class PlayerStats(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command(name="player_stats", aliases=['stats'])
-    async def _get_player_stats(self, ctx, *, player_name):
+    async def _get_player_stats(self, ctx, *, info):
+        info_split = info.split(',')
+        player_name = info_split[0].strip().lower()
         player_id = None
         if player_name in self.bot.player_cache:
             player_id = self.bot.player_cache[player_name]["id"]
@@ -29,6 +33,10 @@ class PlayerStats(commands.Cog):
         else:
             color = discord.Colour.from_rgb(255, 255, 255)
 
+        days_back = None
+        if len(info_split) > 1:
+            days_back = int(info_split[1])
+
         season = self.bot.config['current_season'] - 1
         position = None
         async with aiosqlite.connect(self.bot.db_path) as db:
@@ -41,18 +49,19 @@ class PlayerStats(commands.Cog):
             return await ctx.send(f"Could not find stats for player: {player_name}.")
 
         if position == 'lineup':
-            return await self._get_hitter_stats(season, player_id, player_name, color, ctx.channel)
+            return await self._get_hitter_stats(season, player_id, player_name, color, ctx.channel, days_back)
         if position == 'rotation':
-            return await self._get_pitcher_stats(season, player_id, player_name, color, ctx.channel)
+            return await self._get_pitcher_stats(season, player_id, player_name, color, ctx.channel, days_back)
 
-    async def _get_hitter_stats(self, season, player_id, player_name, color, response_channel):
+    async def _get_hitter_stats(self, season, player_id, player_name, color, response_channel, days_back):
+        days_query = await self._generate_days_back_query(days_back)
         stats = None
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select playerId, name, teamId, sum(atBats), sum(caughtStealing), sum(doubles), "
                                   "sum(groundIntoDp), sum(hits), sum(homeRuns), sum(rbis), sum(runs), "
                                   "sum(stolenBases), sum(struckouts), sum(triples), sum(walks)"
                                   "from DailyStatSheets where season=? and position='lineup' "
-                                  "and playerId=?", [season, player_id]) as cursor:
+                                  f"and playerId=? {days_query}", [season, player_id]) as cursor:
                 async for row in cursor:
                     if row and row[0]:
                         stats = {
@@ -75,7 +84,10 @@ class PlayerStats(commands.Cog):
                     break
         if not stats:
             return await response_channel.send(f"Could not find stats for player: {player_name}.")
-        title = f"Season {season} stats for {player_name.capitalize()}"
+        if days_back:
+            title = f"Last {days_back} day's stats for {player_name.capitalize()}"
+        else:
+            title = f"Season {season + 1} stats for {player_name.capitalize()}"
         embed = discord.Embed(colour=color, title=title)
 
         first_half = f"At Bats: **{stats['atBats']}**\n" \
@@ -110,7 +122,8 @@ class PlayerStats(commands.Cog):
         embed.add_field(name=self.bot.empty_str, value=third_half)
         return await response_channel.send(embed=embed)
 
-    async def _get_pitcher_stats(self, season, player_id, player_name, color, response_channel):
+    async def _get_pitcher_stats(self, season, player_id, player_name, color, response_channel, days_back):
+        days_query = await self._generate_days_back_query(days_back)
         stats = None
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select playerId, name, teamId, sum(earnedRuns), "
@@ -118,7 +131,7 @@ class PlayerStats(commands.Cog):
                                   "sum(walksIssued), sum(hitsAllowed), sum(homeRunsAllowed), "
                                   "sum(shutout), sum(noHitter), sum(perfectGame) "
                                   "from DailyStatSheets where season=? and position='rotation' "
-                                  "and playerId=?", [season, player_id]) as cursor:
+                                  f"and playerId=? {days_query}", [season, player_id]) as cursor:
                 async for row in cursor:
                     if row and row[0]:
                         stats = {
@@ -141,7 +154,10 @@ class PlayerStats(commands.Cog):
 
         if not stats:
             return await response_channel.send(f"Could not find stats for player: {player_name}.")
-        title = f"Season {season + 1} stats for {player_name.capitalize()}"
+        if days_back:
+            title = f"Last {days_back} day's stats for {player_name.capitalize()}"
+        else:
+            title = f"Season {season + 1} stats for {player_name.capitalize()}"
         embed = discord.Embed(colour=color, title=title)
 
         first_half = f"Record: **{stats['wins']}-{stats['losses']}**\n" \
@@ -184,15 +200,27 @@ class PlayerStats(commands.Cog):
 
         return await response_channel.send(embed=embed)
 
+    @staticmethod
+    async def _generate_days_back_query(days_back):
+        days_query = ''
+        if days_back:
+            html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
+            if html_response:
+                sim_data = html_response.json()
+                current_day = sim_data['day']
+                target_day = current_day - days_back
+                days_query = f' and day >= {target_day}'
+        return days_query
+
     @commands.command(name="equivalent_exchange", aliases=['ee', 'equiv', 'eq'])
     async def _equivalent_exchange(self, ctx, *, info):
         player_id = None
         info_split = info.split(",")
         if info_split[0].strip().lower() == "help":
             return await ctx.send("""Command syntax: `!equivalent_exchange rating, player name, options`
-\t• `rating`: one of baserunning, defense, pitching, hitting as a sort order
+\t• `rating`: one of baserunning, defense, pitching, hitting as a sort order (or 'all' to include all 4 ratings) 
 \t• `player name`: The player you are interested in
-\t• `options`: Include these terms seperated by a comma, order is not important
+\t• `options`: Include these terms separated by a comma, order is not important
 \t\t ∙ output: `csv` or `inline` for how you want to output to be displayed (default: inline)
 \t\t ∙ limit: the number of results you want to show. Ignored for csv (default: 10)
 \t\t ∙ sort: `increasing` or `decreasing`, how the output should be sorted. (default: increasing)
