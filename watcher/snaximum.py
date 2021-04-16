@@ -458,11 +458,12 @@ class Snaximum:
         return snax
 
     def get_lucrative_batters(self, snaxfolio: Optional[Snaxfolio] = None,
-                              limit: int = 10, inc_teams = None) -> List[BatterAnalysis]:
+                              limit: int = 10, inc_teams=None) -> List[BatterAnalysis]:
+        if inc_teams is None:
+            inc_teams = []
         snaxfolio = self.mksnax(snaxfolio, maximum=True)
 
         key = (snaxfolio['seeds'], snaxfolio['hot_dog'], snaxfolio['pickles'])
-
 
         # Can't rely on cache if selecting a team
         if key in self.batter_analysis_cache and len(inc_teams) == 0:

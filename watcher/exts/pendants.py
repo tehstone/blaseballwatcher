@@ -469,7 +469,7 @@ class Pendants(commands.Cog):
                 for message in game_watcher_messages:
                     description += message + "\n"
                 msg_embed = discord.Embed(description=description[:2047])
-                game_watcher_message = await output_channel.send(embed=msg_embed)
+                game_watcher_message = await output_channel.send(f"Notable events on Day {last_day+1}", embed=msg_embed)
                 if self.bot.config['live_version']:
                     await game_watcher_message.publish()
             if len(daily_message) > 0:

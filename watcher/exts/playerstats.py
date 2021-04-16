@@ -4,7 +4,8 @@ from discord.ext import commands
 import os
 import csv
 import string
-from pathlib import Path 
+from pathlib import Path
+
 
 class PlayerStats(commands.Cog):
     def __init__(self, bot):
@@ -99,7 +100,7 @@ class PlayerStats(commands.Cog):
         slg = (singles + (2 * stats['doubles']) + (3 * stats['triples']) + (4 * stats['homeRuns'])) / stats['atBats']
         obps = obp + slg
 
-        third_half = f"Batting Avg: **{('%.3f' % (round(ba * 1000)/1000)).lstrip('0')}**\n" + \
+        third_half = f"Batting Avg: **{('%.3f' % (round(ba * 1000) / 1000)).lstrip('0')}**\n" + \
                      f"OBP: **{('%.3f' % (round(obp * 1000) / 1000)).lstrip('0')}**\n" + \
                      f"SLG: **{('%.3f' % (round(slg * 1000) / 1000)).lstrip('0')}**\n" + \
                      f"OBPS: **{('%.3f' % (round(obps * 1000) / 1000)).lstrip('0')}**"
@@ -140,7 +141,7 @@ class PlayerStats(commands.Cog):
 
         if not stats:
             return await response_channel.send(f"Could not find stats for player: {player_name}.")
-        title = f"Season {season+1} stats for {player_name.capitalize()}"
+        title = f"Season {season + 1} stats for {player_name.capitalize()}"
         embed = discord.Embed(colour=color, title=title)
 
         first_half = f"Record: **{stats['wins']}-{stats['losses']}**\n" \
@@ -188,7 +189,7 @@ class PlayerStats(commands.Cog):
         player_id = None
         info_split = info.split(",")
         if info_split[0].strip().lower() == "help":
-          return await ctx.send("""Command syntax: `!equivalent_exchange rating, player name, options`
+            return await ctx.send("""Command syntax: `!equivalent_exchange rating, player name, options`
 \t• `rating`: one of baserunning, defense, pitching, hitting as a sort order
 \t• `player name`: The player you are interested in
 \t• `options`: Include these terms seperated by a comma, order is not important
@@ -198,16 +199,18 @@ class PlayerStats(commands.Cog):
 \t\t ∙ team: limits the search to just a particular team""")
 
         if len(info_split) < 2:
-          return await ctx.send(f"Please include one of: baserunning, defense, pitching, hitting rating types and a player you are intersted in\n"
-                                f"Command syntax: `!equivalent_exchange rating, player name, options`")
+            return await ctx.send(
+                f"Please include one of: baserunning, defense, pitching, hitting rating types and a player you are intersted in\n"
+                f"Command syntax: `!equivalent_exchange rating, player name, options`")
 
         raw_rating = info_split[0]
         player_name = string.capwords(info_split[1].strip())
         # allows parsing of various keys to the bot
-        options_map = {"output": {"inline": 0, "csv": 1}, 
-                   "sort": {"increasing": 'asc', "inc": 'asc', "asc": 'asc', "decreasing": 'desc', "dec": 'desc', 'desc': 'desc'}
-                  }
-        output_format = 0 
+        options_map = {"output": {"inline": 0, "csv": 1},
+                       "sort": {"increasing": 'asc', "inc": 'asc', "asc": 'asc', "decreasing": 'desc', "dec": 'desc',
+                                'desc': 'desc'}
+                       }
+        output_format = 0
         sort_dir = 'desc'
         on_team = ''
         on_team_name = ''
@@ -222,39 +225,39 @@ class PlayerStats(commands.Cog):
             return await ctx.send(f"Could not find player: {player_name}. Please check your spelling and try again.")
 
         if len(info_split) > 2:
-          for opt in info_split[2:]:
-            #Checks if option is one of the output options
-            try:
-              output_format = options_map["output"][opt.strip()]
-              continue
-            except:
-              pass
+            for opt in info_split[2:]:
+                # Checks if option is one of the output options
+                try:
+                    output_format = options_map["output"][opt.strip()]
+                    continue
+                except:
+                    pass
 
-            #Checks if option is one of the sort options
-            try:
-              sort_dir = options_map["sort"][opt.strip()]
-              continue 
-            except:
-              pass
+                # Checks if option is one of the sort options
+                try:
+                    sort_dir = options_map["sort"][opt.strip()]
+                    continue
+                except:
+                    pass
 
-            #Sets the limit on the search.
-            try:
-              lim = int(opt)
-              continue
-            except:
-              pass
+                # Sets the limit on the search.
+                try:
+                    lim = int(opt)
+                    continue
+                except:
+                    pass
 
-            # if all that fails check if its a team name
-            for team in self.bot.team_names:
-              if self.bot.team_names[team].lower() == opt.strip().lower():
-                  on_team = f"and team_id = '{team}'"
-                  on_team_name = opt.capitalize()
+                # if all that fails check if its a team name
+                for team in self.bot.team_names:
+                    if self.bot.team_names[team].lower() == opt.strip().lower():
+                        on_team = f"and team_id = '{team}'"
+                        on_team_name = opt.capitalize()
 
         if output_format == 1:
             limit = ""
             lim = ""
         elif lim > 0:
-          limit = f"limit {lim}" 
+            limit = f"limit {lim}"
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select league, combined_stars from PlayerLeagueAndStars where "
                                   "player_id=?", [player_id]) as cursor:
@@ -268,10 +271,12 @@ class PlayerStats(commands.Cog):
             other_league = 'Mild'
         other_players = []
 
-        rating_map = {"baserunning": "baserunning_rating", "running": "baserunning_rating",
-                      "pitching": "pitching_rating",
-                      "hitting": "hitting_rating", "batting": "hitting_rating",
-                      "defense": "defense_rating"}
+        rating_map = {
+            "baserunning": "baserunning_rating", "running": "baserunning_rating",
+            "hitting": "hitting_rating", "batting": "hitting_rating",
+            "pitching": "pitching_rating", "defense": "defense_rating",
+            "all": "hitting_rating, pitching_rating, baserunning_rating, defense_rating"
+                      }
         if raw_rating in rating_map:
             rating = rating_map[raw_rating]
         else:
@@ -283,54 +288,65 @@ class PlayerStats(commands.Cog):
                                   f"(combined_stars > {combined_stars}-2 and combined_stars < {combined_stars}+2) {on_team}"
                                   f"group by player_id order by {rating} {sort_dir} {limit};") as cursor:
                 async for row in cursor:
-                    other_players.append([row[0], row[1], row[2], row[3], row[4], row[5]])
+                    p_row = [row[0], row[1], row[2], row[3], row[4], row[5]]
+                    if len(row) > 6:
+                        p_row += row[6], row[7], row[8]
+                    other_players.append(p_row)
         team_caviat = f"on {string.capwords(on_team_name)}" if on_team != '' else ''
         restricted_output = ""
         if len(other_players) < 1:
             return await ctx.send(f"Could not find players within 2 stars of {player_name} {team_caviat}")
         elif len(other_players) > 10 and output_format == 0:
-          restricted_output = f"**Displaying 10 of {len(other_players)} results** get full output with option `csv`"
-          other_players = other_players[:10]
+            restricted_output = f"**Displaying 10 of {len(other_players)} results** get full output with option `csv`"
+            other_players = other_players[:10]
 
         p_stars = round((combined_stars * 100)) / 100
         if output_format == 0:
-          if limit == '':
-            filter_desc = "All players"
-          elif sort_dir == 'asc':
-            filter_desc = f"Bottom {len(other_players)} players"
-          else:
-            filter_desc = f"Top {len(other_players)} players"
+            if limit == '':
+                filter_desc = "All players"
+            elif sort_dir == 'asc':
+                filter_desc = f"Bottom {len(other_players)} players"
+            else:
+                filter_desc = f"Top {len(other_players)} players"
 
-
-          response = f"{filter_desc} by {raw_rating} within 2 combined stars of **{player_name.title()}** " \
-                     f"({p_stars}) in {other_league} League {team_caviat}\n\n"
-          for player in other_players:
-              o_player_name, team_name = player[1], player[4]
-              stars = round((player[2] * 100)) / 100
-              rating_star = player[5] * 5
-              rating = round((rating_star * 100)) / 100
-              response += f"**{o_player_name}**: {stars} ({team_name}) - {rating}⭐ {raw_rating}\n"
-          response += restricted_output
-          return await ctx.send(response)
-        else:
-          filename = f"{player_name}-{raw_rating}-equivilant-exchange.csv"
-          fieldnames = ["player", "combined_stars", "team_name", "rating"]
-          Path(os.path.join('data', 'tmp', 'eq')).mkdir(parents=True, exist_ok=True)
-          with open(os.path.join('data', 'tmp', 'eq', filename), 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=fieldnames)
-            writer.writeheader()
+            response = f"{filter_desc} by {raw_rating} within 2 combined stars of **{player_name.title()}** " \
+                       f"({p_stars}) in {other_league} League {team_caviat}\n\n"
             for player in other_players:
-              o_player_name, team_name = player[1], player[4]
-              stars = round((player[2] * 100)) / 100
-              rating_star = player[5] * 5
-              rating = round((rating_star * 100)) / 100
-              writer.writerow({"player": o_player_name, "combined_stars": stars, "team_name": team_name, "rating": rating})
+                o_player_name, team_name = player[1], player[4]
+                stars = round((player[2] * 100)) / 100
+                rating_star = player[5] * 5
+                rating = round((rating_star * 100)) / 100
+                response += f"**{o_player_name}**: {stars} ({team_name}) - {rating}⭐ {raw_rating}\n"
+            response += restricted_output
+            return await ctx.send(response)
+        else:
+            filename = f"{player_name}-{raw_rating}-equivilant-exchange.csv"
+            fieldnames = ["player", "combined_stars", "team_name"]
+            rating_items = rating.split(',')
+            fieldnames.extend(rating_items)
+            Path(os.path.join('data', 'tmp', 'eq')).mkdir(parents=True, exist_ok=True)
+            with open(os.path.join('data', 'tmp', 'eq', filename), 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, delimiter=',', fieldnames=fieldnames)
+                writer.writeheader()
+                for player in other_players:
+                    o_player_name, team_name = player[1], player[4]
+                    stars = round((player[2] * 100)) / 100
 
-          with open(os.path.join('data', 'tmp', 'eq', filename), 'rb') as csvfile:
-            await ctx.send(file=discord.File(csvfile, filename=filename))
-          pass
-          os.remove(os.path.join('data', 'tmp', 'eq', filename))
-          # Returns CSV
+                    row_dict = {"player": o_player_name, "combined_stars": stars, "team_name": team_name}
+                    idx = 5
+                    for r in rating_items:
+                        rating_star = player[idx] * 5
+                        rounded_rating = round((rating_star * 100)) / 100
+                        row_dict[r] = rounded_rating
+                        idx += 1
+
+                    writer.writerow(row_dict)
+
+            with open(os.path.join('data', 'tmp', 'eq', filename), 'rb') as csvfile:
+                await ctx.send(file=discord.File(csvfile, filename=filename))
+            pass
+            os.remove(os.path.join('data', 'tmp', 'eq', filename))
+            # Returns CSV
 
 
 def setup(bot):
