@@ -317,7 +317,7 @@ class BetAdvice(commands.Cog):
         return upset_wins, upset_losses
 
     async def daily_message(self, season, day):
-        if day < 99:
+        if int(day) < 99:
             with open(os.path.join('data', 'season_sim', 'results', f"s{season}_d{day}_sim_results.json"), 'r') as file:
                 result = json.load(file)
             results, day, output = result['data'], result['day'], result['output']
@@ -571,52 +571,69 @@ class BetAdvice(commands.Cog):
             embed_fields.append({"name": "Weather Forecast",
                                  "value": weather_msg})
 
-        upset_msg = ""
-        sorted_results = {k: v for k, v in
-                          sorted(results.items(), key=lambda item: item[1]["win_percentage"], reverse=True)
-                          if v["upset"] == True}
-        for item in sorted_results.values():
-            win_per = item["win_percentage"]
-            home_team, away_team = item["home_team"], item["away_team"]
-            if home_team["win_percentage"] > away_team["win_percentage"]:
-                team_name = self.bot.team_names[home_team["team_id"]]
-                odds = round(home_team["odds"] * 1000) / 10
+        if day < 99:
+            upset_msg = ""
+            sorted_results = {k: v for k, v in
+                              sorted(results.items(), key=lambda item: item[1]["win_percentage"], reverse=True)
+                              if v["upset"] == True}
+            for item in sorted_results.values():
+                win_per = item["win_percentage"]
+                home_team, away_team = item["home_team"], item["away_team"]
+                if home_team["win_percentage"] > away_team["win_percentage"]:
+                    team_name = self.bot.team_names[home_team["team_id"]]
+                    odds = round(home_team["odds"] * 1000) / 10
 
-                upset_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
-            else:
-                team_name = self.bot.team_names[away_team["team_id"]]
-                odds = round(away_team["odds"] * 1000) / 10
-                diff = round((away_team['win_percentage'] - odds) * 100) / 100
-                diff_str = f"{diff}"
-                if diff >= 0:
-                    diff_str = f"+{diff_str}"
-                upset_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
+                    upset_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
+                else:
+                    team_name = self.bot.team_names[away_team["team_id"]]
+                    odds = round(away_team["odds"] * 1000) / 10
+                    upset_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
 
-        if len(upset_msg) > 0:
+            if len(upset_msg) > 0:
+                embed_fields.append({"name": "SimSim's Spicy Picks",
+                                     "value": upset_msg})
+
+            close_msg = ""
+            sorted_close = {k: v for k, v in
+                            sorted(results.items(), key=lambda item: item[1]["win_percentage"], reverse=True)
+                            if v["win_percentage"] / 100 < v["odds"] and v["upset"] is False}
+            for item in sorted_close.values():
+                win_per = item["win_percentage"]
+                home_team, away_team = item["home_team"], item["away_team"]
+                if home_team["win_percentage"] > away_team["win_percentage"]:
+                    team_name = self.bot.team_names[home_team["team_id"]]
+                    odds = round(home_team["odds"] * 1000) / 10
+
+                    close_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
+                else:
+                    team_name = self.bot.team_names[away_team["team_id"]]
+                    odds = round(away_team["odds"] * 1000) / 10
+
+                    close_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
+
+            if len(close_msg) > 0:
+                embed_fields.append({"name": "Caveat Emptor",
+                                     "value": close_msg})
+        else:
+            sorted_results = {k: v for k, v in
+                              sorted(results.items(), key=lambda item: item[1]["win_percentage"], reverse=True)}
+            predict_msg = ""
+            for item in sorted_results.values():
+                win_per = item["win_percentage"]
+                home_team, away_team = item["home_team"], item["away_team"]
+                if home_team["win_percentage"] > away_team["win_percentage"]:
+                    team_name = self.bot.team_names[home_team["team_id"]]
+                    odds = round(home_team["odds"] * 1000) / 10
+
+                    predict_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
+                else:
+                    team_name = self.bot.team_names[away_team["team_id"]]
+                    odds = round(away_team["odds"] * 1000) / 10
+                    predict_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
+
+        if len(predict_msg) > 0:
             embed_fields.append({"name": "SimSim's Spicy Picks",
-                                 "value": upset_msg})
-
-        close_msg = ""
-        sorted_close = {k: v for k, v in
-                        sorted(results.items(), key=lambda item: item[1]["win_percentage"], reverse=True)
-                        if v["win_percentage"] / 100 < v["odds"] and v["upset"] is False}
-        for item in sorted_close.values():
-            win_per = item["win_percentage"]
-            home_team, away_team = item["home_team"], item["away_team"]
-            if home_team["win_percentage"] > away_team["win_percentage"]:
-                team_name = self.bot.team_names[home_team["team_id"]]
-                odds = round(home_team["odds"] * 1000) / 10
-
-                close_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
-            else:
-                team_name = self.bot.team_names[away_team["team_id"]]
-                odds = round(away_team["odds"] * 1000) / 10
-
-                close_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
-
-        if len(close_msg) > 0:
-            embed_fields.append({"name": "Caveat Emptor",
-                                 "value": close_msg})
+                                 "value": predict_msg})
 
         output_msg = await self._create_debug_message(results, day)
         return message, embed_fields, output_msg
