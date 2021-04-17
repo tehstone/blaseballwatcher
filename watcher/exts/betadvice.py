@@ -631,9 +631,9 @@ class BetAdvice(commands.Cog):
                     odds = round(away_team["odds"] * 1000) / 10
                     predict_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
 
-        if len(predict_msg) > 0:
-            embed_fields.append({"name": "SimSim's Spicy Picks",
-                                 "value": predict_msg})
+            if len(predict_msg) > 0:
+                embed_fields.append({"name": "SimSim's Pickled Postseason Picks",
+                                     "value": predict_msg})
 
         output_msg = await self._create_debug_message(results, day)
         return message, embed_fields, output_msg
