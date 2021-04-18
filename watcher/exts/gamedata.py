@@ -1112,10 +1112,10 @@ class GameData(commands.Cog):
                 }])
 
                 empty_rows = []
-                for i in range(13):
+                for i in range(15):
                     empty_rows.append([''] * 7)
                 await m_worksheet.batch_update([{
-                    'range': f"A{3}:G{15}",
+                    'range': f"A{3}:G{17}",
                     'values': empty_rows
                 }])
             except KeyError:

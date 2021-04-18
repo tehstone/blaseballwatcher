@@ -221,7 +221,7 @@ class BetAdvice(commands.Cog):
         data = {"iterations": iterations,
                 "season": season}
         async with self.bot.session.get(url=f'http://localhost:5555/v1/powerrankings', json=data,
-                                        timeout=50000) as response:
+                                        timeout=75000) as response:
             result = await response.json()
             await ctx.send(result["output"])
 
