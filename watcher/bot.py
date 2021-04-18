@@ -201,6 +201,8 @@ class WatcherBot(commands.AutoShardedBot):
                     await message.channel.send("https://imgur.com/zAUU6FD")
                 if message.clean_content == "spinny":
                     await message.channel.send("https://tenor.com/view/ikea-blahaj-doll-spinning-shark-gif-18118200")
+                if message.clean_content == "facepalm":
+                    await message.channel.send("https://cdn.discordapp.com/attachments/738835237655806033/826994031380529162/joelfacepalm.gif")
         debug_chan_id = self.config.setdefault('debug_channel', None)
         debug_channel = None
         if debug_chan_id:
