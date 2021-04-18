@@ -1083,7 +1083,8 @@ class GameData(commands.Cog):
                     if success:
                         data = {"iterations": 500,
                                 "season": season,
-                                "seg_size": 3}
+                                "seg_size": 3,
+                                "file_id": f"s_{season}_season_sim"}
                         async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
                                                         timeout=75000) as response:
                             result = await response.json()
