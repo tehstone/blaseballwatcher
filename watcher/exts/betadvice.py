@@ -658,20 +658,26 @@ class BetAdvice(commands.Cog):
                                         away_team["odds"], away_team['win_percentage'])
             ev_str = f"{round(ev_raw * 1000) / 10}%"
 
+            away_pitcher_name = home_team['opp_pitcher']['pitcher_name']
+            home_pitcher_name = away_team['opp_pitcher']['pitcher_name']
+
             if home_team["win_percentage"] > away_team["win_percentage"]:
                 diff = round((home_team['win_percentage'] - home_odds) * 100) / 100
                 diff_str = f"{diff}"
                 if diff >= 0:
                     diff_str = f"+{diff_str}"
+
                 pred_str = f"**{home_team['team_name']}** sim: {home_team['win_percentage']}% " \
-                           f"odds: {home_odds} **{diff_str}** EV: {ev_str}"
+                           f"odds: {home_odds} **{diff_str}** EV: {ev_str}\n" \
+                           f"({home_pitcher_name} - {away_pitcher_name})"
             else:
                 diff = round((away_team['win_percentage'] - away_odds) * 100) / 100
                 diff_str = f"{diff}"
                 if diff >= 0:
                     diff_str = f"+{diff_str}"
                 pred_str = f"**{away_team['team_name']}** sim: {away_team['win_percentage']}% " \
-                           f"odds: {away_odds} **{diff_str}** EV: {ev_str}"
+                           f"odds: {away_odds} **{diff_str}** EV: {ev_str}\n" \
+                           f"({away_pitcher_name} - {home_pitcher_name})"
             msg += f"{pred_str}\n"
             output_msg += msg
         return output_msg

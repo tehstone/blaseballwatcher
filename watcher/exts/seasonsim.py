@@ -53,6 +53,18 @@ class SeasonSim(commands.Cog):
             hitter_msg += f"{name}: {round(sorted_hits[pid]['Batter hits'])}\n"
         await ctx.send(hitter_msg)
 
+        sorted_hrs = {k: v for k, v in sorted(player_stats.items(),
+                                               key=lambda item: item[1].get("Batter hrs", 0),
+                                               reverse=True)}
+        hr_msg = ""
+        top_hit_keys = list(sorted_hrs.keys())[:10]
+        for pid in top_hit_keys:
+            if pid not in self.bot.player_id_to_name:
+                continue
+            name = self.bot.player_id_to_name[pid]
+            hr_msg += f"{name}: {round(sorted_hrs[pid]['Batter hrs'])}\n"
+        await ctx.send(hr_msg)
+
 
 def setup(bot):
     bot.add_cog(SeasonSim(bot))
