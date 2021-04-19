@@ -1081,13 +1081,17 @@ class GameData(commands.Cog):
                     await self.update_spreadsheets(season, True)
                     await self._update_tiebreakers()
                     if success:
-                        data = {"iterations": 500,
-                                "season": season,
-                                "seg_size": 3,
-                                "file_id": f"s_{season}_season_sim"}
-                        async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
-                                                        timeout=75000) as response:
-                            result = await response.json()
+                        file_id = f"s_{season}_season_sim"
+                        for day in range(0, 99):
+                            data = {"iterations": 501,
+                                    "season": season,
+                                    "day": day,
+                                    "file_id": file_id,
+                                    "seg_size": 3
+                                    }
+                            async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
+                                                            timeout=75000) as response:
+                                await response.json()
                     break
 
             await asyncio.sleep(120)
