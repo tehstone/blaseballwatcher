@@ -338,7 +338,7 @@ class BetAdvice(commands.Cog):
         try:
             async with aiosqlite.connect(self.bot.db_path) as db:
                 async with db.execute("select count(*) as correct_upsets from dailygameresultstable where "
-                                      "( "
+                                      "(( "
                                       "    (.495 < hometeamodds and hometeamodds < .505) and "
                                       "        ( "
                                       "            (hometeamwinpercentage > awayteamwinpercentage) or "
@@ -360,14 +360,14 @@ class BetAdvice(commands.Cog):
                                       "            (awayteamodds < hometeamodds) "
                                       "        ) "
                                       "    ) "
-                                      ") "
+                                      ")) "
                                       " and season = ?;", [season]) as cursor:
                     async for row in cursor:
                         if row and row[0] is not None:
                             predict_count = row[0]
 
                 async with db.execute("select count(*) as correct_upsets from dailygameresultstable where  "
-                                      "( "
+                                      "(( "
                                           "(.495 < hometeamodds and hometeamodds < .505) and  "
                                               "((hometeamwinpercentage > awayteamwinpercentage and hometeamwin) or "
                                                "(awayteamwinpercentage > hometeamwinpercentage  and awayteamwin)) "
@@ -388,7 +388,7 @@ class BetAdvice(commands.Cog):
                                                   "(awayteamodds < hometeamodds) "
                                               ") "
                                           ")                                    "
-                                      ") "
+                                      ")) "
                                       "and season = ?; ", [season]) as cursor:
                     async for row in cursor:
                         if row and row[0] is not None:

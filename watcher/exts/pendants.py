@@ -880,7 +880,7 @@ class Pendants(commands.Cog):
             nm_row[4] = sorted_combo_payouts[nm_id].setdefault("stolenBases", 0)
         await h_worksheet.batch_update([{
             'range': "A6:E8",
-            'values': [ys_row, wg_row, nm_row]
+            'values': [ys_row, hr_row, nm_row]
         }])
 
     @staticmethod

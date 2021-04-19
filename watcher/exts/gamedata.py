@@ -212,19 +212,20 @@ class GameData(commands.Cog):
             day += 1
         with open(os.path.join("season_data", f"season{season+1}.json"), 'w') as json_file:
             json.dump(new_season_data, json_file)
-        first = os.path.join('..', 'gamesimsvc', 'season_sim', 'season_data')
-        second = os.path.join('..', 'blaseballgamesim', 'season_sim', 'season_data')
         success = False
-        if os.path.exists(first):
-            success = True
-            file_path = os.path.join(first, f"season{season+1}.json")
-            with open(file_path, 'w') as json_file:
-                json.dump(new_season_data, json_file)
-        elif os.path.exists(second):
-            success = True
-            file_path = os.path.join(second, f"season{season + 1}.json")
-            with open(file_path, 'w') as json_file:
-                json.dump(new_season_data, json_file)
+        if fill:
+            first = os.path.join('..', 'gamesimsvc', 'season_sim', 'season_data')
+            second = os.path.join('..', 'blaseballgamesim', 'season_sim', 'season_data')
+            if os.path.exists(first):
+                success = True
+                file_path = os.path.join(first, f"season{season+1}.json")
+                with open(file_path, 'w') as json_file:
+                    json.dump(new_season_data, json_file)
+            elif os.path.exists(second):
+                success = True
+                file_path = os.path.join(second, f"season{season + 1}.json")
+                with open(file_path, 'w') as json_file:
+                    json.dump(new_season_data, json_file)
         return success
 
     def base_season_parser(self, seasons, fill):
