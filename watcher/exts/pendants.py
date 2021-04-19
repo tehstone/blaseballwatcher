@@ -26,7 +26,8 @@ MOVING_PLAYER_IDS = [
 ]
 boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2,
                            "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5,
-                           "c0732e36-3731-4f1a-abdc-daa9563b6506": 2}
+                           "c0732e36-3731-4f1a-abdc-daa9563b6506": 2,
+                           "cf8e152e-2d27-4dcc-ba2b-68127de4e6a4": 2}
 
 class Pendants(commands.Cog):
     def __init__(self, bot):
@@ -852,14 +853,22 @@ class Pendants(commands.Cog):
         if ys_id in sorted_combo_payouts:
             ys_row[4] = sorted_combo_payouts[ys_id].setdefault("stolenBases", 0)
         # Wyatt Glover
-        wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
-        wg_row = ["Wyatt Glover", '', 0, 0, 0]
-        if wg_id in sorted_combo_payouts:
-            wg_row[2] = hitters[wg_id].setdefault("hitsMinusHrs", 0)
-        if wg_id in sorted_combo_payouts:
-            wg_row[3] = sorted_combo_payouts[wg_id].setdefault("homeRuns", 0)
-        if wg_id in sorted_combo_payouts:
-            wg_row[4] = sorted_combo_payouts[wg_id].setdefault("stolenBases", 0)
+        # wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
+        # wg_row = ["Wyatt Glover", '', 0, 0, 0]
+        # if wg_id in sorted_combo_payouts:
+        #     wg_row[2] = hitters[wg_id].setdefault("hitsMinusHrs", 0)
+        # if wg_id in sorted_combo_payouts:
+        #     wg_row[3] = sorted_combo_payouts[wg_id].setdefault("homeRuns", 0)
+        # if wg_id in sorted_combo_payouts:
+        #     wg_row[4] = sorted_combo_payouts[wg_id].setdefault("stolenBases", 0)
+        hr_id = "cf8e152e-2d27-4dcc-ba2b-68127de4e6a4"
+        hr_row = ["Hendricks Richardson", '', 0, 0, 0]
+        if hr_id in sorted_combo_payouts:
+            hr_row[2] = hitters[hr_id].setdefault("hitsMinusHrs", 0)
+        if hr_id in sorted_combo_payouts:
+            hr_row[3] = sorted_combo_payouts[hr_id].setdefault("homeRuns", 0)
+        if hr_id in sorted_combo_payouts:
+            hr_row[4] = sorted_combo_payouts[hr_id].setdefault("stolenBases", 0)
         # Nagomi Mcdaniel
         nm_id = "c0732e36-3731-4f1a-abdc-daa9563b6506"
         nm_row = ["Nagomi Mcdaniel", '', 0, 0, 0]
