@@ -475,11 +475,13 @@ class BetAdvice(commands.Cog):
         for game in results.values():
             pitcher_opp_strikeouts[game["home_team"]["opp_pitcher"]["pitcher_id"]] = {
                 "strikeout_avg": game["home_team"]["strikeout_avg"],
+                "dinger_avg": game["home_team"]["dinger_avg"],
                 "name": game["home_team"]["opp_pitcher"]["pitcher_name"],
                 "team": game["home_team"]["opp_pitcher"]["p_team_id"]
             }
             pitcher_opp_strikeouts[game["away_team"]["opp_pitcher"]["pitcher_id"]] = {
                 "strikeout_avg": game["away_team"]["strikeout_avg"],
+                "dinger_avg": game["away_team"]["dinger_avg"],
                 "name": game["away_team"]["opp_pitcher"]["pitcher_name"],
                 "team": game["away_team"]["opp_pitcher"]["p_team_id"]
             }
@@ -502,6 +504,26 @@ class BetAdvice(commands.Cog):
             pitcher_list.append(entry)
 
         embed_fields.append({"name": "Strikeout Predictions",
+                             "value": '\n'.join(pitcher_list)})
+
+        sorted_hr_preds = {k: v for k, v in sorted(pitcher_opp_strikeouts.items(),
+                                                   key=lambda item: item[1]['dinger_avg'],
+                                                   reverse=True)}
+        top_list = list(sorted_hr_preds.keys())[:4]
+        pitcher_list = []
+        for key in top_list:
+            pitcher = pitcher_opp_strikeouts[key]
+            name = pitcher["name"]
+            shorthand = team_short_map[pitcher["team"]]
+
+            opp_k_per = pitcher["dinger_avg"]
+            pred = round(opp_k_per * 10) / 10
+            entry = f"[{name}]({'https://www.blaseball.com/player/' + key}) "
+            entry += f"([{shorthand}]({'https://www.blaseball.com/team/' + pitcher['team']}))"
+            entry += f" - [{pred}]({'https://blaseball-reference.com/players/' + key}) "
+            pitcher_list.append(entry)
+
+        embed_fields.append({"name": "Dinger Predictions",
                              "value": '\n'.join(pitcher_list)})
 
         shutouts = {}
