@@ -621,7 +621,7 @@ class Pendants(commands.Cog):
 
         try:
             for i in range(len(filtered_items)):
-                if i + 1 > len(filtered_items):
+                if i + 1 >= len(filtered_items):
                     break
                 if "hits a Single" in filtered_items[i]['description']:
                     if "hits a Double" in filtered_items[i + 1]['description']:
@@ -632,7 +632,7 @@ class Pendants(commands.Cog):
             self.bot.logger.warn(f"Failed cycle check on:\n{filtered_items}")
         try:
             for i in range(len(filtered_items)):
-                if i + 1 > len(filtered_items):
+                if i + 1 >= len(filtered_items):
                     break
                 if "home run" in filtered_items[i]['description']:
                     if "hits a Triple" in filtered_items[i + 1]['description']:
