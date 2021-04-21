@@ -224,7 +224,7 @@ class WatcherBot(commands.AutoShardedBot):
             betadvice_cog = self.cogs.get('BetAdvice')
             try:
                 upset_wins, upset_losses = await betadvice_cog.update_day_winners(current_season - 1, latest_day - 1)
-                message, embed_fields, __ = await betadvice_cog.daily_message(current_season-1, latest_day)
+                message, embed_fields, output = await betadvice_cog.daily_message(current_season-1, latest_day)
                 m_embed = discord.Embed(description=message)
                 for field in embed_fields:
                     m_embed.add_field(name=field["name"], value=field["value"])
@@ -234,10 +234,11 @@ class WatcherBot(commands.AutoShardedBot):
                     publish = self.config.setdefault('publish_rec_message', False)
                     if publish:
                         await bet_msg.publish()
-                if upset_wins + upset_losses > 0:
-                    outputchan_id = self.config['game_sim_output_chan_id']
-                    output_channel = self.get_channel(outputchan_id)
-                    if output_channel:
+                outputchan_id = self.config['game_sim_output_chan_id']
+                output_channel = self.get_channel(outputchan_id)
+                if output_channel:
+                    await output_channel.send(output)
+                    if upset_wins + upset_losses > 0:
                         await output_channel.send(f"Day {latest_day} upset record: {upset_wins}-{upset_losses}")
             except Exception as e:
                 self.logger.warning(f"Failed to send pendant picks: {e}")
