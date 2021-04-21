@@ -527,7 +527,7 @@ class BetAdvice(commands.Cog):
             entry += f" - [{pred}]({'https://blaseball-reference.com/players/' + key}) "
             pitcher_list.append(entry)
 
-        embed_fields.append({"name": "Dinger Predictions",
+        embed_fields.append({"name": "Cloudy with a chance of Meatballs",
                              "value": '\n'.join(pitcher_list)})
 
         shutouts = {}
