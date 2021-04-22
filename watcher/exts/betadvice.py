@@ -616,7 +616,7 @@ class BetAdvice(commands.Cog):
                     upset_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
 
             if len(upset_msg) > 0:
-                embed_fields.append({"name": "SimSim's Spicy Picks",
+                embed_fields.append({"name": "MetaSim's Spicy Picks",
                                      "value": upset_msg})
 
             close_msg = ""
@@ -658,7 +658,7 @@ class BetAdvice(commands.Cog):
                     predict_msg += f"{team_name} {odds}% site odds - **{win_per}% sim odds**\n"
 
             if len(predict_msg) > 0:
-                embed_fields.append({"name": "SimSim's Pickled Postseason Picks",
+                embed_fields.append({"name": "MetaSim's Pickled Postseason Picks",
                                      "value": predict_msg})
 
         output_msg = await self._create_debug_message(results, day)
