@@ -648,7 +648,7 @@ class Pendants(commands.Cog):
 
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select playerId, name, teamId, sum(hits)-sum(homeRuns), "
-                                  "sum(homeRuns), sum(stolenBases), sum(atBats) "
+                                  "sum(homeRuns), sum(stolenBases), sum(atBats), count(distinct gameId) as games "
                                   "from DailyStatSheets where season=? and position='lineup' "
                                   "group by playerId", [season]) as cursor:
                 async for row in cursor:
@@ -660,7 +660,8 @@ class Pendants(commands.Cog):
                             "hitsMinusHrs": row[3],
                             "homeRuns": row[4],
                             "stolenBases": row[5],
-                            "atBats": row[6]
+                            "atBats": row[6],
+                            "games": row[7]
                         }
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute("select playerId, name, teamId, sum(outsRecorded), sum(strikeouts), "
@@ -806,10 +807,9 @@ class Pendants(commands.Cog):
             team = team_short_map[values["teamId"]]
             lineup_length = team_lineup_lengths[values["teamId"]]
             name = f"({team}) {values['name']}"
-            atBats = ''
-            if 'atBats' in hitters[key]:
-                atBats = hitters[key]["atBats"]
-            rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length])
+            atBats = hitters[key]["atBats"]
+            games = hitters[key]["games"]
+            rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length, games])
             players_seen.append(key)
             count += 1
             if count == 4:
@@ -825,10 +825,9 @@ class Pendants(commands.Cog):
                 team = team_short_map[values["teamId"]]
                 lineup_length = team_lineup_lengths[values["teamId"]]
                 name = f"({team}) {values['name']}"
-                atBats = ''
-                if 'atBats' in hitters[key]:
-                    atBats = hitters[key]["atBats"]
-                rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length])
+                atBats = hitters[key]["atBats"]
+                games = hitters[key]["games"]
+                rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length, games])
                 players_seen.append(key)
                 count += 1
                 if count == 4:
@@ -844,33 +843,32 @@ class Pendants(commands.Cog):
                 team = team_short_map[values["teamId"]]
                 lineup_length = team_lineup_lengths[values["teamId"]]
                 name = f"({team}) {values['name']}"
-                atBats = ''
-                if 'atBats' in hitters[key]:
-                    atBats = hitters[key]["atBats"]
-                rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length])
+                atBats = hitters[key]["atBats"]
+                games = hitters[key]["games"]
+                rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length, games])
                 count += 1
                 if count == 4:
                     break
 
         await h_worksheet.batch_update([{
-            'range': f"A10:G{10+len(rows)}",
+            'range': f"A10:H{10+len(rows)}",
             'values': rows
         }])
 
         # York Silk
         ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
-        ys_row = ["York Silk", '', 0, 0, 0, 0, 0]
+        ys_row = ["York Silk", '', 0, 0, 0, 0, 0, 0]
         if ys_id in sorted_combo_payouts:
             ys_row[2] = hitters[ys_id].setdefault("hitsMinusHrs", 0)
         if ys_id in sorted_combo_payouts:
             ys_row[3] = sorted_combo_payouts[ys_id].setdefault("homeRuns", 0)
         if ys_id in sorted_combo_payouts:
             ys_row[4] = sorted_combo_payouts[ys_id].setdefault("stolenBases", 0)
-        atBats = ''
-        if 'atBats' in hitters[ys_id]:
-            atBats = hitters[ys_id]["atBats"]
+        atBats = hitters[ys_id]["atBats"]
+        games = hitters[ys_id]["games"]
         ys_row[5] = atBats
         ys_row[6] = team_lineup_lengths[hitters[ys_id]["teamId"]]
+        ys_row[7] = games
         # Wyatt Glover
         # wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
         # wg_row = ["Wyatt Glover", '', 0, 0, 0]
@@ -881,34 +879,34 @@ class Pendants(commands.Cog):
         # if wg_id in sorted_combo_payouts:
         #     wg_row[4] = sorted_combo_payouts[wg_id].setdefault("stolenBases", 0)
         hr_id = "cf8e152e-2d27-4dcc-ba2b-68127de4e6a4"
-        hr_row = ["Hendricks Richardson", '', 0, 0, 0, 0, 0]
+        hr_row = ["Hendricks Richardson", '', 0, 0, 0, 0, 0, 0]
         if hr_id in sorted_combo_payouts:
             hr_row[2] = hitters[hr_id].setdefault("hitsMinusHrs", 0)
         if hr_id in sorted_combo_payouts:
             hr_row[3] = sorted_combo_payouts[hr_id].setdefault("homeRuns", 0)
         if hr_id in sorted_combo_payouts:
             hr_row[4] = sorted_combo_payouts[hr_id].setdefault("stolenBases", 0)
-        atBats = ''
-        if 'atBats' in hitters[hr_id]:
-            atBats = hitters[hr_id]["atBats"]
+        atBats = hitters[hr_id]["atBats"]
+        games = hitters[hr_id]["games"]
         hr_row[5] = atBats
         hr_row[6] = team_lineup_lengths[hitters[hr_id]["teamId"]]
+        hr_row[7] = games
         # Nagomi Mcdaniel
         nm_id = "c0732e36-3731-4f1a-abdc-daa9563b6506"
-        nm_row = ["Nagomi Mcdaniel", '', 0, 0, 0, 0, 0]
+        nm_row = ["Nagomi Mcdaniel", '', 0, 0, 0, 0, 0, 0]
         if nm_id in sorted_combo_payouts:
             nm_row[2] = hitters[nm_id].setdefault("hitsMinusHrs", 0)
         if nm_id in sorted_combo_payouts:
             nm_row[3] = sorted_combo_payouts[nm_id].setdefault("homeRuns", 0)
         if nm_id in sorted_combo_payouts:
             nm_row[4] = sorted_combo_payouts[nm_id].setdefault("stolenBases", 0)
-        atBats = ''
-        if 'atBats' in hitters[nm_id]:
-            atBats = hitters[nm_id]["atBats"]
+        atBats = hitters[nm_id]["atBats"]
+        games = hitters[nm_id]["games"]
         nm_row[5] = atBats
         nm_row[6] = team_lineup_lengths[hitters[nm_id]["teamId"]]
+        nm_row[7] = games
         await h_worksheet.batch_update([{
-            'range': "A6:G8",
+            'range': "A6:H8",
             'values': [ys_row, hr_row, nm_row]
         }])
 
