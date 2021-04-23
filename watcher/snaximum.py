@@ -489,7 +489,10 @@ class Snaximum:
                 batters.append((payout, split, player))
 
         batters = sorted(batters, key=lambda x: x[0]['total'], reverse=True)
-        self.batter_analysis_cache[key] = batters
+        
+        # Don't Save to cache if we specified a team
+        if len(inc_teams) == 0:
+            self.batter_analysis_cache[key] = batters
 
         if limit == -1:
             return batters
