@@ -615,10 +615,10 @@ class GameData(commands.Cog):
                 weather_rows = []
                 for w, count in weathers[season].items():
                     weather_name = weather_types[w]
-                    w_row = [weather_name, count, f"{round((count/990)*1000)/10}%"]
+                    w_row = [weather_name, count, f"{round((count/1188)*1000)/10}%"]
                     weather_rows.append(w_row)
                 await o_worksheet.batch_update([{
-                    'range': f"K{9}:M{9 + len(weather_rows)}",
+                    'range': f"K{8}:M{8 + len(weather_rows)}",
                     'values': weather_rows
                 }])
             else:
