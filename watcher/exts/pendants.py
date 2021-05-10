@@ -922,7 +922,7 @@ class Pendants(commands.Cog):
         # nm_row[7] = games
         await h_worksheet.batch_update([{
             'range': "A6:H7",
-            'values': [hr_row, fb_id]
+            'values': [hr_row, fb_row]
         }])
 
     async def _get_team_lineup_lengths(self, season, day):
