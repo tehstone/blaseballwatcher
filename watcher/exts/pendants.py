@@ -25,9 +25,11 @@ MOVING_PLAYER_IDS = [
     "9ba361a1-16d5-4f30-b590-fc4fc2fb53d2"
 ]
 boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2,
-                           "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5,
-                           "c0732e36-3731-4f1a-abdc-daa9563b6506": 2,
-                           "cf8e152e-2d27-4dcc-ba2b-68127de4e6a4": 2}
+                   "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5,
+                   "c0732e36-3731-4f1a-abdc-daa9563b6506": 2,
+                   "cf8e152e-2d27-4dcc-ba2b-68127de4e6a4": 2,
+                   "8ecea7e0-b1fb-4b74-8c8c-3271cb54f659": 2
+                  }
 
 class Pendants(commands.Cog):
     def __init__(self, bot):
@@ -856,19 +858,19 @@ class Pendants(commands.Cog):
         }])
 
         # York Silk
-        ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
-        ys_row = ["York Silk", '', 0, 0, 0, 0, 0, 0]
-        if ys_id in sorted_combo_payouts:
-            ys_row[2] = hitters[ys_id].setdefault("hitsMinusHrs", 0)
-        if ys_id in sorted_combo_payouts:
-            ys_row[3] = sorted_combo_payouts[ys_id].setdefault("homeRuns", 0)
-        if ys_id in sorted_combo_payouts:
-            ys_row[4] = sorted_combo_payouts[ys_id].setdefault("stolenBases", 0)
-        atBats = hitters[ys_id]["atBats"]
-        games = hitters[ys_id]["games"]
-        ys_row[5] = atBats
-        ys_row[6] = team_lineup_lengths[hitters[ys_id]["teamId"]]
-        ys_row[7] = games
+        # ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
+        # ys_row = ["York Silk", '', 0, 0, 0, 0, 0, 0]
+        # if ys_id in sorted_combo_payouts:
+        #     ys_row[2] = hitters[ys_id].setdefault("hitsMinusHrs", 0)
+        # if ys_id in sorted_combo_payouts:
+        #     ys_row[3] = sorted_combo_payouts[ys_id].setdefault("homeRuns", 0)
+        # if ys_id in sorted_combo_payouts:
+        #     ys_row[4] = sorted_combo_payouts[ys_id].setdefault("stolenBases", 0)
+        # atBats = hitters[ys_id]["atBats"]
+        # games = hitters[ys_id]["games"]
+        # ys_row[5] = atBats
+        # ys_row[6] = team_lineup_lengths[hitters[ys_id]["teamId"]]
+        # ys_row[7] = games
         # Wyatt Glover
         # wg_id = "e16c3f28-eecd-4571-be1a-606bbac36b2b"
         # wg_row = ["Wyatt Glover", '', 0, 0, 0]
@@ -891,23 +893,36 @@ class Pendants(commands.Cog):
         hr_row[5] = atBats
         hr_row[6] = team_lineup_lengths[hitters[hr_id]["teamId"]]
         hr_row[7] = games
+        fb_id = "8ecea7e0-b1fb-4b74-8c8c-3271cb54f659"
+        fb_row = ["Fitzgerald Blackburn", '', 0, 0, 0, 0, 0, 0]
+        if fb_id in sorted_combo_payouts:
+            fb_row[2] = hitters[fb_id].setdefault("hitsMinusHrs", 0)
+        if fb_id in sorted_combo_payouts:
+            fb_row[3] = sorted_combo_payouts[fb_id].setdefault("homeRuns", 0)
+        if fb_id in sorted_combo_payouts:
+            fb_row[4] = sorted_combo_payouts[fb_id].setdefault("stolenBases", 0)
+        atBats = hitters[fb_id]["atBats"]
+        games = hitters[fb_id]["games"]
+        fb_row[5] = atBats
+        fb_row[6] = team_lineup_lengths[hitters[fb_id]["teamId"]]
+        fb_row[7] = games
         # Nagomi Mcdaniel
-        nm_id = "c0732e36-3731-4f1a-abdc-daa9563b6506"
-        nm_row = ["Nagomi Mcdaniel", '', 0, 0, 0, 0, 0, 0]
-        if nm_id in sorted_combo_payouts:
-            nm_row[2] = hitters[nm_id].setdefault("hitsMinusHrs", 0)
-        if nm_id in sorted_combo_payouts:
-            nm_row[3] = sorted_combo_payouts[nm_id].setdefault("homeRuns", 0)
-        if nm_id in sorted_combo_payouts:
-            nm_row[4] = sorted_combo_payouts[nm_id].setdefault("stolenBases", 0)
-        atBats = hitters[nm_id]["atBats"]
-        games = hitters[nm_id]["games"]
-        nm_row[5] = atBats
-        nm_row[6] = team_lineup_lengths[hitters[nm_id]["teamId"]]
-        nm_row[7] = games
+        # nm_id = "c0732e36-3731-4f1a-abdc-daa9563b6506"
+        # nm_row = ["Nagomi Mcdaniel", '', 0, 0, 0, 0, 0, 0]
+        # if nm_id in sorted_combo_payouts:
+        #     nm_row[2] = hitters[nm_id].setdefault("hitsMinusHrs", 0)
+        # if nm_id in sorted_combo_payouts:
+        #     nm_row[3] = sorted_combo_payouts[nm_id].setdefault("homeRuns", 0)
+        # if nm_id in sorted_combo_payouts:
+        #     nm_row[4] = sorted_combo_payouts[nm_id].setdefault("stolenBases", 0)
+        # atBats = hitters[nm_id]["atBats"]
+        # games = hitters[nm_id]["games"]
+        # nm_row[5] = atBats
+        # nm_row[6] = team_lineup_lengths[hitters[nm_id]["teamId"]]
+        # nm_row[7] = games
         await h_worksheet.batch_update([{
-            'range': "A6:H8",
-            'values': [ys_row, hr_row, nm_row]
+            'range': "A6:H7",
+            'values': [hr_row, fb_id]
         }])
 
     async def _get_team_lineup_lengths(self, season, day):

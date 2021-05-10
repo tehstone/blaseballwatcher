@@ -54,8 +54,8 @@ async def start_task_loops(bot):
         pendants_cog = bot.get_cog('Pendants')
         event_loop.create_task(pendants_cog.check_remaining_teams_loop(bot))
 
-        # betadvice_cog = bot.get_cog('BetAdvice')
-        # event_loop.create_task(betadvice_cog.check_game_sim_loop())
+        betadvice_cog = bot.get_cog('BetAdvice')
+        event_loop.create_task(betadvice_cog.check_game_sim_loop())
 
         logger.info('Loops initiated')
     except KeyboardInterrupt:
