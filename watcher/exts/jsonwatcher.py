@@ -191,7 +191,7 @@ class JsonWatcher(commands.Cog):
             park = park['data']
             old_park = old_parks[park["id"]]['data']
             team_name = self.bot.team_names[park["teamId"]]
-            for attr in ["hype", "mods", "name", "model", "weather", "state",
+            for attr in ["mods", "name", "model", "weather", "state",
                          "nickname", "mainColor", "secondaryColor", "tertiaryColor"]:
                 if attr in park and attr in old_park:
                     if park[attr] != old_park[attr]:

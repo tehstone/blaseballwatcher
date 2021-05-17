@@ -225,6 +225,23 @@ class BetAdvice(commands.Cog):
             result = await response.json()
             await ctx.send(result["output"])
 
+    @commands.command(name="run_season_sim", aliases=['rss'])
+    async def _run_season_sim(self, ctx, start: int, end: int, iterations=501):
+        await ctx.message.add_reaction("⏲️")
+        current_season = self.bot.config['current_season'] - 1
+        file_id = f"s_{current_season}_season_sim"
+        for day in range(start, end + 1):
+            data = {"iterations": iterations,
+                    "season": current_season,
+                    "day": day,
+                    "file_id": file_id,
+                    "seg_size": 3
+                    }
+            async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
+                                            timeout=75000) as response:
+                await response.json()
+        await ctx.message.add_reaction(self.bot.success_react)
+
     @commands.command()
     async def rds(self, ctx, day: int):
         data = {"iterations": 501, "day": day}
