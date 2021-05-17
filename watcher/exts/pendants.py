@@ -613,7 +613,8 @@ class Pendants(commands.Cog):
     async def _check_feed_natural_cycle(self, player_name, player_id, day, season):
         player_feed = await utils.retry_request(f"https://www.blaseball.com/database/feed/player?id={player_id}")
         feed_json = player_feed.json()
-        day_items = list(filter(lambda d: d['day'] == day and d['season'] == season, feed_json))
+        day_items = list(filter(lambda d: d['day'] == day and d['season'] == season
+                                and 'metadata' in d and 'play' in d['metadata'], feed_json))
         sorted_items = sorted(day_items, key=lambda item: item['metadata']['play'])
 
         filtered_items = []
@@ -853,7 +854,7 @@ class Pendants(commands.Cog):
                     break
 
         await h_worksheet.batch_update([{
-            'range': f"A10:H{10+len(rows)}",
+            'range': f"A11:H{10+len(rows)}",
             'values': rows
         }])
 
@@ -906,6 +907,32 @@ class Pendants(commands.Cog):
         fb_row[5] = atBats
         fb_row[6] = team_lineup_lengths[hitters[fb_id]["teamId"]]
         fb_row[7] = games
+        pt_id = "5bcfb3ff-5786-4c6c-964c-5c325fcc48d7"
+        pt_row = ["Paula Turnip", '', 0, 0, 0, 0, 0, 0]
+        if pt_id in sorted_combo_payouts:
+            pt_row[2] = hitters[pt_id].setdefault("hitsMinusHrs", 0)
+        if pt_id in sorted_combo_payouts:
+            pt_row[3] = sorted_combo_payouts[pt_id].setdefault("homeRuns", 0)
+        if pt_id in sorted_combo_payouts:
+            pt_row[4] = sorted_combo_payouts[pt_id].setdefault("stolenBases", 0)
+        atBats = hitters[pt_id]["atBats"]
+        games = hitters[pt_id]["games"]
+        pt_row[5] = atBats
+        pt_row[6] = team_lineup_lengths[hitters[pt_id]["teamId"]]
+        pt_row[7] = games
+        jh_id = "04e14d7b-5021-4250-a3cd-932ba8e0a889"
+        jh_row = ["Paula Turnip", '', 0, 0, 0, 0, 0, 0]
+        if jh_id in sorted_combo_payouts:
+            jh_row[2] = hitters[jh_id].setdefault("hitsMinusHrs", 0)
+        if jh_id in sorted_combo_payouts:
+            jh_row[3] = sorted_combo_payouts[jh_id].setdefault("homeRuns", 0)
+        if jh_id in sorted_combo_payouts:
+            jh_row[4] = sorted_combo_payouts[jh_id].setdefault("stolenBases", 0)
+        atBats = hitters[jh_id]["atBats"]
+        games = hitters[jh_id]["games"]
+        jh_row[5] = atBats
+        jh_row[6] = team_lineup_lengths[hitters[jh_id]["teamId"]]
+        jh_row[7] = games
         # Nagomi Mcdaniel
         # nm_id = "c0732e36-3731-4f1a-abdc-daa9563b6506"
         # nm_row = ["Nagomi Mcdaniel", '', 0, 0, 0, 0, 0, 0]
@@ -921,8 +948,8 @@ class Pendants(commands.Cog):
         # nm_row[6] = team_lineup_lengths[hitters[nm_id]["teamId"]]
         # nm_row[7] = games
         await h_worksheet.batch_update([{
-            'range': "A6:H7",
-            'values': [hr_row, fb_row]
+            'range': "A6:H9",
+            'values': [hr_row, fb_row, pt_row, jh_row]
         }])
 
     async def _get_team_lineup_lengths(self, season, day):
