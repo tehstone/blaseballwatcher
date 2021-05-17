@@ -921,7 +921,7 @@ class Pendants(commands.Cog):
         pt_row[6] = team_lineup_lengths[hitters[pt_id]["teamId"]]
         pt_row[7] = games
         jh_id = "04e14d7b-5021-4250-a3cd-932ba8e0a889"
-        jh_row = ["Paula Turnip", '', 0, 0, 0, 0, 0, 0]
+        jh_row = ["Jaylen Hotdogfingers", '', 0, 0, 0, 0, 0, 0]
         if jh_id in sorted_combo_payouts:
             jh_row[2] = hitters[jh_id].setdefault("hitsMinusHrs", 0)
         if jh_id in sorted_combo_payouts:
