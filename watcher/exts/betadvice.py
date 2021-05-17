@@ -231,14 +231,30 @@ class BetAdvice(commands.Cog):
         async with self.bot.session.get(url=f'http://localhost:5555/v1/dailysim', json=data, timeout=1200) as response:
             result = await response.json()
         day, time_elapsed = result['day'], result["time_elapsed"]
-        with open(os.path.join('data', 'season_sim', 'results', f"s15_d{day}_sim_results_rerun.json"), 'w') as file:
+        if "stats" in result:
+            stats = result["stats"]
+        with open(os.path.join('data', 'season_sim', 'results', f"s17_d{day}_sim_results_rerun.json"), 'w') as file:
             json.dump(result, file)
+        # with open(os.path.join('data', 'season_sim', 'results', f"s16_d{day}_sim_results_rerun.json"), 'r') as file:
+        #     result = json.load(file)
         output_msg = await self._create_debug_message(result['data'], day)
         outputchan_id = self.bot.config['game_sim_output_chan_id']
         output_channel = self.bot.get_channel(outputchan_id)
         if output_channel:
             await output_channel.send(output_msg)
-        print(f"ran 501 iter sim for day {day} in {time_elapsed} seconds")
+        #print(f"ran 501 iter sim for day {day} in {time_elapsed} seconds")
+        stats = result["stats"]
+        sorted_hits = {k: v for k, v in sorted(stats.items(),
+                                               key=lambda item: item[1].get("Batter hits", 0),
+                                               reverse=True)}
+        hitter_msg = ""
+        top_hit_keys = list(sorted_hits.keys())[:10]
+        for pid in top_hit_keys:
+            if pid not in self.bot.player_id_to_name:
+                continue
+            name = self.bot.player_id_to_name[pid]
+            hitter_msg += f"{name}: {round(sorted_hits[pid]['Batter hits'])}\n"
+        await ctx.send(hitter_msg)
 
     async def run_daily_sim(self, season, iterations):
         data = {"iterations": iterations}
@@ -569,33 +585,33 @@ class BetAdvice(commands.Cog):
             embed_fields.append({"name": "Teams most likely to score 10+",
                                  "value": big_message})
 
-        black_hole_games, flood_games, sun_two_games, eclipse_games = 0, 0, 0, 0
-        for game in results.values():
-            if game["weather"] == 14:
-                black_hole_games += 1
-            if game["weather"] == 18:
-                flood_games += 1
-            if game["weather"] == 1:
-                sun_two_games += 1
-            if game["weather"] == 7:
-                eclipse_games += 1
-        black_hole_games = int(black_hole_games)
-        flood_games = int(flood_games)
-        sun_two_games = int(sun_two_games)
-        eclipse_games = int(eclipse_games)
+        # black_hole_games, flood_games, sun_two_games, eclipse_games = 0, 0, 0, 0
+        # for game in results.values():
+        #     if game["weather"] == 14:
+        #         black_hole_games += 1
+        #     if game["weather"] == 18:
+        #         flood_games += 1
+        #     if game["weather"] == 1:
+        #         sun_two_games += 1
+        #     if game["weather"] == 7:
+        #         eclipse_games += 1
+        # black_hole_games = int(black_hole_games)
+        # flood_games = int(flood_games)
+        # sun_two_games = int(sun_two_games)
+        # eclipse_games = int(eclipse_games)
 
-        weather_msg = ""
-        if black_hole_games > 0:
-            weather_msg += f"{black_hole_games} games in Black Hole Weather\n"
-        if sun_two_games > 0:
-            weather_msg += f"{sun_two_games} games in Sun 2 Weather\n"
-        if flood_games > 0:
-            weather_msg += f"{flood_games} games in Flooding Weather\n"
-        if eclipse_games > 0:
-            weather_msg += f"{eclipse_games} games in Eclipse Weather\n"
-        if len(weather_msg) > 0:
-            embed_fields.append({"name": "Weather Forecast",
-                                 "value": weather_msg})
+        # weather_msg = ""
+        # if black_hole_games > 0:
+        #     weather_msg += f"{black_hole_games} games in Black Hole Weather\n"
+        # if sun_two_games > 0:
+        #     weather_msg += f"{sun_two_games} games in Sun 2 Weather\n"
+        # if flood_games > 0:
+        #     weather_msg += f"{flood_games} games in Flooding Weather\n"
+        # if eclipse_games > 0:
+        #     weather_msg += f"{eclipse_games} games in Eclipse Weather\n"
+        # if len(weather_msg) > 0:
+        #     embed_fields.append({"name": "Weather Forecast",
+        #                          "value": weather_msg})
 
         if day < 99:
             upset_msg = ""
@@ -640,6 +656,29 @@ class BetAdvice(commands.Cog):
             if len(close_msg) > 0:
                 embed_fields.append({"name": "Caveat Emptor",
                                      "value": close_msg})
+
+            big_loss_msg = ""
+            sorted_loss = {k: v for k, v in
+                              sorted(results.items(), key=lambda item: item[1]["win_percentage"])}
+            top_three = list(sorted_loss.keys())[:3]
+            for key in top_three:
+                item = sorted_loss[key]
+                win_per = item["win_percentage"]
+                home_team, away_team = item["home_team"], item["away_team"]
+                if home_team["win_percentage"] > away_team["win_percentage"]:
+                    pitcher_name = home_team["opp_pitcher"]["pitcher_name"]
+                    odds = round(away_team["odds"] * 1000) / 10
+                    shorthand = team_short_map[away_team["team_id"]]
+                    big_loss_msg += f"**{pitcher_name}** ({shorthand}): {odds}% win chance\n"
+                else:
+                    pitcher_name = away_team["opp_pitcher"]["pitcher_name"]
+                    odds = round(home_team["odds"] * 1000) / 10
+                    shorthand = team_short_map[home_team["team_id"]]
+                    big_loss_msg += f"**{pitcher_name}** ({shorthand}): {odds}% win chance\n"
+            if len(big_loss_msg) > 0:
+                embed_fields.append({"name": "Would you like fries with that?",
+                                     "value": big_loss_msg})
+
         else:
             sorted_results = {k: v for k, v in
                               sorted(results.items(), key=lambda item: item[1]["win_percentage"], reverse=True)}
