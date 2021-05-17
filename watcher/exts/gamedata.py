@@ -96,8 +96,8 @@ weather_types = {
     17: 'Coffee 3s',
     18: 'Flooding',
     19: 'Salmon',
-    20: '???',
-    21: '???',
+    20: 'Polarity+',
+    21: 'Polarity-',
     22: '???'
 }
 
