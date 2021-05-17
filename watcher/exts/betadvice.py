@@ -659,7 +659,7 @@ class BetAdvice(commands.Cog):
 
             big_loss_msg = ""
             sorted_loss = {k: v for k, v in
-                              sorted(results.items(), key=lambda item: item[1]["win_percentage"])}
+                              sorted(results.items(), key=lambda item: item[1]["win_percentage"], reverse=True)}
             top_three = list(sorted_loss.keys())[:3]
             for key in top_three:
                 item = sorted_loss[key]
