@@ -233,7 +233,7 @@ class BetAdvice(commands.Cog):
         day, time_elapsed = result['day'], result["time_elapsed"]
         if "stats" in result:
             stats = result["stats"]
-        with open(os.path.join('data', 'season_sim', 'results', f"s17_d{day}_sim_results_rerun.json"), 'w') as file:
+        with open(os.path.join('data', 'season_sim', 'results', f"s18_d{day}_sim_results_rerun.json"), 'w') as file:
             json.dump(result, file)
         # with open(os.path.join('data', 'season_sim', 'results', f"s16_d{day}_sim_results_rerun.json"), 'r') as file:
         #     result = json.load(file)
@@ -898,7 +898,8 @@ class BetAdvice(commands.Cog):
             bet_msg = await output_channel.send(embed=m_embed)
             d_output_chan = self.bot.get_channel(self.bot.config['gamesim_debug_channel'])
             await d_output_chan.send(output)
-            if self.bot.config['live_version']:
+            publish = self.bot.config.setdefault('publish_rec_message', False)
+            if publish:
                 await bet_msg.publish()
 
     @commands.command(aliases=['fdt'])
