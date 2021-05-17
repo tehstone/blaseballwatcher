@@ -684,7 +684,7 @@ class BetAdvice(commands.Cog):
                 home_team, away_team = item["home_team"], item["away_team"]
                 if home_team["win_percentage"] > away_team["win_percentage"]:
                     pitcher_name = home_team["opp_pitcher"]["pitcher_name"]
-                    odds = round(away_team["win_percentage"] * 1000) / 10
+                    odds = away_team["win_percentage"]
                     shorthand = team_short_map[away_team["team_id"]]
                     big_loss_msg += f"**{pitcher_name}** ({shorthand}): {odds}% win chance\n"
                 else:
