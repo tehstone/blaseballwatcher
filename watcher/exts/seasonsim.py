@@ -8,20 +8,21 @@ class SeasonSim(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def run_season_sim(self, ctx, season: int, iterations: int, start: int, end: int, run=True, file_id=None):
-        if run:
-            if not file_id:
-                file_id = str(round(time.time()))
-            for day in range(start, end+1):
-                data = {"iterations": iterations,
-                        "season": season,
-                        "day": day,
-                        "file_id": file_id,
-                        "seg_size": 3
-                        }
-                async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
-                                                timeout=75000) as response:
-                    await response.json()
+    async def sum_season(self, ctx, file_id=None):
+        # season: int, iterations: int, start: int, end: int, run=True,
+        # if run:
+        #     if not file_id:
+        #         file_id = str(round(time.time()))
+        #     for day in range(start, end+1):
+        #         data = {"iterations": iterations,
+        #                 "season": season,
+        #                 "day": day,
+        #                 "file_id": file_id,
+        #                 "seg_size": 3
+        #                 }
+        #         async with self.bot.session.get(url=f'http://localhost:5555/v1/seasonsim', json=data,
+        #                                         timeout=75000) as response:
+        #             await response.json()
 
         data = {
                 "file_id": file_id

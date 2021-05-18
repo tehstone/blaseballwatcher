@@ -1050,7 +1050,7 @@ class Pendants(commands.Cog):
                                                    reverse=True)}
         sorted_stolenbases = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['stolenBases'],
                                                       reverse=True)}
-        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
+        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185", "194a78fd-3aa7-4356-8ba0-b9fdcbc0ea85"]
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
             if k in skip_players:
