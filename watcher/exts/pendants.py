@@ -706,7 +706,6 @@ class Pendants(commands.Cog):
         sorted_combo_payouts, sorted_sickle_payouts, sorted_seed_dog_payouts\
             = self.save_daily_top_hitters(hitters, day)
         rows = []
-        team_short_map = await self.get_short_map()
         for i in range(1, 6):
             sorted_strikeouts = {k: v
                                  for k, v in sorted(pitcher_dict.items(),
@@ -719,8 +718,7 @@ class Pendants(commands.Cog):
                 top_keys = top_list[:3]
                 for key in top_keys:
                     values = pitcher_dict[key]
-                    team = team_short_map[values["teamId"]]
-                    name = f"({team}) {values['name']}"
+                    name = f"{values['name']}"
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
                     rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
         await p_worksheet.batch_update([{
@@ -739,8 +737,7 @@ class Pendants(commands.Cog):
         top_keys = top_list[:10]
         for key in top_keys:
             values = pitcher_dict[key]
-            team = team_short_map[values["teamId"]]
-            name = f"({team}) {values['name']}"
+            name = f"{values['name']}"
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
         await p_worksheet.batch_update([{
@@ -756,8 +753,7 @@ class Pendants(commands.Cog):
             top_keys = list(sorted_shutouts.keys())[:3]
             for key in top_keys:
                 values = sorted_shutouts[key]
-                team = team_short_map[values["teamId"]]
-                name = f"({team}) {values['name']}"
+                name = f"{values['name']}"
                 rows.append([name, '', values["shutout"]])
         await p_worksheet.batch_update([{
             'range': "I5:K19",
@@ -770,8 +766,7 @@ class Pendants(commands.Cog):
         top_keys = list(sorted_shutouts.keys())[:10]
         for key in top_keys:
             values = sorted_shutouts[key]
-            team = team_short_map[values["teamId"]]
-            name = f"({team}) {values['name']}"
+            name = f"{values['name']}"
             rows.append([values["rotation"], name, '', values["shutout"]])
         await p_worksheet.batch_update([{
             'range': "H23:K32",
@@ -785,8 +780,7 @@ class Pendants(commands.Cog):
         top_keys = list(sorted_dingers_allowed.keys())[:12]
         for key in top_keys:
             values = sorted_dingers_allowed[key]
-            team = team_short_map[values["teamId"]]
-            name = f"({team}) {values['name']}"
+            name = f"{values['name']}"
             rows.append([values["rotation"], name, '', '', values["homeRunsAllowed"]])
         await p_worksheet.batch_update([{
             'range': "A36:F47",
@@ -807,9 +801,8 @@ class Pendants(commands.Cog):
                 continue
             values = sorted_combo_payouts[key]
             hits = hitters[key]["hitsMinusHrs"]
-            team = team_short_map[values["teamId"]]
             lineup_length = team_lineup_lengths[values["teamId"]]
-            name = f"({team}) {values['name']}"
+            name = f"{values['name']}"
             atBats = hitters[key]["atBats"]
             games = hitters[key]["games"]
             rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length, games])
@@ -825,9 +818,8 @@ class Pendants(commands.Cog):
             if key not in players_seen:
                 values = sorted_sickle_payouts[key]
                 hits = hitters[key]["hitsMinusHrs"]
-                team = team_short_map[values["teamId"]]
                 lineup_length = team_lineup_lengths[values["teamId"]]
-                name = f"({team}) {values['name']}"
+                name = f"{values['name']}"
                 atBats = hitters[key]["atBats"]
                 games = hitters[key]["games"]
                 rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length, games])
@@ -843,9 +835,8 @@ class Pendants(commands.Cog):
             if key not in players_seen:
                 values = sorted_seed_dog_payouts[key]
                 hits = hitters[key]["hitsMinusHrs"]
-                team = team_short_map[values["teamId"]]
                 lineup_length = team_lineup_lengths[values["teamId"]]
-                name = f"({team}) {values['name']}"
+                name = f"{values['name']}"
                 atBats = hitters[key]["atBats"]
                 games = hitters[key]["games"]
                 rows.append([name, '', hits, values["homeRuns"], values["stolenBases"], atBats, lineup_length, games])
