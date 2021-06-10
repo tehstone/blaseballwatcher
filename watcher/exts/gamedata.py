@@ -777,7 +777,8 @@ class GameData(commands.Cog):
                     odds_rows.append(row)
                     for c in range(len(bet_counts)):
                         total_betcounts[c] += bet_counts[c]
-                od_worksheet = await sheet.worksheet("Daily Results")
+                snack_sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season + 1}snacks"])
+                od_worksheet = await snack_sheet.worksheet("Daily Results")
                 await od_worksheet.batch_update([{
                     'range': f"A{4}:AD{4 + len(odds_rows)}",
                     'values': odds_rows
@@ -793,24 +794,24 @@ class GameData(commands.Cog):
             await asyncio.sleep(5)
 
     async def _save_weather_counts(self, sheet, season, weather_occurrences):
-        p_worksheet = await sheet.worksheet("Hitting Snacks")
+        p_worksheet = await sheet.worksheet("Weather Snacks")
         flood_count, runner_count = await self._lookup_floods(season)
-        await p_worksheet.batch_update([{
-            'range': "B2:B2",
-            'values': [[weather_occurrences["Black Hole"]]]
-        }])
-        await p_worksheet.batch_update([{
-            'range': "T2:T2",
-            'values': [[weather_occurrences["Sunset"]]]
-        }])
-        await p_worksheet.batch_update([{
-            'range': "AC2:AC2",
-            'values': [[weather_occurrences["Incineration"]]]
-        }])
-        await p_worksheet.batch_update([{
-            'range': "K2:L2",
-            'values': [[flood_count, runner_count]]
-        }])
+        # await p_worksheet.batch_update([{
+        #     'range': "C2:C2",
+        #     'values': [[weather_occurrences["Black Hole"]]]
+        # }])
+        # await p_worksheet.batch_update([{
+        #     'range': "C3:C3",
+        #     'values': [[weather_occurrences["Sunset"]]]
+        # }])
+        # await p_worksheet.batch_update([{
+        #     'range': "C4:C4",
+        #     'values': [[weather_occurrences["Incineration"]]]
+        # }])
+        # await p_worksheet.batch_update([{
+        #     'range': "C5:C6",
+        #     'values': [[flood_count, runner_count]]
+        # }])
 
         weather_occurrences["flooded_runners"] = runner_count
         with open(os.path.join('season_data', 'weather_occurrences.json'), 'w') as file:

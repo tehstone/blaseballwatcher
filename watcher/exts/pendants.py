@@ -28,8 +28,10 @@ boosted_players = {"86d4e22b-f107-4bcf-9625-32d387fcb521": 2,
                    "e16c3f28-eecd-4571-be1a-606bbac36b2b": 5,
                    "c0732e36-3731-4f1a-abdc-daa9563b6506": 2,
                    "cf8e152e-2d27-4dcc-ba2b-68127de4e6a4": 2,
-                   "8ecea7e0-b1fb-4b74-8c8c-3271cb54f659": 2
-                  }
+                   "8ecea7e0-b1fb-4b74-8c8c-3271cb54f659": 2,
+                   "9a9bb4f5-d2a5-4ce2-b715-9e2c74a65502": 2,
+                   }
+skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185"]
 
 class Pendants(commands.Cog):
     def __init__(self, bot):
@@ -198,15 +200,15 @@ class Pendants(commands.Cog):
                 team_stats[team_id]["at_bats"] += p_values["atBats"]
                 if "plate_appearances" not in team_stats[team_id]:
                     team_stats[team_id]["plate_appearances"] = 0
-                plate_appearances = p_values["atBats"] + p_values["walks"] + p_values["hitByPitch"]
-                team_stats[team_id]["plate_appearances"] += plate_appearances
+                p_values["plate_appearances"] = p_values["atBats"] + p_values["walks"] + p_values["hitByPitch"]
+                team_stats[team_id]["plate_appearances"] += p_values["plate_appearances"]
                 if "struckouts" in p_values:
                     team_stats[team_id]["struckouts"] += p_values["struckouts"]
                 if "lineup_pa" not in team_stats[team_id]:
                     team_stats[team_id]["lineup_pa"] = {}
                 if p_values["playerId"] not in team_stats[team_id]["lineup_pa"]:
                     team_stats[team_id]["lineup_pa"][p_values["playerId"]] = 0
-                team_stats[team_id]["lineup_pa"][p_values["playerId"]] += plate_appearances
+                team_stats[team_id]["lineup_pa"][p_values["playerId"]] += p_values["plate_appearances"]
                 if opp_id not in pitcher_hr_counts:
                     pitcher_hr_counts[opp_id] = 0
                 pitcher_hr_counts[opp_id] += p_values["homeRuns"]
@@ -238,11 +240,11 @@ class Pendants(commands.Cog):
                          p_values["hitByPitch"], p_values["hitBatters"], p_values["quadruples"],
                          p_values["pitchesThrown"], p_values["rotation_changed"], p_values["position"],
                          p_values["rotation"], p_values["shutout"], p_values["noHitter"],
-                         p_values["perfectGame"], p_values["homeRunsAllowed"]))
+                         p_values["perfectGame"], p_values["homeRunsAllowed"], p_values.get("plate_appearances", 0)))
 
         async with aiosqlite.connect(self.bot.db_path) as db:
             await db.executemany("insert into DailyStatSheets values "
-                                 "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                                 "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
                                  "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", rows)
             await db.commit()
 
@@ -646,30 +648,93 @@ class Pendants(commands.Cog):
             self.bot.logger.warn(f"Failed reverse cycle check on:\n{filtered_items}")
         return "Not a natural cycle."
 
+    async def _update_legendary(self):
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select player_id "
+                                  "from PlayerLeagueAndStars where legendary=1;") as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        skip_players.append(row[0])
+
+    async def _get_modified_lineup_positions(self, hitters, pitcher_dict):
+        team_lineups = {}
+        team_lineup_lengths = {}
+        team_rotation_lengths = {}
+        for team in self.bot.team_names.keys():
+            team_lineups[team] = {}
+            team_lineup = []
+            async with aiosqlite.connect(self.bot.db_path) as db:
+                async with db.execute("select player_id, slot, elsewhere, shelled "
+                                      "from PlayerLeagueAndStars where team_id=? and position='lineup'"
+                                      "order by slot;", [team]) as cursor:
+                    async for row in cursor:
+                        if row and row[0]:
+                            team_lineup.append(
+                                {
+                                    "playerId": row[0],
+                                    "slot": row[1],
+                                    "elsewhere": row[2],
+                                    "shelled": row[3]
+                                }
+                            )
+            slot = 1
+            for player in team_lineup:
+                if player["playerId"] in hitters:
+                    hitters[player["playerId"]]["teamId"] = team
+                if not player["elsewhere"] and not player["shelled"]:
+                    team_lineups[player["playerId"]] = slot
+                    slot += 1
+            team_lineup_lengths[team] = slot - 1
+
+            rotation_len = 0
+            async with aiosqlite.connect(self.bot.db_path) as db:
+                async with db.execute("select player_id, team_id "
+                                      "from PlayerLeagueAndStars where team_id=? and position='rotation'"
+                                      "order by slot;", [team]) as cursor:
+                    async for row in cursor:
+                        if row and row[0]:
+                            if row[0] in pitcher_dict:
+                                pitcher_dict[row[0]]["teamId"] = row[1]
+                                rotation_len += 1
+            team_rotation_lengths[team] = rotation_len
+        return team_lineups, team_lineup_lengths, team_rotation_lengths
+
     async def compile_stats(self, season):
         hitters, pitchers = {}, {}
 
         async with aiosqlite.connect(self.bot.db_path) as db:
-            async with db.execute("select playerId, name, teamId, sum(hits)-sum(homeRuns), "
-                                  "sum(homeRuns), sum(stolenBases), sum(atBats), count(distinct gameId) as games "
+            async with db.execute("select playerId, name, sum(hits)-sum(homeRuns), sum(homeRuns), "
+                                  "sum(stolenBases), sum(atBats), sum(plateAppearances), "
+                                  "count(distinct gameId) as games "
                                   "from DailyStatSheets where season=? and position='lineup' "
-                                  "group by playerId", [season]) as cursor:
+                                  "group by playerId;", [season]) as cursor:
                 async for row in cursor:
                     if row and row[0]:
                         hitters[row[0]] = {
                             "name": row[1],
                             "playerId": row[0],
-                            "teamId": row[2],
-                            "hitsMinusHrs": row[3],
-                            "homeRuns": row[4],
-                            "stolenBases": row[5],
-                            "atBats": row[6],
+                            "hitsMinusHrs": row[2],
+                            "homeRuns": row[3],
+                            "stolenBases": row[4],
+                            "atBats": row[5],
+                            "plateAppearances": row[6],
                             "games": row[7]
                         }
+
         async with aiosqlite.connect(self.bot.db_path) as db:
-            async with db.execute("select playerId, name, teamId, sum(outsRecorded), sum(strikeouts), "
+            async with db.execute("select playerId, sum(atBats)/10.0, sum(plateAppearances)/10.0 "
+                                  "from DailyStatSheets where season=18 and position='lineup' "
+                                  "and day > (select max(day) from DailyStatSheets where season=?) - 10 "
+                                  "group by playerId;", [season]) as cursor:
+                async for row in cursor:
+                    if row and row[0] and row[0] in hitters:
+                        hitters[row[0]]["avg_ab"] = row[1]
+                        hitters[row[0]]["avg_pa"] = row[2]
+
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select playerId, name, sum(outsRecorded), sum(strikeouts), "
                                   "sum(walksIssued), sum(shutout), rotation, rotation_changed, "
-                                  "sum(homeRunsAllowed) "
+                                  "sum(homeRunsAllowed), sum(wins), count(name) as games "
                                   "from DailyStatSheets where season=? and position='rotation' "
                                   "group by playerId", [season]) as cursor:
                 async for row in cursor:
@@ -677,24 +742,94 @@ class Pendants(commands.Cog):
                         pitchers[row[0]] = {
                             "name": row[1],
                             "playerId": row[0],
-                            "teamId": row[2],
-                            "outsRecorded": row[3],
-                            "strikeouts": row[4],
-                            "walksIssued": row[5],
-                            "shutout": row[6],
-                            "rotation": row[7],
-                            "rotation_changed": row[8],
-                            "homeRunsAllowed": row[9]
+                            "outsRecorded": row[2],
+                            "strikeouts": row[3],
+                            "walksIssued": row[4],
+                            "shutout": row[5],
+                            "rotation": row[6],
+                            "rotation_changed": row[7],
+                            "homeRunsAllowed": row[8],
+                            "wins": row[9],
+                            "games": row[10]
                         }
+
+        async with aiosqlite.connect(self.bot.db_path) as db:
+            async with db.execute("select player_id, team_id "
+                                  "from PlayerLeagueAndStars;") as cursor:
+                async for row in cursor:
+                    if row and row[0]:
+                        if row[0] in hitters:
+                            hitters[row[0]]["teamId"] = row[1]
+                        if row[0] in pitchers:
+                            pitchers[row[0]]["teamId"] = row[1]
+
         return hitters, pitchers
 
     async def update_leaders_sheet(self, season, day):
         season -= 1
         agc = await self.bot.authorize_agcm()
         if self.bot.config['live_version'] == True:
-            sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season + 1}"])
+            sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season + 1}snacks"])
         else:
             sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"seasontest"])
+        ah_sheet = await sheet.worksheet("All Hitters")
+        ap_sheet = await sheet.worksheet("All Pitchers")
+        await self._update_legendary()
+        hitters, pitcher_dict = await self.compile_stats(season)
+        team_lineups, team_lineup_lengths, team_rotation_lengths\
+            = await self._get_modified_lineup_positions(hitters, pitcher_dict)
+        #team_lineup_lengths = await self._get_team_lineup_lengths(season, day - 1)
+        team_short_map = await self.get_short_map()
+
+        rows = []
+        sorted_hitters = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['atBats'], reverse=True)}
+        for hitter in sorted_hitters.values():
+            hits = hitter["hitsMinusHrs"]
+            lineup_length, team = -1, "null"
+            if "teamId" in hitter:
+                lineup_length = team_lineup_lengths[hitter["teamId"]]
+                team = team_short_map[hitter["teamId"]]
+
+            name = f"{hitter['name']}"
+            at_bats = hitter["atBats"]
+            plate_appearances = hitter["plateAppearances"]
+            games = hitter["games"]
+            slot = -1
+            if hitter["playerId"] in team_lineups:
+                if hitter["playerId"] not in skip_players:
+                    slot = team_lineups[hitter["playerId"]]
+
+            avg_ab, avg_pa = 0, 0
+            if "avg_ab" in hitter:
+                avg_ab = hitter["avg_ab"]
+            if "avg_pa" in hitter:
+                avg_pa = hitter["avg_pa"]
+
+            rows.append([name, team, hits, hitter["homeRuns"], hitter["stolenBases"],
+                         at_bats, plate_appearances, lineup_length, games, slot, avg_ab, avg_pa])
+        await ah_sheet.batch_update([{
+            'range': f"A5:L{5 + len(rows)}",
+            'values': rows
+        }])
+
+        rows = []
+        sorted_pitchers = {k: v for k, v in sorted(pitcher_dict.items(),
+                                                   key=lambda item: item[1]['outsRecorded'], reverse=True)}
+        for pitcher in sorted_pitchers.values():
+            if pitcher["playerId"] in skip_players:
+                continue
+            name = f"{pitcher['name']}"
+            losses = pitcher['games'] - pitcher['wins']
+            team = "null"
+            if "teamId" in pitcher:
+                team = team_short_map[pitcher["teamId"]]
+            rows.append([name, team, pitcher['outsRecorded'], pitcher['wins'], losses, pitcher['games'],
+                         pitcher['strikeouts'], pitcher['shutout'], pitcher['homeRunsAllowed'], pitcher['rotation']])
+        await ap_sheet.batch_update([{
+            'range': f"A5:J{5 + len(rows)}",
+            'values': rows
+        }])
+
         if season >= 12:
             p_worksheet = await sheet.worksheet("Pitching Snacks")
             h_worksheet = await sheet.worksheet("Hitting Snacks")
@@ -721,10 +856,10 @@ class Pendants(commands.Cog):
                     name = f"{values['name']}"
                     k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
                     rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
-        await p_worksheet.batch_update([{
-            'range': "A5:F19",
-            'values': rows
-        }])
+        # await p_worksheet.batch_update([{
+        #     'range': "A5:F19",
+        #     'values': rows
+        # }])
 
         rows = []
         sorted_strikeouts = {k: v
@@ -740,10 +875,10 @@ class Pendants(commands.Cog):
             name = f"{values['name']}"
             k_9_value = round((values['strikeouts'] / (values['outsRecorded'] / 27)) * 10) / 10
             rows.append([values["rotation"], name, '', '', values["strikeouts"], k_9_value])
-        await p_worksheet.batch_update([{
-            'range': "A23:F32",
-            'values': rows
-        }])
+        # await p_worksheet.batch_update([{
+        #     'range': "A23:F32",
+        #     'values': rows
+        # }])
 
         rows = []
         for i in range(1, 6):
@@ -755,10 +890,10 @@ class Pendants(commands.Cog):
                 values = sorted_shutouts[key]
                 name = f"{values['name']}"
                 rows.append([name, '', values["shutout"]])
-        await p_worksheet.batch_update([{
-            'range': "I5:K19",
-            'values': rows
-        }])
+        # await p_worksheet.batch_update([{
+        #     'range': "I5:K19",
+        #     'values': rows
+        # }])
 
         rows = []
         sorted_shutouts = {k: v for k, v in sorted(pitcher_dict.items(), key=lambda item: item[1]['shutout'],
@@ -768,10 +903,10 @@ class Pendants(commands.Cog):
             values = sorted_shutouts[key]
             name = f"{values['name']}"
             rows.append([values["rotation"], name, '', values["shutout"]])
-        await p_worksheet.batch_update([{
-            'range': "H23:K32",
-            'values': rows
-        }])
+        # await p_worksheet.batch_update([{
+        #     'range': "H23:K32",
+        #     'values': rows
+        # }])
 
         rows = []
         sorted_dingers_allowed = {k: v for k, v in sorted(pitcher_dict.items(),
@@ -782,10 +917,10 @@ class Pendants(commands.Cog):
             values = sorted_dingers_allowed[key]
             name = f"{values['name']}"
             rows.append([values["rotation"], name, '', '', values["homeRunsAllowed"]])
-        await p_worksheet.batch_update([{
-            'range': "A36:F47",
-            'values': rows
-        }])
+        # await p_worksheet.batch_update([{
+        #     'range': "A36:F47",
+        #     'values': rows
+        # }])
 
         team_lineup_lengths = await self._get_team_lineup_lengths(season, day - 1)
         rows = []
@@ -844,10 +979,10 @@ class Pendants(commands.Cog):
                 if count == 4:
                     break
 
-        await h_worksheet.batch_update([{
-            'range': f"A11:H{10+len(rows)}",
-            'values': rows
-        }])
+        # await h_worksheet.batch_update([{
+        #     'range': f"A11:H{10+len(rows)}",
+        #     'values': rows
+        # }])
 
         # York Silk
         # ys_id = "86d4e22b-f107-4bcf-9625-32d387fcb521"
@@ -872,58 +1007,60 @@ class Pendants(commands.Cog):
         #     wg_row[3] = sorted_combo_payouts[wg_id].setdefault("homeRuns", 0)
         # if wg_id in sorted_combo_payouts:
         #     wg_row[4] = sorted_combo_payouts[wg_id].setdefault("stolenBases", 0)
-        hr_id = "cf8e152e-2d27-4dcc-ba2b-68127de4e6a4"
-        hr_row = ["Hendricks Richardson", '', 0, 0, 0, 0, 0, 0]
-        if hr_id in sorted_combo_payouts:
-            hr_row[2] = hitters[hr_id].setdefault("hitsMinusHrs", 0)
-        if hr_id in sorted_combo_payouts:
-            hr_row[3] = sorted_combo_payouts[hr_id].setdefault("homeRuns", 0)
-        if hr_id in sorted_combo_payouts:
-            hr_row[4] = sorted_combo_payouts[hr_id].setdefault("stolenBases", 0)
-        atBats = hitters[hr_id]["atBats"]
-        games = hitters[hr_id]["games"]
-        hr_row[5] = atBats
-        hr_row[6] = team_lineup_lengths[hitters[hr_id]["teamId"]]
-        hr_row[7] = games
-        fb_id = "8ecea7e0-b1fb-4b74-8c8c-3271cb54f659"
-        fb_row = ["Fitzgerald Blackburn", '', 0, 0, 0, 0, 0, 0]
-        if fb_id in sorted_combo_payouts:
-            fb_row[2] = hitters[fb_id].setdefault("hitsMinusHrs", 0)
-        if fb_id in sorted_combo_payouts:
-            fb_row[3] = sorted_combo_payouts[fb_id].setdefault("homeRuns", 0)
-        if fb_id in sorted_combo_payouts:
-            fb_row[4] = sorted_combo_payouts[fb_id].setdefault("stolenBases", 0)
-        atBats = hitters[fb_id]["atBats"]
-        games = hitters[fb_id]["games"]
-        fb_row[5] = atBats
-        fb_row[6] = team_lineup_lengths[hitters[fb_id]["teamId"]]
-        fb_row[7] = games
-        pt_id = "5bcfb3ff-5786-4c6c-964c-5c325fcc48d7"
-        pt_row = ["Paula Turnip", '', 0, 0, 0, 0, 0, 0]
-        if pt_id in sorted_combo_payouts:
-            pt_row[2] = hitters[pt_id].setdefault("hitsMinusHrs", 0)
-        if pt_id in sorted_combo_payouts:
-            pt_row[3] = sorted_combo_payouts[pt_id].setdefault("homeRuns", 0)
-        if pt_id in sorted_combo_payouts:
-            pt_row[4] = sorted_combo_payouts[pt_id].setdefault("stolenBases", 0)
-        atBats = hitters[pt_id]["atBats"]
-        games = hitters[pt_id]["games"]
-        pt_row[5] = atBats
-        pt_row[6] = team_lineup_lengths[hitters[pt_id]["teamId"]]
-        pt_row[7] = games
-        jh_id = "04e14d7b-5021-4250-a3cd-932ba8e0a889"
-        jh_row = ["Jaylen Hotdogfingers", '', 0, 0, 0, 0, 0, 0]
-        if jh_id in sorted_combo_payouts:
-            jh_row[2] = hitters[jh_id].setdefault("hitsMinusHrs", 0)
-        if jh_id in sorted_combo_payouts:
-            jh_row[3] = sorted_combo_payouts[jh_id].setdefault("homeRuns", 0)
-        if jh_id in sorted_combo_payouts:
-            jh_row[4] = sorted_combo_payouts[jh_id].setdefault("stolenBases", 0)
-        atBats = hitters[jh_id]["atBats"]
-        games = hitters[jh_id]["games"]
-        jh_row[5] = atBats
-        jh_row[6] = team_lineup_lengths[hitters[jh_id]["teamId"]]
-        jh_row[7] = games
+
+        # hr_id = "cf8e152e-2d27-4dcc-ba2b-68127de4e6a4"
+        # hr_row = ["Hendricks Richardson", '', 0, 0, 0, 0, 0, 0]
+        # if hr_id in sorted_combo_payouts:
+        #     hr_row[2] = hitters[hr_id].setdefault("hitsMinusHrs", 0)
+        # if hr_id in sorted_combo_payouts:
+        #     hr_row[3] = sorted_combo_payouts[hr_id].setdefault("homeRuns", 0)
+        # if hr_id in sorted_combo_payouts:
+        #     hr_row[4] = sorted_combo_payouts[hr_id].setdefault("stolenBases", 0)
+        # atBats = hitters[hr_id]["atBats"]
+        # games = hitters[hr_id]["games"]
+        # hr_row[5] = atBats
+        # hr_row[6] = team_lineup_lengths[hitters[hr_id]["teamId"]]
+        # hr_row[7] = games
+        # fb_id = "8ecea7e0-b1fb-4b74-8c8c-3271cb54f659"
+        # fb_row = ["Fitzgerald Blackburn", '', 0, 0, 0, 0, 0, 0]
+        # if fb_id in sorted_combo_payouts:
+        #     fb_row[2] = hitters[fb_id].setdefault("hitsMinusHrs", 0)
+        # if fb_id in sorted_combo_payouts:
+        #     fb_row[3] = sorted_combo_payouts[fb_id].setdefault("homeRuns", 0)
+        # if fb_id in sorted_combo_payouts:
+        #     fb_row[4] = sorted_combo_payouts[fb_id].setdefault("stolenBases", 0)
+        # atBats = hitters[fb_id]["atBats"]
+        # games = hitters[fb_id]["games"]
+        # fb_row[5] = atBats
+        # fb_row[6] = team_lineup_lengths[hitters[fb_id]["teamId"]]
+        # fb_row[7] = games
+        # pt_id = "5bcfb3ff-5786-4c6c-964c-5c325fcc48d7"
+        # pt_row = ["Paula Turnip", '', 0, 0, 0, 0, 0, 0]
+        # if pt_id in sorted_combo_payouts:
+        #     pt_row[2] = hitters[pt_id].setdefault("hitsMinusHrs", 0)
+        # if pt_id in sorted_combo_payouts:
+        #     pt_row[3] = sorted_combo_payouts[pt_id].setdefault("homeRuns", 0)
+        # if pt_id in sorted_combo_payouts:
+        #     pt_row[4] = sorted_combo_payouts[pt_id].setdefault("stolenBases", 0)
+        # atBats = hitters[pt_id]["atBats"]
+        # games = hitters[pt_id]["games"]
+        # pt_row[5] = atBats
+        # pt_row[6] = team_lineup_lengths[hitters[pt_id]["teamId"]]
+        # pt_row[7] = games
+        # jh_id = "04e14d7b-5021-4250-a3cd-932ba8e0a889"
+        # jh_row = ["Jaylen Hotdogfingers", '', 0, 0, 0, 0, 0, 0]
+        # if jh_id in sorted_combo_payouts:
+        #     jh_row[2] = hitters[jh_id].setdefault("hitsMinusHrs", 0)
+        # if jh_id in sorted_combo_payouts:
+        #     jh_row[3] = sorted_combo_payouts[jh_id].setdefault("homeRuns", 0)
+        # if jh_id in sorted_combo_payouts:
+        #     jh_row[4] = sorted_combo_payouts[jh_id].setdefault("stolenBases", 0)
+        # atBats = hitters[jh_id]["atBats"]
+        # games = hitters[jh_id]["games"]
+        # jh_row[5] = atBats
+        # jh_row[6] = team_lineup_lengths[hitters[jh_id]["teamId"]]
+        # jh_row[7] = games
+
         # Nagomi Mcdaniel
         # nm_id = "c0732e36-3731-4f1a-abdc-daa9563b6506"
         # nm_row = ["Nagomi Mcdaniel", '', 0, 0, 0, 0, 0, 0]
@@ -938,10 +1075,11 @@ class Pendants(commands.Cog):
         # nm_row[5] = atBats
         # nm_row[6] = team_lineup_lengths[hitters[nm_id]["teamId"]]
         # nm_row[7] = games
-        await h_worksheet.batch_update([{
-            'range': "A6:H9",
-            'values': [hr_row, fb_row, pt_row, jh_row]
-        }])
+
+        # await h_worksheet.batch_update([{
+        #     'range': "A6:H9",
+        #     'values': [hr_row, fb_row, pt_row, jh_row]
+        # }])
 
     async def _get_team_lineup_lengths(self, season, day):
         team_lineup_lengths = {}
@@ -966,7 +1104,7 @@ class Pendants(commands.Cog):
             if not sim_data:
                 return False
             sd_json = sim_data.json()
-            # still midseason, nothing to check
+            # still regular season, nothing to check
             if sd_json["day"] < 98:
                 return True
             if sd_json["day"] == 98:
@@ -1041,7 +1179,6 @@ class Pendants(commands.Cog):
                                                    reverse=True)}
         sorted_stolenbases = {k: v for k, v in sorted(hitters.items(), key=lambda item: item[1]['stolenBases'],
                                                       reverse=True)}
-        skip_players = ["167751d5-210c-4a6e-9568-e92d61bab185", "194a78fd-3aa7-4356-8ba0-b9fdcbc0ea85"]
         total_hit_payouts = {}
         for k, v in sorted_hits.items():
             if k in skip_players:
@@ -1059,11 +1196,12 @@ class Pendants(commands.Cog):
             combo = ((hits * 1500) + (homeruns * 4000) + (stolenbases * 3000)) * multiplier
             hitters[k]["multiplier"] = multiplier
 
-            total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hitsMinusHrs"],
-                                    "homeRuns": sorted_homeruns[k]["homeRuns"],
-                                    "stolenBases": sorted_stolenbases[k]["stolenBases"],
-                                    "seed_dog": seed_dog, "combo": combo,
-                                    "sickle": sickle, "multiplier": multiplier}
+            if "teamId" in v:
+                total_hit_payouts[k] = {"name": v['name'], "teamId": v["teamId"], "hits": v["hitsMinusHrs"],
+                                        "homeRuns": sorted_homeruns[k]["homeRuns"],
+                                        "stolenBases": sorted_stolenbases[k]["stolenBases"],
+                                        "seed_dog": seed_dog, "combo": combo,
+                                        "sickle": sickle, "multiplier": multiplier}
         sorted_seed_dog_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
                                                            key=lambda item: item[1]['seed_dog'], reverse=True)}
         sorted_sickle_payouts = {k: v for k, v in sorted(total_hit_payouts.items(),
