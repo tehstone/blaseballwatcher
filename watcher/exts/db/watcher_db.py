@@ -50,6 +50,7 @@ def initialize(db):
                                 team	TEXT NOT NULL,
                                 name	TEXT NOT NULL,
                                 atBats	int,
+                                plateAppearances	int,
                                 caughtStealing	int,
                                 doubles	int,
                                 earnedRuns	int,
@@ -109,12 +110,28 @@ def initialize(db):
                                                 team_id TEXT NOT NULL,
                                                 team_name TEXT NOT NULL,
                                                 league TEXT NOT NULL,
-                                                division TEXT NOT NULL
+                                                division TEXT NOT NULL,
+                                                position TEXT NOT NULL,
+                                                slot INTEGER NOT NULL,
+                                                elsewhere BOOLEAN NOT NULL,
+                                                shelled BOOLEAN NOT NULL
         );""")
         try:
             c.execute("ALTER TABLE DailyStatSheets ADD COLUMN homeRunsAllowed	INTEGER DEFAULT 0;")
         except Exception as e:
             pass
+        try:
+            c.execute("ALTER TABLE PlayerLeagueAndStars ADD COLUMN position TEXT NOT NULL DEFAULT 'Lineup';")
+            c.execute("ALTER TABLE PlayerLeagueAndStars ADD COLUMN slot INTEGER NOT NULL DEFAULT 1;")
+            c.execute("ALTER TABLE PlayerLeagueAndStars ADD COLUMN elsewhere BOOLEAN NOT NULL DEFAULT 'false';")
+            c.execute("ALTER TABLE PlayerLeagueAndStars ADD COLUMN shelled BOOLEAN NOT NULL DEFAULT 'false';")
+            c.execute("ALTER TABLE PlayerLeagueAndStars ADD COLUMN legendary BOOLEAN NOT NULL DEFAULT 'false';")
+        except Exception as e:
+            print(f"Failed to modify PlayerLeagueAndStars table with error: '{e}'")
+        try:
+            c.execute("ALTER TABLE DailyStatSheets ADD COLUMN plateAppearances	INTEGER DEFAULT 0;")
+        except Exception as e:
+            print(f"Failed to modify DailyStatSheets table with error: '{e}'")
         c.close()
 
 

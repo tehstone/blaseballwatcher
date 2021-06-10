@@ -37,13 +37,17 @@ async def update_player_cache(bot):
     player_rows = []
     player_ids = []
     player_positions = {}
+    player_slots = {}
     team_map = get_team_league_division_map(bot)
     for tid in team_map.keys():
         team = bot.team_cache[tid]
         new_player_ids = team["lineup"] + team["rotation"] + team["bullpen"] + team["bench"]
         for position in ["lineup", "rotation", "bullpen", "bench"]:
+            slot = 1
             for player in team[position]:
                 player_positions[player] = position
+                player_slots[player] = slot
+                slot += 1
         player_ids += new_player_ids
         for pid in new_player_ids:
             bot.player_team_map[pid] = tid
@@ -55,6 +59,15 @@ async def update_player_cache(bot):
             for rating in ["baserunningRating", "pitchingRating", "hittingRating", "defenseRating"]:
                 stars += player[rating]
             combined_stars = stars * 5
+            player['slot'] = player_slots[player["id"]]
+            player['elsewhere'], player['shelled'], player['legendary'] = False, False, False
+            if "permAttr" in player:
+                if "ELSEWHERE" in player["permAttr"]:
+                    player['elsewhere'] = True
+                if "SHELLED" in player["permAttr"]:
+                    player['shelled'] = True
+                if "LEGENDARY" in player["permAttr"]:
+                    player['legendary'] = True
             bot.player_cache[player["name"]] = player
             bot.player_names[player["name"].lower()] = player["id"]
             bot.player_id_to_name[player["id"]] = player["name"]
@@ -64,9 +77,12 @@ async def update_player_cache(bot):
                     division = team_map[player["leagueTeamId"]]["division"]
                     team_id = player["leagueTeamId"]
                     team_name = bot.team_cache[team_id]["nickname"]
+                    position = player_positions[player["id"]]
+
                     player_rows.append([player["id"], player["name"], combined_stars, player["baserunningRating"],
                                         player["pitchingRating"], player["hittingRating"], player["defenseRating"],
-                                        team_id, team_name, league, division])
+                                        team_id, team_name, league, division, position, player['slot'],
+                                        player['elsewhere'], player['shelled'], player['legendary']])
     deceased = await get_deceased()
     if not deceased:
         bot.logger.info("Failed to update deceased players cache.")
@@ -88,8 +104,8 @@ async def update_player_cache(bot):
         await db.execute("DELETE FROM PlayerLeagueAndStars;")
         await db.executemany("insert into PlayerLeagueAndStars (player_id, player_name, combined_stars, "
                              "baserunning_rating, pitching_rating, hitting_rating, defense_rating, "
-                             "team_id, team_name, league, division) values "
-                             "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", player_rows)
+                             "team_id, team_name, league, division, position, slot, elsewhere, shelled, legendary) "
+                             "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", player_rows)
         await db.commit()
     return True
 
