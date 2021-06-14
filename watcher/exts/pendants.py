@@ -830,12 +830,6 @@ class Pendants(commands.Cog):
             'values': rows
         }])
 
-        if season >= 12:
-            p_worksheet = await sheet.worksheet("Pitching Snacks")
-            h_worksheet = await sheet.worksheet("Hitting Snacks")
-        else:
-            p_worksheet = await sheet.worksheet("Pendants")
-            h_worksheet = await sheet.worksheet("Pendants")
         hitters, pitcher_dict = await self.compile_stats(season)
 
         sorted_combo_payouts, sorted_sickle_payouts, sorted_seed_dog_payouts\
