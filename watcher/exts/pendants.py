@@ -1140,7 +1140,7 @@ class Pendants(commands.Cog):
                     json.dump(team_ids, file)
                 return True
 
-            round_num = sd_json["playOffRound"]
+            round_num = sd_json["tournamentRound"]
             playoffs = await utils.retry_request(
                 f"https://www.blaseball.com/database/playoffs?number={sd_json['season']}")
             if not playoffs:
