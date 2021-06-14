@@ -994,10 +994,10 @@ class GameData(commands.Cog):
     @commands.command(name="apply_conditional_rules", aliases=['acr'])
     async def _apply_conditional_rules(self, ctx, season):
         gc = gspread.service_account(os.path.join("gspread", "service_account.json"))
-        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}"])
+        sheet = gc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}snacks"])
         od_worksheet = sheet.worksheet("Daily Results")
         rules = get_conditional_format_rules(od_worksheet)
-        for i in range(5, 106):
+        for i in range(6, 106):
             rule = ConditionalFormatRule(
                 ranges=[GridRange.from_a1_range(f'AF{i}', od_worksheet),
                         GridRange.from_a1_range(f'AG{i}', od_worksheet),
