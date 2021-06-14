@@ -331,13 +331,13 @@ class JsonWatcher(commands.Cog):
         all_players = {}
         for team in old_team_list:
             old_teams[team["id"]] = team
-            for group in ["lineup", "rotation", "bullpen", "bench"]:
+            for group in ["lineup", "rotation", "shadows"]:
                 for pid in team[group]:
                     if pid not in all_player_ids:
                         all_player_ids.append(pid)
         for team in new_team_list:
             new_teams[team["id"]] = team
-            for group in ["lineup", "rotation", "bullpen", "bench"]:
+            for group in ["lineup", "rotation", "shadows"]:
                 for pid in team[group]:
                     if pid not in all_player_ids:
                         all_player_ids.append(pid)
