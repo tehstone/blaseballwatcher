@@ -1114,12 +1114,44 @@ class GameData(commands.Cog):
                 }])
 
                 empty_rows = []
-                for i in range(15):
+                for i in range(17):
                     empty_rows.append([''] * 7)
                 await m_worksheet.batch_update([{
-                    'range': f"A{3}:G{17}",
+                    'range': f"A{3}:G{19}",
                     'values': empty_rows
                 }])
+            except KeyError:
+                pass
+        await ctx.message.add_reaction(self.bot.success_react)
+
+    @commands.command(name='fix_formulas', aliases=['ffm'])
+    async def _fix_formulas(self, ctx, season):
+        agc = await self.bot.authorize_agcm()
+        sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}"])
+        for team in self.bot.team_names.keys():
+            try:
+                m_worksheet = await sheet.worksheet(spreadsheet_names[team]["matchups"])
+
+                formula_rows = [
+                    ['=SUM(FILTER(D3:D18,E3:E18="Division"))'],
+                    ['=SUM(FILTER(D3:D18,E3:E18="League"))'],
+                    ['=SUM(FILTER(D3:D18,E3:E18="InterLeague"))']
+                ]
+                await m_worksheet.batch_update([{
+                    'range': f"B20:B22",
+                    'values': formula_rows
+                }],
+                    value_input_option='USER_ENTERED')
+
+                formula_rows = [
+                    ['=sum(F3:F18)'],
+                    ['=sum(G3:G18)']
+                ]
+                await m_worksheet.batch_update([{
+                    'range': f"F20:F21",
+                    'values': formula_rows
+                }],
+                    value_input_option='USER_ENTERED')
             except KeyError:
                 pass
         await ctx.message.add_reaction(self.bot.success_react)
