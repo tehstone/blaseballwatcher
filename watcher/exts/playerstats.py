@@ -312,8 +312,11 @@ class PlayerStats(commands.Cog):
                                   f"Command syntax: `!equivalent_exchange rating, player name, options`")
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute(f"select player_id, player_name, combined_stars, team_id, team_name, {rating} "
-                                  f"from playerleagueandstars where league = '{other_league}' and "
-                                  f"(combined_stars > {combined_stars}-2 and combined_stars < {combined_stars}+2) {on_team}"
+                                  f"from playerleagueandstars " 
+                                  # where league = '{other_league}' "
+                                  " and "
+                                  f"(combined_stars > {combined_stars}-2 and "
+                                  f"combined_stars < {combined_stars}+2) {on_team}"
                                   f"group by player_id order by {rating} {sort_dir} {limit};") as cursor:
                 async for row in cursor:
                     p_row = [row[0], row[1], row[2], row[3], row[4], row[5]]
@@ -348,7 +351,7 @@ class PlayerStats(commands.Cog):
             response += restricted_output
             return await ctx.send(response)
         else:
-            filename = f"{player_name}-{raw_rating}-equivilant-exchange.csv"
+            filename = f"{player_name}-{raw_rating}-equivalent-exchange.csv"
             fieldnames = ["player", "combined_stars", "team_name"]
             rating_items = rating.split(',')
             fieldnames.extend(rating_items)
