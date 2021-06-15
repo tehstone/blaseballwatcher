@@ -15,18 +15,21 @@ async def get_all_teams():
 
 
 async def update_team_cache(bot):
-    teams = await get_all_teams()
-    if not teams:
-        return None
-    for team in teams:
-        bot.team_cache[team["id"]] = team
-        bot.team_names[team["id"]] = team["nickname"]
-    with open(os.path.join("data", "api_cache", "team_cache.json"), 'w', encoding='utf-8') as json_file:
-        json.dump(bot.team_cache, json_file)
-    with open(os.path.join("data", "api_cache", "team_names.json"), 'w', encoding='utf-8') as json_file:
-        json.dump(bot.team_names, json_file)
-
-    return True
+    try:
+        teams = await get_all_teams()
+        if not teams:
+            return None
+        for team in teams:
+            bot.team_cache[team["id"]] = team
+            bot.team_names[team["id"]] = team["nickname"]
+        with open(os.path.join("data", "api_cache", "team_cache.json"), 'w', encoding='utf-8') as json_file:
+            json.dump(bot.team_cache, json_file)
+        with open(os.path.join("data", "api_cache", "team_names.json"), 'w', encoding='utf-8') as json_file:
+            json.dump(bot.team_names, json_file)
+        return True
+    except Exception as e:
+        bot.logger.warn(f"Failed to update team cache with error: \n{e}")
+        return False
 
 
 async def check_teams_loop(bot):

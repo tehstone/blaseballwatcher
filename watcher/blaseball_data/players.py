@@ -111,6 +111,7 @@ async def update_player_cache(bot):
         return True
     except Exception as e:
         bot.logger.warn(f"Failed to update player cache with error: \n{e}")
+        return False
 
 
 async def check_players_loop(bot):
