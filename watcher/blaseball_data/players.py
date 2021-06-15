@@ -41,8 +41,8 @@ async def update_player_cache(bot):
     team_map = get_team_league_division_map(bot)
     for tid in team_map.keys():
         team = bot.team_cache[tid]
-        new_player_ids = team["lineup"] + team["rotation"] + team["bullpen"] + team["bench"]
-        for position in ["lineup", "rotation", "bullpen", "bench"]:
+        new_player_ids = team["lineup"] + team["rotation"] + team["shadows"]
+        for position in ["lineup", "rotation", "shadows"]:
             slot = 1
             for player in team[position]:
                 player_positions[player] = position
