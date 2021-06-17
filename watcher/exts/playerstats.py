@@ -312,9 +312,8 @@ class PlayerStats(commands.Cog):
                                   f"Command syntax: `!equivalent_exchange rating, player name, options`")
         async with aiosqlite.connect(self.bot.db_path) as db:
             async with db.execute(f"select player_id, player_name, combined_stars, team_id, team_name, {rating} "
-                                  f"from playerleagueandstars " 
-                                  # where league = '{other_league}' "
-                                  " and "
+                                  f"from playerleagueandstars where " 
+                                  # " league = '{other_league}' and "
                                   f"(combined_stars > {combined_stars}-2 and "
                                   f"combined_stars < {combined_stars}+2) {on_team}"
                                   f"group by player_id order by {rating} {sort_dir} {limit};") as cursor:
