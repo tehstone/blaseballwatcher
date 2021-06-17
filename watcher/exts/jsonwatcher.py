@@ -215,7 +215,7 @@ class JsonWatcher(commands.Cog):
                                     if old_park[attr]['air_balloons'] != park[attr]['air_balloons']:
                                         changed = changed or True
                                         if park[attr]['air_balloons'] == 99:
-                                            changes.append(f"Neunundneunzig Luftballons Auf ihrem Weg zum {park_name}\n")
+                                            changes.append(f"Neunundneunzig :balloon: Luftballons :balloon: Auf ihrem Weg zum {park_name}\n")
                             else:
                                 changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
                                 changed = changed or True
