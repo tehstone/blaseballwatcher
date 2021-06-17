@@ -194,6 +194,8 @@ class JsonWatcher(commands.Cog):
             for attr in ["mods", "name", "model", "weather", "state",
                          "nickname", "mainColor", "secondaryColor", "tertiaryColor"]:
                 if attr in park and attr in old_park:
+                    if attr == "air_balloons":
+                        continue
                     if park[attr] != old_park[attr]:
                         if attr == "mods":
                             new_mods, old_mods = [], []
