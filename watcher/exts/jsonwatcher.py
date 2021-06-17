@@ -191,11 +191,11 @@ class JsonWatcher(commands.Cog):
             park = park['data']
             old_park = old_parks[park["id"]]['data']
             team_name = self.bot.team_names[park["teamId"]]
+            park_name = park["nickname"]
             for attr in ["mods", "name", "model", "weather", "state",
                          "nickname", "mainColor", "secondaryColor", "tertiaryColor"]:
                 if attr in park and attr in old_park:
-                    if attr == "air_balloons":
-                        continue
+
                     if park[attr] != old_park[attr]:
                         if attr == "mods":
                             new_mods, old_mods = [], []
@@ -210,8 +210,15 @@ class JsonWatcher(commands.Cog):
                             if len(old_mods) > 0:
                                 changes.append(f"{', '.join(old_mods)} removed from {team_name}'s park.\n")
                         else:
-                            changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
-                            changed = changed or True
+                            if attr == "state":
+                                if 'air_balloons' in park[attr]:
+                                    if old_park[attr]['air_balloons'] != park[attr]['air_balloons']:
+                                        changed = changed or True
+                                        if park[attr]['air_balloons'] == 99:
+                                            changes.append(f"Neunundneunzig Luftballons Auf ihrem Weg zum {park_name}\n")
+                            else:
+                                changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
+                                changed = changed or True
         await utils.send_message_in_chunks(changes, output_channel)
         self.save_files(new_ballpark_json, "ballpark_data.json", changed)
 
