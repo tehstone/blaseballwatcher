@@ -347,10 +347,12 @@ class GameData(commands.Cog):
             return "Shelled"
         if "tasted the infinite and shelled" in outcome.lower():
             return "Shelled"
-        if "set a win" in outcome.lower():
+        if "sun 2" in outcome.lower():
             return "Sunset"
         if "black hole swallowed" in outcome.lower():
             return "Black Hole"
+        if "black hole burped" in outcome.lower():
+            return "Black Hole Burp"
         if "was swept elsewhere" in outcome.lower():
             return "Swept Elsewhere"
         if "returned from elsewhere" in outcome.lower():
@@ -495,7 +497,8 @@ class GameData(commands.Cog):
                                 outcome_type = self.get_outcome_type(o)
                                 team_name = teams[team]['name']
                                 if outcome_type == "Sunset":
-                                    match = re.search(r"upon the ([a-zA-Z ]+)", o)
+                                    # this may need changing in the future
+                                    match = re.search(r"at the ([a-zA-Z ]+)", o)
                                     if match:
                                         if len(match.groups()) > 0:
                                             target_team = match.groups()[0]
@@ -508,6 +511,13 @@ class GameData(commands.Cog):
                                             target_team = match.groups()[0]
                                             if target_team == team_name:
                                                 record["win_modifier"] -= 1
+                                elif outcome_type == "Black Hole Burp":
+                                    match = re.search(r"at the ([a-zA-Z ]+)", o)
+                                    if match:
+                                        if len(match.groups()) > 0:
+                                            target_team = match.groups()[0]
+                                            if target_team == team_name:
+                                                record["win_modifier"] += 1
 
                         game_outcomes = [o.strip() for o in game["outcomes"]]
                         if fill:

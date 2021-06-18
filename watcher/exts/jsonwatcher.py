@@ -211,10 +211,10 @@ class JsonWatcher(commands.Cog):
                                 changes.append(f"{', '.join(old_mods)} removed from {team_name}'s park.\n")
                         else:
                             if attr == "state":
-                                if 'air_balloons' in park[attr]:
+                                if 'air_balloons' in park[attr] and 'air_balloons' in old_park[attr]:
                                     if old_park[attr]['air_balloons'] != park[attr]['air_balloons']:
-                                        changed = changed or True
                                         if park[attr]['air_balloons'] == 99:
+                                            changed = changed or True
                                             changes.append(f"Neunundneunzig :balloon: Luftballons :balloon: Auf ihrem Weg zum {park_name}\n")
                             else:
                                 changes.append(f"{team_name}'s park {attr} changed from {old_park[attr]} to {park[attr]}.\n")
@@ -419,6 +419,7 @@ class JsonWatcher(commands.Cog):
             await self.check_for_content_updates()
             await self.check_for_ballpark_updates()
             await self.save()
+            self.bot.logger.info("completed check for json changes")
             await asyncio.sleep(self.bot.config.setdefault('json_watch_interval', 10) * 60)
             continue
 
