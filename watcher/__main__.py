@@ -37,26 +37,26 @@ async def _print(owner, message):
 async def start_task_loops(bot):
     try:
         rules_watcher = bot.get_cog("RulesWatcher")
-        # bot.tasks.append(event_loop.create_task(rules_watcher.check_book_loop()))
-        # bot.tasks.append(event_loop.create_task(rules_watcher.check_players_loop()))
+        bot.tasks.append(event_loop.create_task(rules_watcher.check_book_loop()))
+        bot.tasks.append(event_loop.create_task(rules_watcher.check_players_loop()))
 
         json_watcher = bot.get_cog("JsonWatcher")
         bot.tasks.append(event_loop.create_task(json_watcher.check_loop()))
-        #
-        # if bot.check_for_games_complete:
-        #     bot.tasks.append(event_loop.create_task(utils.game_check_loop(bot)))
-        # if bot.check_for_new_schedules:
-        #     gamedata_cog = bot.get_cog('GameData')
-        #     bot.tasks.append(event_loop.create_task(gamedata_cog.check_new_schedule_loop()))
-        #
-        # bot.tasks.append(event_loop.create_task(teams.check_teams_loop(bot)))
-        # bot.tasks.append(event_loop.create_task(players.check_players_loop(bot)))
-        # pendants_cog = bot.get_cog('Pendants')
-        # event_loop.create_task(pendants_cog.check_remaining_teams_loop(bot))
-        #
-        # if bot.config.get('pre_sim', False):
-        #     betadvice_cog = bot.get_cog('BetAdvice')
-        #     event_loop.create_task(betadvice_cog.check_game_sim_loop())
+
+        if bot.check_for_games_complete:
+            bot.tasks.append(event_loop.create_task(utils.game_check_loop(bot)))
+        if bot.check_for_new_schedules:
+            gamedata_cog = bot.get_cog('GameData')
+            bot.tasks.append(event_loop.create_task(gamedata_cog.check_new_schedule_loop()))
+
+        bot.tasks.append(event_loop.create_task(teams.check_teams_loop(bot)))
+        bot.tasks.append(event_loop.create_task(players.check_players_loop(bot)))
+        pendants_cog = bot.get_cog('Pendants')
+        event_loop.create_task(pendants_cog.check_remaining_teams_loop(bot))
+
+        if bot.config.get('pre_sim', False):
+            betadvice_cog = bot.get_cog('BetAdvice')
+            event_loop.create_task(betadvice_cog.check_game_sim_loop())
 
         logger.info('Loops initiated')
     except KeyboardInterrupt:
