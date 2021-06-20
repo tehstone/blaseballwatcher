@@ -366,6 +366,8 @@ class Pendants(commands.Cog):
                              f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['id']})\n"
                 sh_description += sh_message
             for event in notable_events["cycle"]:
+                if event['hits'] / event['atBats'] < .5:
+                    continue
                 doubles_str = f"{event.doubles} double"
                 if event.doubles != 1:
                     doubles_str += "s"
@@ -376,21 +378,21 @@ class Pendants(commands.Cog):
                 if event.homeRuns != 1:
                     hr_str += "s"
                 base_message = "for the cycle"
-                # quad_str = " "
-                # if "quadruples" in event:
-                #     quad_str = f"{event['quadruples']} quadruple"
-                #     if event['quadruples'] != 1:
-                #         quad_str += "s, "
-                #     else:
-                #         quad_str += ", "
-                #     if event['quadruples'] > 0 and event['homeRuns'] > 0 \
-                #             and event['triples'] > 0 and event['doubles'] > 0:
-                #         base_message = "a super cycle!"
+                quad_str = " "
+                if "quadruples" in event:
+                    quad_str = f"{event['quadruples']} quadruple"
+                    if event['quadruples'] != 1:
+                        quad_str += "s, "
+                    else:
+                        quad_str += ", "
+                    if event['quadruples'] > 0 and event['homeRuns'] > 0 \
+                            and event['triples'] > 0 and event['doubles'] > 0:
+                        base_message = "a super cycle!"
                 at_bats_str = f" in {event.atBats} at bats.\n"
                 natural_cycle = await self._check_feed_natural_cycle(event.name, event.playerId,
                                                                      last_day, current_season)
                 message = f"\n**{event.name} hit {base_message}!**{at_bats_str} with {event.hits}" \
-                          f" hits, {doubles_str}, {triples_str} " \
+                          f" hits, {doubles_str}, {triples_str}, {quad_str} " \
                           f"and {hr_str}.\n" \
                           f"[reblase](https://reblase.sibr.dev/game/{event.gameId})" \
                           f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event.Id})"
@@ -401,6 +403,8 @@ class Pendants(commands.Cog):
             for __, event in notable_events["dingerparty"].items():
                 at_bats_str = ".\n"
                 if "atBats" in event:
+                    if event['hits'] / event['atBats'] < .5:
+                        continue
                     at_bats_str = f" in {event['atBats']} at bats.\n"
                 message = f"\n**{event['name']} hit 4+ home runs!**\n{event['homeRuns']} home runs " \
                           f"in {event['hits']} total hits{at_bats_str}" \
@@ -421,19 +425,28 @@ class Pendants(commands.Cog):
                 hr_str = f"{event['homeRuns']} home run"
                 if event['homeRuns'] != 1:
                     hr_str += "s"
-                # quad_str = ""
-                # if "quadruples" in event:
-                #     quad_str = f"{event['quadruples']} quadruple"
-                #     if event['quadruples'] != 1:
-                #         quad_str += "s, "
-                #     else:
-                #         quad_str += ", "
+
                 at_bats_str = "\n"
                 if "atBats" in event:
+                    if event['hits'] / event['atBats'] < .5:
+                        continue
                     at_bats_str = f" in {event['atBats']} at bats.\n"
                 message = f"\n**{event['name']} got {event['hits']} hits!**{at_bats_str}" \
-                          f"with {doubles_str}, {triples_str} and {hr_str}.\n" \
-                          f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
+                          f"with {doubles_str}, {triples_str}"
+
+                if "quadruples" in event:
+                    quad_str = f"{event['quadruples']} quadruple"
+                    if event['quadruples'] != 1:
+                        quad_str += "s, "
+                    else:
+                        quad_str += ", "
+                    message += f"{quad_str}, and {hr_str}.\n" \
+                               f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
+                else:
+                    message += f", and {hr_str}.\n" \
+                               f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
+
+
                 if "statsheet_id" in event:
                     message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['Id']})"
                 message += "\n"
@@ -450,18 +463,20 @@ class Pendants(commands.Cog):
                 hr_str = f"{event['homeRuns']} home run"
                 if event['homeRuns'] != 1:
                     hr_str += "s"
-                # quad_str = ""
-                # if "quadruples" in event:
-                #     quad_str = f"{event['quadruples']} quadruple"
-                #     if event['quadruples'] != 1:
-                #         quad_str += "s, "
-                #     else:
-                #         quad_str += ", "
+                quad_str = ""
+                if "quadruples" in event:
+                    quad_str = f"{event['quadruples']} quadruple"
+                    if event['quadruples'] != 1:
+                        quad_str += "s, "
+                    else:
+                        quad_str += ", "
                 at_bats_str = "\n"
                 if "atBats" in event:
+                    if event['hits'] / event['atBats'] < .5:
+                        continue
                     at_bats_str = f" with {event['hits']} hits in {event['atBats']} at bats.\n"
                 message = f"\n**{event['name']} got {event['rbis']} RBIs!**{at_bats_str}" \
-                          f"with {doubles_str}, {triples_str} and {hr_str}.\n" \
+                          f"with {doubles_str}, {triples_str}, {quad_str} and {hr_str}.\n" \
                           f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
                 if "statsheet_id" in event:
                     message += f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['Id']})"
