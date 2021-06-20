@@ -10,7 +10,7 @@ from gspread_formatting import *
 
 from discord.ext import commands
 
-from watcher import utils
+from watcher import utils, checks
 
 """New season checklist:
     Make sure divisions are up to date 
@@ -1103,35 +1103,99 @@ class GameData(commands.Cog):
 
             await asyncio.sleep(120)
 
-    @commands.command(name='clear_new_sheet', aliases=['cns'])
-    async def clear_new_sheet(self, ctx, season):
-        agc = await self.bot.authorize_agcm()
-        sheet = await agc.open_by_key(self.bot.SPREADSHEET_IDS[f"season{season}"])
-        for team in self.bot.team_names.keys():
-            try:
-                s_worksheet = await sheet.worksheet(spreadsheet_names[team]["schedule"])
-                m_worksheet = await sheet.worksheet(spreadsheet_names[team]["matchups"])
-                empty_rows = []
-                for i in range(112):
-                    empty_rows.append([''] * 16)
-                await s_worksheet.batch_update([{
-                    'range': f"A{2}:Q{2}",
-                    'values': [[''] * 16]
-                }])
-                await s_worksheet.batch_update([{
-                    'range': f"A{4}:Q{115}",
-                    'values': empty_rows
-                }])
+    @commands.command(name='copy_and_clear_new_sheet', aliases=['cns'])
+    @checks.is_owner()
+    async def _copy_and_clear_new_sheet(self, ctx, season):
+        client = gspread.authorize(self.bot.get_creds())
+        old_snacks_id = self.bot.SPREADSHEET_IDS[f"season{int(season)-1}snacks"]
+        new_snacks_sheet = client.copy(old_snacks_id, title=f"Blaseball Season {season} Snacks", copy_permissions=True)
+        self.bot.SPREADSHEET_IDS[f"season{int(season)}snacks"] = new_snacks_sheet.id
 
-                empty_rows = []
-                for i in range(17):
-                    empty_rows.append([''] * 7)
-                await m_worksheet.batch_update([{
-                    'range': f"A{3}:G{19}",
-                    'values': empty_rows
-                }])
-            except KeyError:
-                pass
+        old_sheet_id = self.bot.SPREADSHEET_IDS[f"season{int(season) - 1}"]
+        new_main_sheet = client.copy(old_sheet_id, title=f"Blaseball Season {season}", copy_permissions=True)
+        self.bot.SPREADSHEET_IDS[f"season{int(season)}"] = new_main_sheet.id
+
+        with open(os.path.join("data", "spreadsheet_ids.json"), 'w') as json_file:
+            json.dump(self.bot.SPREADSHEET_IDS, json_file)
+
+        await ctx.send(f"Main sheet: {new_main_sheet.url}\nSnacks sheet: {new_snacks_sheet.url}")
+
+        agc = await self.bot.authorize_agcm()
+
+        async def clear_snack_sheet():
+            snack_sheet = await agc.open_by_key(new_snacks_sheet.id)
+            d_worksheet = await snack_sheet.worksheet("Daily Results")
+            empty_rows = []
+            for i in range(120):
+                empty_rows.append([''] * 14)
+            await d_worksheet.batch_update([{
+                'range': f"B5:O125",
+                'values': empty_rows
+            }])
+            await d_worksheet.batch_update([{
+                'range': f"P2:AD2",
+                'values': [[''] * 15]
+            }])
+
+            d_worksheet = await snack_sheet.worksheet("Weather Snacks")
+            empty_rows = []
+            for i in range(5):
+                empty_rows.append([''] * 2)
+            await d_worksheet.batch_update([{
+                'range': f"C2:D6",
+                'values': empty_rows
+            }])
+        await clear_snack_sheet()
+
+        async def clear_main_sheet():
+            sheet = await agc.open_by_key(new_main_sheet.id)
+            b_worksheet = await sheet.worksheet("Blaseball")
+            empty_rows = []
+            for i in range(15):
+                empty_rows.append([''] * 3)
+            await b_worksheet.batch_update([{
+                'range': f"K{8}:M{22}",
+                'values': empty_rows
+            }])
+
+            empty_rows = []
+            last_row = b_worksheet.row_count
+            weather_rows = last_row - 8
+            for i in range(weather_rows):
+                empty_rows.append([''] * 9)
+            await b_worksheet.batch_update([{
+                'range': f"A{9}:I{last_row}",
+                'values': empty_rows
+            }])
+
+            for team in self.bot.team_names.keys():
+                try:
+                    s_worksheet = await sheet.worksheet(spreadsheet_names[team]["schedule"])
+                    m_worksheet = await sheet.worksheet(spreadsheet_names[team]["matchups"])
+
+                    empty_rows = []
+                    for i in range(112):
+                        empty_rows.append([''] * 16)
+                    await s_worksheet.batch_update([{
+                        'range': f"A{2}:Q{2}",
+                        'values': [[''] * 16]
+                    }])
+                    await s_worksheet.batch_update([{
+                        'range': f"A{4}:Q{115}",
+                        'values': empty_rows
+                    }])
+
+                    empty_rows = []
+                    for i in range(17):
+                        empty_rows.append([''] * 7)
+                    await m_worksheet.batch_update([{
+                        'range': f"A{3}:G{19}",
+                        'values': empty_rows
+                    }])
+                except KeyError:
+                    pass
+        await clear_main_sheet()
+
         await ctx.message.add_reaction(self.bot.success_react)
 
     @commands.command(name='fix_formulas', aliases=['ffm'])

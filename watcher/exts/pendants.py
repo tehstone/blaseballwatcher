@@ -459,7 +459,7 @@ class Pendants(commands.Cog):
                 #         quad_str += ", "
                 at_bats_str = "\n"
                 if "atBats" in event:
-                    at_bats_str = f" with {event['hits']} in {event['atBats']} at bats.\n"
+                    at_bats_str = f" with {event['hits']} hits in {event['atBats']} at bats.\n"
                 message = f"\n**{event['name']} got {event['rbis']} RBIs!**{at_bats_str}" \
                           f"with {doubles_str}, {triples_str} and {hr_str}.\n" \
                           f"[reblase](https://reblase.sibr.dev/game/{event['gameId']})"
@@ -807,10 +807,10 @@ class Pendants(commands.Cog):
 
             rows.append([name, team, hits, hitter["homeRuns"], hitter["stolenBases"],
                          at_bats, plate_appearances, lineup_length, games, slot, avg_ab, avg_pa])
-        await ah_sheet.batch_update([{
-            'range': f"A5:L{5 + len(rows)}",
-            'values': rows
-        }])
+        # await ah_sheet.batch_update([{
+        #     'range': f"A5:L{5 + len(rows)}",
+        #     'values': rows
+        # }])
 
         rows = []
         sorted_pitchers = {k: v for k, v in sorted(pitcher_dict.items(),
