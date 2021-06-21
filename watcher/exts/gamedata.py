@@ -914,7 +914,8 @@ class GameData(commands.Cog):
         await ctx.message.add_reaction("⏲️")
         current_season -= 1
         await self.save_json_range(current_season, fill)
-        await self._update_tiebreakers()
+        if fill:
+            await self._update_tiebreakers()
         await self.update_spreadsheets([current_season], fill)
         await ctx.message.add_reaction(self.bot.success_react)
         await ctx.send("Spreadsheets updated.")
@@ -970,7 +971,7 @@ class GameData(commands.Cog):
             if not html_response:
                 self.bot.logger.warning('Failed to acquire sim data')
                 return
-            sim_data = html_response.json()
+            sim_data = await html_response.json()
             league_id = sim_data['league']
             content = await utils.retry_request_stream(self.bot.session,
                                                        f"https://www.blaseball.com/database/league?id={league_id}")
