@@ -82,13 +82,13 @@ class Pendants(commands.Cog):
                 if not game["gameComplete"]:
                     return True
             game_team_map = {}
-            for game in games.json():
+            for game in await games.json():
                 game_team_map[game['homeTeam']] = {"game_id": game["id"], "opponent": game['awayTeam']}
                 game_team_map[game['awayTeam']] = {"game_id": game["id"], "opponent": game['homeTeam']}
             with open(os.path.join('data', 'pendant_data', 'statsheets', 'game_team_maps',
                                    f's{season}_d{day}_game_team_map.json'), 'w') as file:
                 json.dump(game_team_map, file)
-            game_statsheet_ids = [game["statsheet"] for game in games.json()]
+            game_statsheet_ids = [game["statsheet"] for game in await games.json()]
             game_statsheets_response = await utils.retry_request(self.bot.session,
                 f"https://www.blaseball.com/database/gameStatsheets?ids={','.join(game_statsheet_ids)}")
             if not game_statsheets_response:

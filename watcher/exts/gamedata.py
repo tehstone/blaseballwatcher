@@ -933,7 +933,7 @@ class GameData(commands.Cog):
                                                       f'https://www.blaseball.com/database/players?ids={",".join(players)}')
             if not html_response:
                 return await ctx.send("Failed to acquire player data.")
-            player_data = html_response.json()
+            player_data = await html_response.json()
             for player in player_data:
                 out_str += f"{team['nickname']}\t{player['name']}\tbullpen\n"
 
