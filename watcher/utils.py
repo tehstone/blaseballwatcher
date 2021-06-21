@@ -53,20 +53,18 @@ async def send_message_in_chunks(message_parts, channel):
     if len(current_msg) > 0:
         await channel.send(current_msg)
 
-
-async def retry_request(url, tries=10):
+async def retry_request(session, url, tries=10, timeout=10):
     headers = {
         'User-Agent': 'sibrDataWatcher/0.5test (tehstone#8448@sibr)'
     }
 
     for i in range(tries):
         try:
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
+            async with session.get(url=url, timeout=timeout, headers=headers) as response:
+                await response.json()
+            if response.status == 200:
                 return response
         except (Timeout, Exception):
-            continue
-        finally:
             await asyncio.sleep(.5)
     return None
 
@@ -76,7 +74,7 @@ async def game_check_loop(bot):
         bot.logger.info("Checking for games complete")
         failed = False
         url = 'https://www.blaseball.com/database/simulationdata'
-        html_response = await retry_request(url)
+        html_response = await retry_request(bot.session, url)
         if not html_response:
             failed = True
             continue
@@ -84,7 +82,7 @@ async def game_check_loop(bot):
         season = resp_json["season"]
         day = resp_json["day"]
         bot.current_day = day
-        games = await retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
+        games = await retry_request(bot.session, f"https://www.blaseball.com/database/games?day={day}&season={season}")
         complete = True
         for game in games.json():
             if not game["gameComplete"]:

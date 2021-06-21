@@ -102,7 +102,7 @@ class BetAdvice(commands.Cog):
         pitcher_ids = []
         pitcher_stlats = {}
         team_stlats = {}
-        teams_response = await utils.retry_request("https://www.blaseball.com/database/allteams")
+        teams_response = await utils.retry_request(self.bot.session, "https://www.blaseball.com/database/allteams")
         teams_json = teams_response.json()
         for team in teams_json:
             team_stlats[team["id"]] = {"lineup": {}}
@@ -112,7 +112,7 @@ class BetAdvice(commands.Cog):
         chunked_pitcher_ids = [pitcher_ids[i:i + 50] for i in range(0, len(pitcher_ids), 50)]
         for chunk in chunked_pitcher_ids:
             b_url = f"https://www.blaseball.com/database/players?ids={','.join(chunk)}"
-            pitcher_response = await utils.retry_request(b_url)
+            pitcher_response = await utils.retry_request(self.bot.session, b_url)
             pitcher_json = pitcher_response.json()
             for pitcher in pitcher_json:
                 pitcher_stlats[pitcher["id"]] = pitcher
@@ -120,7 +120,7 @@ class BetAdvice(commands.Cog):
         chunked_batter_ids = [batter_ids[i:i + 50] for i in range(0, len(batter_ids), 50)]
         for chunk in chunked_batter_ids:
             b_url = f"https://www.blaseball.com/database/players?ids={','.join(chunk)}"
-            batter_response = await utils.retry_request(b_url)
+            batter_response = await utils.retry_request(self.bot.session, b_url)
             batter_json = batter_response.json()
             for batter in batter_json:
                 team_id = batters[batter["id"]]
@@ -295,7 +295,7 @@ class BetAdvice(commands.Cog):
                 with open(filepath, 'r') as file:
                     day_results = json.load(file)
                 url = f"https://blaseball.com/database/games?day={day}&season={season}"
-                html_response = await utils.retry_request(url)
+                html_response = await utils.retry_request(self.bot.session, url)
                 rows = []
                 if html_response:
                     day_data = html_response.json()
@@ -781,7 +781,7 @@ class BetAdvice(commands.Cog):
         return (payout_ratio * winning_team_percentage) - 1
 
     async def _run_daily_sim(self):
-        html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
+        html_response = await utils.retry_request(self.bot.session, "https://www.blaseball.com/database/simulationdata")
         if not html_response:
             self.bot.logger.warning('Bet Advice daily message failed to acquire sim data and exited.')
             return
@@ -807,7 +807,7 @@ class BetAdvice(commands.Cog):
                 async for row in cursor:
                     at_bat_counts[row[0]] = row[1]
 
-        games = await utils.retry_request(f"https://www.blaseball.com/database/games?day={day}&season={season}")
+        games = await utils.retry_request(self.bot.session, f"https://www.blaseball.com/database/games?day={day}&season={season}")
         games_json = games.json()
         pitcher_ids = []
         pitcher_ids += [game["homePitcher"] for game in games_json]
@@ -949,7 +949,7 @@ class BetAdvice(commands.Cog):
     async def check_game_sim_loop(self):
         while not self.bot.is_closed():
             self.bot.logger.info("Checking for game sim run")
-            html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
+            html_response = await utils.retry_request(self.bot.session, "https://www.blaseball.com/database/simulationdata")
             sim_data = html_response.json()
             season = sim_data['season']
             day = sim_data['day'] + 1

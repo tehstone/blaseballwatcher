@@ -45,7 +45,7 @@ class WinExp(commands.Cog):
 
     async def get_game_logs(self, season, day, team):
         url = f"https://blaseball.com/database/games?day={day-1}&season={season-1}"
-        html_response = await utils.retry_request(url)
+        html_response = await utils.retry_request(self.bot.session, url)
         if not html_response:
             return
         day_data = html_response.json()
@@ -79,7 +79,7 @@ class WinExp(commands.Cog):
         except:
             pass
         url = f"https://api.blaseball-reference.com/v1/events?gameId={game_id}&baseRunners=true"
-        html_response = await utils.retry_request(url)
+        html_response = await utils.retry_request(self.bot.session, url)
         if not html_response:
             return
         game_data = html_response.json()

@@ -32,7 +32,7 @@ class JsonWatcher(commands.Cog):
 
     async def check_for_field_updates(self):
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
-        html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
+        html_response = await utils.retry_request(self.bot.session, "https://www.blaseball.com/database/simulationdata")
         if not html_response:
             self.bot.logger.warning('Failed to acquire sim data')
             return
@@ -60,7 +60,8 @@ class JsonWatcher(commands.Cog):
             subleague_json = json.load(json_file)
 
         try:
-            html_response = await utils.retry_request(f"https://www.blaseball.com/database/games?season={season}&day={day}")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      f"https://www.blaseball.com/database/games?season={season}&day={day}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire game data')
                 return
@@ -69,7 +70,8 @@ class JsonWatcher(commands.Cog):
             self.save_files(cur_json, "game.json", changed)
 
             sid = cur_json[0]['statsheet']
-            html_response = await utils.retry_request(f"https://www.blaseball.com/database/gamestatsheets?ids={sid}")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      f"https://www.blaseball.com/database/gamestatsheets?ids={sid}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire gamestatsheet data')
                 return
@@ -78,7 +80,8 @@ class JsonWatcher(commands.Cog):
             self.save_files(cur_json, "gamestatsheet.json", changed)
 
             sid = cur_json[0]['awayTeamStats']
-            html_response = await utils.retry_request(f"https://www.blaseball.com/database/teamstatsheets?ids={sid}")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      f"https://www.blaseball.com/database/teamstatsheets?ids={sid}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire teamstatsheet data')
                 return
@@ -97,7 +100,8 @@ class JsonWatcher(commands.Cog):
                 sid = static_playerstatsheet_id
             else:
                 sid = cur_json[0]['playerStats'][0]
-            html_response = await utils.retry_request(f"https://www.blaseball.com/database/playerstatsheets?ids={sid}")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      f"https://www.blaseball.com/database/playerstatsheets?ids={sid}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire playerstatsheet data')
                 return
@@ -109,7 +113,8 @@ class JsonWatcher(commands.Cog):
                 sid = static_player_id
             else:
                 sid = cur_json[0]['playerId']
-            html_response = await utils.retry_request(f"https://www.blaseball.com/database/players?ids={sid}")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      f"https://www.blaseball.com/database/players?ids={sid}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire playerstatsheet data')
                 return
@@ -122,7 +127,8 @@ class JsonWatcher(commands.Cog):
                                  f'teamstatsheet, playerstatsheet, player\n{e}')
 
         try:
-            html_response = await utils.retry_request(f"https://www.blaseball.com/database/league?id={league_id}")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      f"https://www.blaseball.com/database/league?id={league_id}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire league data')
                 return
@@ -132,7 +138,8 @@ class JsonWatcher(commands.Cog):
             self.latest_tie = cur_json['tiebreakers']
 
             sid = cur_json['subleagues'][0]
-            html_response = await utils.retry_request(f"https://www.blaseball.com/database/subleague?id={sid}")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      f"https://www.blaseball.com/database/subleague?id={sid}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire subleague data')
                 return
@@ -147,7 +154,8 @@ class JsonWatcher(commands.Cog):
         with open(os.path.join("json_data", "allteams.json"), encoding='utf-8') as json_file:
             current_allteams = json.load(json_file)
         try:
-            html_response = await utils.retry_request("https://www.blaseball.com/database/allteams")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      "https://www.blaseball.com/database/allteams")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire allteams data')
                 return
@@ -178,7 +186,7 @@ class JsonWatcher(commands.Cog):
         with open(os.path.join("json_data", "ballpark_data.json"), encoding='utf-8') as json_file:
             ballpark_json = json.load(json_file)
 
-        new_ballpark_data = await utils.retry_request("https://api.sibr.dev/chronicler/v1/stadiums")
+        new_ballpark_data = await utils.retry_request(self.bot.session, "https://api.sibr.dev/chronicler/v1/stadiums")
         if not new_ballpark_data:
             return self.bot.logger.warning('Failed to acquire ballpark data')
         new_ballpark_json = new_ballpark_data.json()
@@ -227,7 +235,7 @@ class JsonWatcher(commands.Cog):
 
         with open(os.path.join("json_data", "simulationdata.json"), encoding='utf-8') as json_file:
             simulationdata_json = json.load(json_file)
-        html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
+        html_response = await utils.retry_request(self.bot.session, "https://www.blaseball.com/database/simulationdata")
         if not html_response:
             self.bot.logger.warning('Failed to acquire sim data')
             return
@@ -237,7 +245,7 @@ class JsonWatcher(commands.Cog):
 
         with open(os.path.join("json_data", "offseasonsetup.json"), encoding='utf-8') as json_file:
             offseasonsetup_json = json.load(json_file)
-        html_response = await utils.retry_request("https://www.blaseball.com/database/offseasonsetup")
+        html_response = await utils.retry_request(self.bot.session, "https://www.blaseball.com/database/offseasonsetup")
         if not html_response:
             self.bot.logger.warning('Failed to acquire offseasonsetup data')
             return
@@ -247,7 +255,7 @@ class JsonWatcher(commands.Cog):
 
         with open(os.path.join("json_data", "alldivisions.json"), encoding='utf-8') as json_file:
             alldivisions_json = json.load(json_file)
-        html_response = await utils.retry_request("https://www.blaseball.com/database/alldivisions")
+        html_response = await utils.retry_request(self.bot.session, "https://www.blaseball.com/database/alldivisions")
         if not html_response:
             self.bot.logger.warning('Failed to acquire divisions data')
             return
@@ -263,7 +271,8 @@ class JsonWatcher(commands.Cog):
             tie_id = self.latest_tie
             with open(os.path.join("json_data", "tiebreakers.json"), encoding='utf-8') as json_file:
                 tiebreakers_json = json.load(json_file)
-            html_response = await utils.retry_request(f"https://www.blaseball.com/database/tiebreakers?id={tie_id}")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      f"https://www.blaseball.com/database/tiebreakers?id={tie_id}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire tiebreakers data')
                 return
@@ -332,8 +341,7 @@ class JsonWatcher(commands.Cog):
                             changed = True
         return messages, changed
 
-    @staticmethod
-    async def check_all_teams(new_team_list, old_team_list):
+    async def check_all_teams(self, new_team_list, old_team_list):
         old_teams = {}
         new_teams = {}
         all_player_ids = []
@@ -356,7 +364,7 @@ class JsonWatcher(commands.Cog):
         chunked_player_ids = [all_player_ids[i:i + 50] for i in range(0, len(all_player_ids), 50)]
         for chunk in chunked_player_ids:
             b_url = f"https://www.blaseball.com/database/players?ids={','.join(chunk)}"
-            html_response = await utils.retry_request(b_url)
+            html_response = await utils.retry_request(self.bot.session, b_url)
             for player in html_response.json():
                 all_players[player["id"]] = player
         messages = []

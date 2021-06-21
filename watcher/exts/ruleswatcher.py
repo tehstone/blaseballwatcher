@@ -102,7 +102,7 @@ class RulesWatcher(commands.Cog):
                                                                       "1f159bab-923a-4811-b6fa-02bfde50925a"])
         url = f"https://www.blaseball.com/database/players?ids={','.join(watch_list)}"
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
-        html_response = await utils.retry_request(url)
+        html_response = await utils.retry_request(self.bot.session, url)
         if html_response:
             for player in html_response.json():
                 if player["id"] in rituals:
@@ -134,7 +134,7 @@ class RulesWatcher(commands.Cog):
             messages.append("Failed to find a js URL.")
             return messages, None
         old_url = self.bot.config.setdefault('last_js_url', None)
-        script_response = await utils.retry_request(js_url)
+        script_response = await utils.retry_request(self.bot.session, js_url)
         backend = True
         if script_response:
             script_text = script_response.text

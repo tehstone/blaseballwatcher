@@ -5,8 +5,8 @@ import os
 from watcher import utils
 
 
-async def get_all_teams():
-    teams_response = await utils.retry_request("https://www.blaseball.com/database/allTeams")
+async def get_all_teams(bot):
+    teams_response = await utils.retry_request(bot.session, "https://www.blaseball.com/database/allTeams")
     if teams_response:
         teams_json = teams_response.json()
         if len(teams_json) > 0:
@@ -16,7 +16,7 @@ async def get_all_teams():
 
 async def update_team_cache(bot):
     try:
-        teams = await get_all_teams()
+        teams = await get_all_teams(bot)
         if not teams:
             return None
         for team in teams:

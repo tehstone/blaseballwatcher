@@ -200,11 +200,11 @@ class PlayerStats(commands.Cog):
 
         return await response_channel.send(embed=embed)
 
-    @staticmethod
-    async def _generate_days_back_query(days_back):
+    async def _generate_days_back_query(self, days_back):
         days_query = ''
         if days_back:
-            html_response = await utils.retry_request("https://www.blaseball.com/database/simulationdata")
+            html_response = await utils.retry_request(self.bot.session,
+                                                      "https://www.blaseball.com/database/simulationdata")
             if html_response:
                 sim_data = html_response.json()
                 current_day = sim_data['day']

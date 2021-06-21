@@ -7,9 +7,9 @@ import aiosqlite
 from watcher import utils
 
 
-async def get_players(player_ids):
+async def get_players(bot, player_ids):
     url = f"https://www.blaseball.com/database/players?ids={','.join(player_ids)}"
-    players_response = await utils.retry_request(url)
+    players_response = await utils.retry_request(bot.session, url)
     if players_response:
         players_json = players_response.json()
         if len(players_json) > 0:
@@ -24,8 +24,8 @@ def get_team_league_division_map(bot):
     return team_map
 
 
-async def get_deceased():
-    players_response = await utils.retry_request("https://api.blaseball-reference.com/v1/deceased")
+async def get_deceased(bot):
+    players_response = await utils.retry_request(bot.session, "https://api.blaseball-reference.com/v1/deceased")
     if players_response:
         players_json = players_response.json()
         if len(players_json) > 0:
@@ -54,7 +54,7 @@ async def update_player_cache(bot):
                 bot.player_team_map[pid] = tid
         chunked_player_ids = [player_ids[i:i + 50] for i in range(0, len(player_ids), 50)]
         for chunk in chunked_player_ids:
-            players = await get_players(chunk)
+            players = await get_players(bot, chunk)
             for player in players:
                 stars = 0
                 for rating in ["baserunningRating", "pitchingRating", "hittingRating", "defenseRating"]:
@@ -84,7 +84,7 @@ async def update_player_cache(bot):
                                             player["pitchingRating"], player["hittingRating"], player["defenseRating"],
                                             team_id, team_name, league, division, position, player['slot'],
                                             player['elsewhere'], player['shelled'], player['legendary']])
-        deceased = await get_deceased()
+        deceased = await get_deceased(bot)
         if not deceased:
             bot.logger.info("Failed to update deceased players cache.")
         else:
