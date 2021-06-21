@@ -11,7 +11,7 @@ async def get_players(bot, player_ids):
     url = f"https://www.blaseball.com/database/players?ids={','.join(player_ids)}"
     players_response = await utils.retry_request(bot.session, url)
     if players_response:
-        players_json = players_response.json()
+        players_json = await players_response.json()
         if len(players_json) > 0:
             return players_json
     return None
@@ -27,7 +27,7 @@ def get_team_league_division_map(bot):
 async def get_deceased(bot):
     players_response = await utils.retry_request(bot.session, "https://api.blaseball-reference.com/v1/deceased")
     if players_response:
-        players_json = players_response.json()
+        players_json = await players_response.json()
         if len(players_json) > 0:
             return players_json
     return None

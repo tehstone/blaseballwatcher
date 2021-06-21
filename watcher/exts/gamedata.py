@@ -191,7 +191,7 @@ class GameData(commands.Cog):
             print(f"day: {day}")
             html_response = await utils.retry_request(self.bot.session, url)
             if html_response:
-                day_data = html_response.json()
+                day_data = await html_response.json()
                 if len(day_data) < 1:
                     break
                 if len(day_data) < 10:
@@ -849,7 +849,7 @@ class GameData(commands.Cog):
                     game_feed = await utils.retry_request(self.bot.session,
                         f"https://api.blaseball-reference.com/v1/events?gameId={game_id}&baseRunners=true")
                     if game_feed:
-                        feed_json = game_feed.json()
+                        feed_json = await game_feed.json()
                         if len(feed_json['results']) > 0:
                             last_event = None
                             for food in feed_json['results']:
@@ -924,7 +924,7 @@ class GameData(commands.Cog):
         html_response = await utils.retry_request(self.bot.session, 'https://www.blaseball.com/database/allteams')
         if not html_response:
             return await ctx.send("Failed to acquire team data.")
-        team_data = html_response.json()
+        team_data = await html_response.json()
         for team in team_data:
             out_str = ""
             players = team['bullpen']
@@ -941,7 +941,7 @@ class GameData(commands.Cog):
                 f'https://www.blaseball.com/database/players?ids={",".join(players)}')
             if not html_response:
                 return await ctx.send("Failed to acquire player data.")
-            player_data = html_response.json()
+            player_data = await html_response.json()
             for player in player_data:
                 out_str += f"{team['nickname']}\t{player['name']}\tbench\n"
             print(out_str)
@@ -972,18 +972,18 @@ class GameData(commands.Cog):
                 return
             sim_data = html_response.json()
             league_id = sim_data['league']
-            html_response = await utils.retry_request(self.bot.session,
-                                                      f"https://www.blaseball.com/database/league?id={league_id}")
-            if not html_response:
+            content = await utils.retry_request_stream(self.bot.session,
+                                                       f"https://www.blaseball.com/database/league?id={league_id}")
+            if not content:
                 self.bot.logger.warning('Failed to acquire league data')
                 return
-            league_json = json.loads(html_response.content.decode('utf-8'))
+            league_json = json.loads(content.decode('utf-8'))
             html_response = await utils.retry_request(self.bot.session,
                                                       f"https://www.blaseball.com/database/tiebreakers?id={league_json['tiebreakers']}")
             if not html_response:
                 self.bot.logger.warning('Failed to acquire tiebreakers data')
                 return
-            new_ties_json = html_response.json()
+            new_ties_json = await html_response.json()
             json_watcher = self.bot.get_cog("JsonWatcher")
             await json_watcher.update_bot_tiebreakers(new_ties_json)
             html_response = await utils.retry_request(self.bot.session,
@@ -991,7 +991,7 @@ class GameData(commands.Cog):
             if not html_response:
                 self.bot.logger.warning('Failed to acquire team data')
                 return
-            team_data = html_response.json()
+            team_data = await html_response.json()
             favor_rankings = {}
             count = 0
             for rank in new_ties_json[0]['order']:
@@ -1041,7 +1041,7 @@ class GameData(commands.Cog):
         for game_id in game_ids:
             game_feed = await utils.retry_request(self.bot.session,
                                                   f"https://api.blaseball-reference.com/v1/events?gameId={game_id}&baseRunners=true")
-            feed_json = game_feed.json()
+            feed_json = await game_feed.json()
             last_event = None
             for food in feed_json['results']:
                 for text in food['event_text']:
@@ -1083,7 +1083,7 @@ class GameData(commands.Cog):
             games = await utils.retry_request(self.bot.session,
                                               f"https://www.blaseball.com/database/games?day=0&season={season}")
             if games:
-                games_list = games.json()
+                games_list = await games.json()
                 if len(games_list) > 0:
                     for t in range(len(self.bot.tasks)):
                         task = self.bot.tasks[t]

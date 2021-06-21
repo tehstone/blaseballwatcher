@@ -18,7 +18,7 @@ class PlayerData(commands.Cog):
         html_response = await utils.retry_request(self.bot.session, url)
         if not html_response:
             return
-        teams_data = html_response.json()
+        teams_data = await html_response.json()
         for team in teams_data:
             batters = team["lineup"]
             pitchers = team["rotation"]
@@ -37,7 +37,7 @@ class PlayerData(commands.Cog):
         async def get_batch(id_string):
             b_url = f"https://www.blaseball.com/database/players?ids={id_string}"
             html_response = await utils.retry_request(self.bot.session, b_url)
-            return html_response.json()
+            return await html_response.json()
 
         batter_ids = list(players.keys())
         all_json = []

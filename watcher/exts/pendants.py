@@ -78,7 +78,7 @@ class Pendants(commands.Cog):
                                               f"https://www.blaseball.com/database/games?day={day}&season={season}")
             if not games:
                 return True
-            for game in games.json():
+            for game in await games.json():
                 if not game["gameComplete"]:
                     return True
             game_team_map = {}
@@ -89,15 +89,19 @@ class Pendants(commands.Cog):
                                    f's{season}_d{day}_game_team_map.json'), 'w') as file:
                 json.dump(game_team_map, file)
             game_statsheet_ids = [game["statsheet"] for game in games.json()]
-            game_statsheets = await utils.retry_request(self.bot.session,
+            game_statsheets_response = await utils.retry_request(self.bot.session,
                 f"https://www.blaseball.com/database/gameStatsheets?ids={','.join(game_statsheet_ids)}")
-            if not game_statsheets:
+            if not game_statsheets_response:
                 return True
-            team_statsheet_ids = [game["awayTeamStats"] for game in game_statsheets.json()]
-            team_statsheet_ids += [game["homeTeamStats"] for game in game_statsheets.json()]
-            team_statsheets = await utils.retry_request(self.bot.session,
+            game_statsheets = await game_statsheets_response.json()
+            team_statsheet_ids = [game["awayTeamStats"] for game in game_statsheets]
+            team_statsheet_ids += [game["homeTeamStats"] for game in game_statsheets]
+            team_statsheets_response = await utils.retry_request(self.bot.session,
                 f"https://www.blaseball.com/database/teamStatsheets?ids={','.join(team_statsheet_ids)}")
-            player_statsheet_ids = [team["playerStats"] for team in team_statsheets.json()]
+            if not team_statsheets_response:
+                return True
+            team_statsheets = await team_statsheets_response.json()
+            player_statsheet_ids = [team["playerStats"] for team in team_statsheets]
             flat_playerstatsheet_ids = list(itertools.chain.from_iterable(player_statsheet_ids))
             print(f"day {day} player count: {len(flat_playerstatsheet_ids)}")
             chunked_player_ids = [flat_playerstatsheet_ids[i:i + 50] for i in range(0, len(flat_playerstatsheet_ids), 50)]
@@ -121,7 +125,7 @@ class Pendants(commands.Cog):
     async def get_player_statsheets(self, player_ids):
         player_statsheets = await utils.retry_request(self.bot.session,
             f"https://www.blaseball.com/database/playerStatsheets?ids={','.join(player_ids)}")
-        return player_statsheets.json()
+        return await player_statsheets.json()
 
     async def amend_player_statsheets(self, players_statsheets, season, day, game_team_map,
                                       pitching_rotations, team_stats):
@@ -618,7 +622,7 @@ class Pendants(commands.Cog):
     async def _check_feed_natural_cycle(self, player_name, player_id, day, season):
         player_feed = await utils.retry_request(self.bot.session,
                                                 f"https://www.blaseball.com/database/feed/player?id={player_id}")
-        feed_json = player_feed.json()
+        feed_json = await player_feed.json()
         day_items = list(filter(lambda d: d['day'] == day and d['season'] == season
                                 and 'metadata' in d and 'play' in d['metadata'], feed_json))
         sorted_items = sorted(day_items, key=lambda item: item['metadata']['play'])
@@ -1101,7 +1105,7 @@ class Pendants(commands.Cog):
             sim_data = await utils.retry_request(bot.session, "https://www.blaseball.com/database/simulationData")
             if not sim_data:
                 return False
-            sd_json = sim_data.json()
+            sd_json = await sim_data.json()
             # still regular season, nothing to check
             if sd_json["day"] < 98:
                 return True
@@ -1115,13 +1119,13 @@ class Pendants(commands.Cog):
                     f"https://www.blaseball.com/database/playoffRound?id={round_id}")
                 if not playoff_round:
                     return False
-                pr_json = playoff_round.json()
+                pr_json = await playoff_round.json()
                 matchups = pr_json["matchups"]
                 url = f"https://www.blaseball.com/database/playoffMatchups?ids={','.join(matchups)}"
                 playoff_matchups = await utils.retry_request(bot.session, url)
                 if not playoff_matchups:
                     return False
-                pm_json = playoff_matchups.json()
+                pm_json = await playoff_matchups.json()
                 team_ids = []
                 for matchup in pm_json:
                     if not matchup["homeTeam"] or not matchup["awayTeam"]:
@@ -1143,7 +1147,7 @@ class Pendants(commands.Cog):
                 f"https://www.blaseball.com/database/playoffs?number={sd_json['season']}")
             if not playoffs:
                 return False
-            round_id = playoffs.json()["rounds"][round_num]
+            round_id = await playoffs.json()["rounds"][round_num]
             success = await _get_playoff_info(bot, round_id)
             if not success:
                 if round_num + 1 < len(playoffs.json()["rounds"]):
@@ -1270,7 +1274,7 @@ class Pendants(commands.Cog):
             game_feed = await utils.retry_request(self.bot.session,
                 f"https://api.blaseball-reference.com/v1/events?gameId={game_id}&baseRunners=true")
             if game_feed:
-                feed_json = game_feed.json()
+                feed_json = await game_feed.json()
                 if len(feed_json['results']) > 0:
                     last_event = None
                     for food in feed_json['results']:

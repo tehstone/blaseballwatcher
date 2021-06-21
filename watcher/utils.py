@@ -69,6 +69,22 @@ async def retry_request(session, url, tries=10, timeout=10):
     return None
 
 
+async def retry_request_stream(session, url, tries=10, timeout=10):
+    headers = {
+        'User-Agent': 'sibrDataWatcher/0.5test (tehstone#8448@sibr)'
+    }
+
+    for i in range(tries):
+        try:
+            async with session.get(url=url, timeout=timeout, headers=headers) as response:
+                content = await response.content.read()
+                if response.status == 200:
+                    return content
+        except (Timeout, Exception):
+            await asyncio.sleep(.5)
+    return None
+
+
 async def game_check_loop(bot):
     while not bot.is_closed():
         bot.logger.info("Checking for games complete")
@@ -78,13 +94,13 @@ async def game_check_loop(bot):
         if not html_response:
             failed = True
             continue
-        resp_json = html_response.json()
+        resp_json = await html_response.json()
         season = resp_json["season"]
         day = resp_json["day"]
         bot.current_day = day
         games = await retry_request(bot.session, f"https://www.blaseball.com/database/games?day={day}&season={season}")
         complete = True
-        for game in games.json():
+        for game in await games.json():
             if not game["gameComplete"]:
                 complete = False
                 break

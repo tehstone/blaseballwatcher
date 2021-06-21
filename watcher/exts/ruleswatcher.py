@@ -104,7 +104,7 @@ class RulesWatcher(commands.Cog):
         output_channel = self.bot.get_channel(self.bot.config['notify_channel'])
         html_response = await utils.retry_request(self.bot.session, url)
         if html_response:
-            for player in html_response.json():
+            for player in await html_response.json():
                 if player["id"] in rituals:
                     if player["ritual"] != rituals[player["id"]]['ritual']:
                         message = f"{player['name']}'s pregame ritual has changed from " \

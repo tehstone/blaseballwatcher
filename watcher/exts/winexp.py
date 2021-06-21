@@ -48,7 +48,7 @@ class WinExp(commands.Cog):
         html_response = await utils.retry_request(self.bot.session, url)
         if not html_response:
             return
-        day_data = html_response.json()
+        day_data = await html_response.json()
         for game in day_data:
             found = False
             if team.lower() == "dalé" or team.lower() == "dale":
@@ -82,7 +82,7 @@ class WinExp(commands.Cog):
         html_response = await utils.retry_request(self.bot.session, url)
         if not html_response:
             return
-        game_data = html_response.json()
+        game_data = await html_response.json()
         with open(os.path.join('data', 'winexpectancy', 'logs', filename), 'w') as file:
             json.dump(game_data["results"], file)
         return "log", filename, home_team, away_team

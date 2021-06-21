@@ -206,7 +206,7 @@ class PlayerStats(commands.Cog):
             html_response = await utils.retry_request(self.bot.session,
                                                       "https://www.blaseball.com/database/simulationdata")
             if html_response:
-                sim_data = html_response.json()
+                sim_data = await html_response.json()
                 current_day = sim_data['day']
                 target_day = current_day - days_back
                 days_query = f' and day >= {target_day}'

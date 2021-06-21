@@ -8,7 +8,7 @@ from watcher import utils
 async def get_all_teams(bot):
     teams_response = await utils.retry_request(bot.session, "https://www.blaseball.com/database/allTeams")
     if teams_response:
-        teams_json = teams_response.json()
+        teams_json = await teams_response.json()
         if len(teams_json) > 0:
             return teams_json
     return None
