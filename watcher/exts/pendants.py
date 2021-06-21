@@ -354,7 +354,7 @@ class Pendants(commands.Cog):
                              f" | [statsheet](https://www.blaseball.com/database/playerstatsheets?ids={event['id']})\n"
                 sh_description += sh_message
             for event in notable_events["cycle"]:
-                if event['hits'] / event['atBats'] < .5:
+                if event.hits / event.atBats < .5:
                     continue
                 doubles_str = f"{event.doubles} double"
                 if event.doubles != 1:
