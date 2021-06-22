@@ -22,7 +22,7 @@ snax_fields = {"oil": "snake_oil", "snake oil": "snake_oil", "snake_oil": "snake
                "fresh popcorn": "fresh_popcorn", "fresh_popcorn": "fresh_popcorn", "freshpopcorn": "fresh_popcorn",
                "stale": "stale_popcorn", "stale popcorn": "stale_popcorn", "stale_popcorn": "stale_popcorn",
                "stalepopcorn": "stale_popcorn", "stopcorn": "stale_popcorn",
-               "chips": "chips", "burger": "burger", "burgers": "burger",
+               "chips": "chips", "burger": "burgers", "burgers": "burgers",
                "seed": "seeds", "sunflower": "seeds", "sunflower seeds": "seeds", "seeds": "seeds",
                "sunflower_seeds": "seeds",
                "pickle": "pickles", "pickles": "pickles",
