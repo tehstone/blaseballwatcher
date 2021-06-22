@@ -371,14 +371,14 @@ class Pendants(commands.Cog):
                     hr_str += "s"
                 base_message = "for the cycle"
                 quad_str = " "
-                if "quadruples" in event:
-                    quad_str = f"{event['quadruples']} quadruple"
-                    if event['quadruples'] != 1:
+                if event.quadruples:
+                    quad_str = f"{event.quadruples} quadruple"
+                    if event.quadruples != 1:
                         quad_str += "s, "
                     else:
                         quad_str += ", "
-                    if event['quadruples'] > 0 and event['homeRuns'] > 0 \
-                            and event['triples'] > 0 and event['doubles'] > 0:
+                    if event.quadruples > 0 and event.homeRuns > 0 \
+                            and event.triples > 0 and event.doubles > 0:
                         base_message = "a super cycle!"
                 at_bats_str = f" in {event.atBats} at bats.\n"
                 natural_cycle = await self._check_feed_natural_cycle(event.name, event.playerId,
@@ -833,10 +833,10 @@ class Pendants(commands.Cog):
                 team = team_short_map[pitcher["teamId"]]
             rows.append([name, team, pitcher['outsRecorded'], pitcher['wins'], losses, pitcher['games'],
                          pitcher['strikeouts'], pitcher['shutout'], pitcher['homeRunsAllowed'], pitcher['rotation']])
-        await ap_sheet.batch_update([{
-            'range': f"A5:J{5 + len(rows)}",
-            'values': rows
-        }])
+        # await ap_sheet.batch_update([{
+        #     'range': f"A5:J{5 + len(rows)}",
+        #     'values': rows
+        # }])
 
         hitters, pitcher_dict = await self.compile_stats(season)
 

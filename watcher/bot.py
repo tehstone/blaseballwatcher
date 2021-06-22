@@ -221,33 +221,25 @@ class WatcherBot(commands.AutoShardedBot):
             except Exception as e:
                 self.logger.warning(f"Failed to update pendant leaders: {e}")
 
-            betadvice_cog = self.cogs.get('BetAdvice')
-            try:
-                upset_wins, upset_losses = await betadvice_cog.update_day_winners(current_season - 1, latest_day - 1)
-                message, embed_fields, output = await betadvice_cog.daily_message(current_season-1, latest_day)
-                m_embed = discord.Embed(description=message)
-                for field in embed_fields:
-                    m_embed.add_field(name=field["name"], value=field["value"])
-                if bet_chan_id:
-                    output_channel = self.get_channel(bet_chan_id)
-                    bet_msg = await output_channel.send(message, embed=m_embed)
-                    publish = self.config.setdefault('publish_rec_message', False)
-                    if publish:
-                        await bet_msg.publish()
-                outputchan_id = self.config['game_sim_output_chan_id']
-                output_channel = self.get_channel(outputchan_id)
-                if output_channel:
-                    await output_channel.send(output)
-                    if upset_wins + upset_losses > 0:
-                        await output_channel.send(f"Day {latest_day} upset record: {upset_wins}-{upset_losses}")
-            except Exception as e:
-                self.logger.warning(f"Failed to send pendant picks: {e}")
-
             gamedata_cog = self.cogs.get('GameData')
             await gamedata_cog.save_json_range(current_season-1)
             await gamedata_cog.update_spreadsheets([current_season-1])
             await debug_channel.send(f"Spreadsheets updated.")
             self.logger.info(f"Spreadsheets updated. {time.time()}")
+
+            betadvice_cog = self.cogs.get('BetAdvice')
+            try:
+                upset_wins, upset_losses = await betadvice_cog.update_day_winners(current_season - 1, latest_day - 1)
+                message, embed_fields, output = await betadvice_cog.daily_message(current_season - 1, latest_day)
+                m_embed = discord.Embed(description=message)
+                for field in embed_fields:
+                    m_embed.add_field(name=field["name"], value=field["value"])
+                await debug_channel.send(message, embed=m_embed)
+                await debug_channel.send(output)
+                if upset_wins + upset_losses > 0:
+                    await debug_channel.send(f"Day {latest_day} upset record: {upset_wins}-{upset_losses}")
+            except Exception as e:
+                self.logger.warning(f"Failed to send pendant picks: {e}")
 
         elif not message.author.bot:
             await self.process_commands(message)
