@@ -228,7 +228,7 @@ class PlayerStatSheetsInstance:
 
 
 class CycleInstance:
-    def __init__(self, playerId, teamId, gameId, name, hits, doubles, triples, homeRuns, atBats, Id):
+    def __init__(self, playerId, teamId, gameId, name, hits, doubles, triples, quadruples, homeRuns, atBats, Id):
         self.playerId = playerId
         self.teamId = teamId
         self.gameId = gameId
@@ -236,6 +236,7 @@ class CycleInstance:
         self.hits = hits
         self.doubles = doubles
         self.triples = triples
+        self.quadruples = quadruples
         self.homeRuns = homeRuns
         self.atBats = atBats
         self.Id = Id

@@ -371,15 +371,18 @@ class Pendants(commands.Cog):
                     hr_str += "s"
                 base_message = "for the cycle"
                 quad_str = " "
-                if event.quadruples:
-                    quad_str = f"{event.quadruples} quadruple"
-                    if event.quadruples != 1:
-                        quad_str += "s, "
-                    else:
-                        quad_str += ", "
-                    if event.quadruples > 0 and event.homeRuns > 0 \
-                            and event.triples > 0 and event.doubles > 0:
-                        base_message = "a super cycle!"
+                try:
+                    if event.quadruples:
+                        quad_str = f"{event.quadruples} quadruple"
+                        if event.quadruples != 1:
+                            quad_str += "s, "
+                        else:
+                            quad_str += ", "
+                        if event.quadruples > 0 and event.homeRuns > 0 \
+                                and event.triples > 0 and event.doubles > 0:
+                            base_message = "a super cycle!"
+                except:
+                    self.bot.logger.warn(f"Exception occurred trying to access 'quadruples' prop of a cycle event.")
                 at_bats_str = f" in {event.atBats} at bats.\n"
                 natural_cycle = await self._check_feed_natural_cycle(event.name, event.playerId,
                                                                      last_day, current_season)
@@ -561,7 +564,7 @@ class Pendants(commands.Cog):
                             "hitsAllowed": row[8],
                             "id": row[9]
                         }
-            async with db.execute("select playerId, teamId, gameId, name, hits, doubles, triples, "
+            async with db.execute("select playerId, teamId, gameId, name, hits, doubles, triples, quadruples, "
                                   "homeRuns, atBats, Id from DailyStatSheets where season=? and day=? "
                                   "and doubles>0 and triples>0 and homeRuns>0 and hits>3 "
                                   "and doubles+triples+homeRuns < hits;", [season, day]) as cursor:

@@ -98,7 +98,9 @@ weather_types = {
     19: 'Salmon',
     20: 'Polarity+',
     21: 'Polarity-',
-    22: '???'
+    22: '???',
+    23: '???',
+    24: 'Sun .1',
 }
 
 old_favor_rankings = {
@@ -202,11 +204,13 @@ class GameData(commands.Cog):
                         if day_retries == 5:
                             self.bot.logger.warning(f"Unable to get 10 games for day{day}")
                             break
+                day_games = []
                 for game in day_data:
                     if not fill and not game["gameComplete"]:
                         done = True
                         break
-                    new_season_data.append(game)
+                    day_games.append(game)
+                new_season_data += day_games
             else:
                 print("no response")
             day += 1
@@ -624,7 +628,7 @@ class GameData(commands.Cog):
             if fill:
                 weather_rows = []
                 for w, count in weathers[season].items():
-                    weather_name = weather_types[w]
+                    weather_name = self.get_weather(w)
                     w_row = [weather_name, count, f"{round((count/1188)*1000)/10}%"]
                     weather_rows.append(w_row)
                 await o_worksheet.batch_update([{
