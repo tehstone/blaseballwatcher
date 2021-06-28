@@ -759,7 +759,7 @@ class GameData(commands.Cog):
                 await update_league(league_records["Mild"], 19)
 
             print("Updating Odds")
-            if season in odds:
+            if season in odds and not fill:
                 odds_rows = []
                 header_row = ["Days", "Favored Wins", "Underdog Wins", "Game 1", "Game 2", "Game 3",
                               "Game 4", "Game 5", "Game 6", "Game 7", "Game 8", "Game 9", "Game 10",
