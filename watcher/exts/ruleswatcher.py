@@ -134,17 +134,16 @@ class RulesWatcher(commands.Cog):
             messages.append("Failed to find a js URL.")
             return messages, None
         old_url = self.bot.config.setdefault('last_js_url', None)
-        script_response = await utils.retry_request(self.bot.session, js_url)
+        script_response = await utils.retry_request_stream(self.bot.session, js_url)
         backend = True
         if script_response:
-            script_text = script_response.text
-            if script_text:
-                with open(os.path.join("json_data", "script_text.js"), encoding='utf-8') as fd:
-                    old_script_text = fd.read()
-                if script_text != old_script_text:
-                    backend = False
-                    with open(os.path.join("json_data", "script_text.js"), 'w', encoding='utf-8') as fd:
-                        fd.write(script_text)
+            new_script_text = script_response.decode('utf-8')
+            with open(os.path.join("json_data", "script_text.js"), encoding='utf-8') as fd:
+                old_script_text = fd.read()
+            if new_script_text != old_script_text:
+                backend = False
+                with open(os.path.join("json_data", "script_text.js"), 'w', encoding='utf-8') as fd:
+                    fd.write(new_script_text)
 
         #self.bot.logger.info(f"Current url: {js_url} Old url: {old_url}")
         if not old_url:
